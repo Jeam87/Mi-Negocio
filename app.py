@@ -1,19 +1,18 @@
-from flask import Flask
-from flask import Flask, request, jsonify, render_template_string
-import os
-import requests
+from flask import Flask, request, jsonify
+import os, requests
 app = Flask(__name__)
+
+MP_TOKEN = os.getenv("MP_ACCESS_TOKEN")
+CLIP_KEY = os.getenv("CLIP_API_KEY")
+CLIP_TERMINAL = os.getenv("CLIP_TERMINAL_ID")
+STRIPE_KEY = os.getenv("STRIPE_SECRET")
+
 @app.route('/')
 def home():
  return """
-HTML = """
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mi Negocio 9.9 Clientes</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Negocio 10.1</title>
+<title>Mi Negocio 10.1 Pagos Auto</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 input,select,textarea{color:#000!important;background:#fff!important}
 .logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;height:360px;pointer-events:none;z-index:0;opacity:0.08;object-fit:contain;}
@@ -22,334 +21,237 @@ input,select,textarea{color:#000!important;background:#fff!important}
 <body class="bg-[#FFF8F0] min-h-screen"><div class="max-w-md mx-auto pb-[110px] relative">
 <img id="logoBg" class="logo-watermark hidden">
 <div id="appContent">
-<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><h1 class="font-black">Mi Negocio 9.9</h1></div><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button></div>
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><h1 class="font-black">Mi Negocio 10.1</h1></div><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button></div>
+
 <div id="tab-costos" class="p-3 hidden"><div id="crear-menu" class="space-y-4"><div class="bg-white rounded-[28px] p-5 shadow-sm text-center"><h2 class="font-black text-[18px]">Crear</h2><button onclick="setCrear('base')" class="w-full mt-5 bg-[#FFF8F0] border-2 border-black rounded-[20px] p-5 text-left flex gap-4 items-center"><div class="w-14 h-14 bg-orange-200 rounded-2xl flex items-center justify-center">🧑‍🍳</div><b>1. Crear BASE</b></button><button onclick="setCrear('producto')" class="w-full mt-3 bg-[#0F172A] rounded-[20px] p-5 text-left flex gap-4 items-center text-white"><div class="w-14 h-14 bg-[#4FD1C5] rounded-2xl flex items-center justify-center">🛍️</div><b>2. Producto con FOTO</b></button></div><div class="bg-white rounded-[20px] p-4 shadow-sm"><div id="listaInv"></div></div></div>
 <div id="crear-base" class="hidden"><button onclick="setCrear('menu')" class="mb-3 text-[12px] font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4 shadow-sm"><h2 class="font-black">BASE</h2><input id="nombre" placeholder="Ej: Salsa búfalo" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div id="insumos" class="mt-4 space-y-3"></div><button onclick="addInsumo()" class="w-full mt-3 bg-orange-100 border-2 py-3 rounded-2xl font-black text-[12px]">+ Ingrediente</button><div class="mt-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-3"><div class="flex gap-2 mt-2"><input id="rendCant" type="number" value="10" class="flex-1 border-2 border-black p-3 rounded-xl font-black" oninput="calc()"><select id="rendUni" class="border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option>L</option><option>ml</option><option>kg</option><option>g</option><option>pza</option></select></div></div><div class="mt-3 p-4 bg-[#0F172A] text-white rounded-[16px]"><div class="flex justify-between text-[13px]"><span>Ingredientes</span><b>$<span id="c-ing">0.00</span></b></div><div class="flex justify-between text-amber-300 text-[12px]"><span>+ Fijos</span><b>$<span id="c-fijos">0.00</span></b></div><div class="font-black text-[16px] border-t border-white/20 mt-2 pt-2"><div class="flex justify-between"><span>Total por <span id="r-cant-label">10</span><span id="r-uni-label">L</span>:</span><span>$<span id="costo">0.00</span></span></div><div class="text-[11px] text-green-300">Costo por 1 <span id="r-uni-label2">L</span>: $<span id="costo-unit">0.00</span></div><div class="flex justify-between mt-2 text-[#4FD1C5]"><span>Venta:</span><span>$<span id="venta">0.00</span></span></div></div><div class="mt-3 flex gap-2 bg-white/10 p-2 rounded-xl"><input id="margen" type="number" value="50" class="w-16 text-black rounded-lg text-center font-black py-2" oninput="calc()"><input id="ventaManual" type="number" placeholder="$ final" class="flex-1 text-black rounded-lg px-2 py-2 font-black" oninput="calc()"></div></div><button onclick="guardarProd('recetario')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR BASE</button><button id="btnCancel" onclick="cancelEdit()" class="hidden w-full mt-2 bg-gray-100 py-3 rounded-2xl text-[11px]">Cancelar</button></div></div>
 <div id="crear-producto" class="hidden"><button onclick="setCrear('menu')" class="mb-3 text-[12px] font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4 shadow-sm"><h2 class="font-black">Producto</h2><input id="nombreProd" placeholder="Ej: Alitas búfalo" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div class="mt-3"><p class="font-black text-[11px]">📸 Foto producto</p><input type="file" id="fotoInput" accept="image/*" onchange="previewFoto(this)" class="w-full mt-2 text-[12px]"><div id="fotoPreview" class="mt-2 hidden"><img id="fotoImg" class="w-24 h-24 object-cover rounded-xl border-2 border-black"><button onclick="quitarFoto()" class="text-[10px] text-red-500 font-bold ml-2">Quitar</button></div></div><div class="mt-4 bg-amber-50 border-2 border-amber-200 rounded-2xl p-3"><div id="basesSel" class="mt-2 space-y-3"></div><button onclick="addBase()" class="w-full mt-2 bg-white border-2 py-2 rounded-xl font-bold text-[11px]">+ Base</button></div><div class="mt-3 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3"><div id="extrasSel" class="mt-2 space-y-2"></div><button onclick="addExtra()" class="w-full mt-2 bg-white border-2 py-2 rounded-xl font-bold text-[11px]">+ Extra</button></div><div class="mt-4 p-4 bg-black text-white rounded-[16px]"><div class="flex justify-between"><span>Costo</span><b>$<span id="c-ing2">0.00</span></b></div><div class="flex justify-between font-black text-[16px] mt-1"><span>Venta</span><span class="text-[#4FD1C5]">$<span id="venta2">0.00</span></span></div><div class="mt-2 flex gap-2"><input id="margen2" type="number" value="100" class="w-14 text-black rounded-lg text-center font-black py-1" oninput="calc2()"><input id="ventaManual2" type="number" placeholder="$ final" class="ml-auto w-20 text-black rounded-lg px-2 py-1 font-black" oninput="calc2()"></div></div><button onclick="guardarProd('catalogo')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button></div></div>
 </div>
+
 <div id="tab-vender" class="p-3 hidden"><div id="listaVenta" class="grid grid-cols-2 gap-3"></div><div class="mt-6 bg-white rounded-[28px] p-4 shadow-xl border-2 border-black"><select id="selCliente" class="w-full border-2 border-black p-3 rounded-xl text-[12px] font-bold"><option value="">Mostrador</option></select><div id="ticket" class="mt-4 space-y-2">Vacio</div><div class="flex justify-between font-black text-[20px] mt-4 border-t-2 pt-3">Total $ <span id="c-total">0</span></div><button onclick="abrirCobro()" class="w-full mt-3 bg-black text-white py-4 rounded-2xl font-black text-[16px]">COBRAR</button><button onclick="limpiarCarrito()" class="w-full mt-2 bg-gray-100 py-2 rounded-xl text-[11px] font-bold">Vaciar</button></div></div>
-<div id="tab-inventario" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><h2 class="font-black">📦 Inventario</h2></div><div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div class="grid grid-cols-5 gap-2"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]"><input id="inv-precio" type="number" placeholder="$30" class="border-2 border-black p-3 rounded-xl font-black text-[13px]"><select id="inv-unidad" class="border-2 border-black p-3 rounded-xl text-[11px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>pza</option><option>m</option></select><button onclick="addInventario()" class="bg-black text-white rounded-xl font-black text-xl">+</button></div><div id="inv-msg" class="hidden mt-3 p-2 rounded-xl text-center font-bold text-[12px]"></div><input id="buscInv" placeholder="🔍 Buscar..." class="w-full border-2 p-3 rounded-xl mt-3 text-[12px]" oninput="renderInventarioMaster()"><div id="listaInvMaster" class="mt-4 space-y-2"></div></div></div>
+<div id="tab-inventario" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><h2 class="font-black">📦 Inventario</h2></div><div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div class="grid grid-cols-5 gap-2"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]"><input id="inv-precio" type="number" placeholder="$30" class="border-2 border-black p-3 rounded-xl font-black text-[13px]"><select id="inv-unidad" class="border-2 border-black p-3 rounded-xl text-[11px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>pza</option><option>m</option></select><button onclick="addInventario()" class="bg-black text-white rounded-xl font-black text-xl">+</button></div><input id="buscInv" placeholder="🔍 Buscar..." class="w-full border-2 p-3 rounded-xl mt-3 text-[12px]" oninput="renderInventarioMaster()"><div id="listaInvMaster" class="mt-4 space-y-2"></div></div></div>
 <div id="tab-finanzas" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">Finanzas</h2><button onclick="openGasto()" class="bg-[#4FD1C5] text-black w-10 h-10 rounded-xl font-black text-xl">+</button></div></div><div id="fin-flujo" class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div id="flu-lista" class="mt-4 space-y-2"></div></div></div>
-<!-- CLIENTES 9.9 NUEVO -->
-<div id="tab-clientes" class="p-3">
-<div class="bg-[#2D3748] rounded-[28px] p-4 text-white">
-<h2 class="font-black text-[16px]">👥 Clientes</h2><p class="text-[11px] opacity-70">Guarda con WhatsApp y dirección</p>
+
+<div id="tab-clientes" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><h2 class="font-black text-[16px]">👥 Clientes</h2><p class="text-[11px] opacity-70">Con WhatsApp y dirección</p></div><div class="mt-3 bg-white rounded-[28px] p-4 shadow-sm"><h3 class="font-black text-[13px]">➕ Nuevo cliente</h3><input id="cliNombre" placeholder="Nombre / Alias *" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="cliTel" type="tel" placeholder="Celular: 443..." class="border-2 border-black p-3 rounded-xl font-bold text-[13px]"><input id="cliWhat" type="tel" placeholder="WhatsApp" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="cliDir" placeholder="Dirección / Colonia" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><label class="flex items-center gap-2 mt-2 text-[11px] font-bold"><input type="checkbox" id="cliWhatIgual" checked> WhatsApp igual que celular</label><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="addCliente()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">💾 Guardar</button><button onclick="importarContacto()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📇 Importar</button></div><p id="cliMsg" class="hidden mt-2 text-[11px] font-bold text-center p-2 rounded-xl"></p></div><div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div class="flex justify-between items-center"><h3 class="font-black text-[12px]">Mis clientes (<span id="cliCount">0</span>)</h3><input id="buscCli" placeholder="🔍" class="border-2 p-2 rounded-xl text-[11px] w-24" oninput="renderClientes()"></div><div id="listaClientes" class="mt-4 space-y-3"></div></div></div>
+
+<div id="tab-config" class="p-3"><div class="bg-white rounded-[28px] p-5 shadow-sm"><h2 class="font-black text-[18px]">⚙️ Config</h2>
+
+<!-- LOGO -->
+<div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3"><p class="font-black text-[12px]">📸 Logo negocio</p><input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]"><div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-20 h-20 object-contain rounded-xl border-2 border-black bg-white"><button onclick="quitarLogo()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-bold">Quitar</button></div><div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex gap-1"><input type="checkbox" id="empMostrarLogo" checked> En ticket</label><label class="text-[11px] font-bold flex gap-1"><input type="checkbox" id="empMostrarFondo" checked> De fondo</label></div><div class="mt-2"><p class="text-[10px] font-bold">Opacidad <span id="opacidadVal">8%</span></p><input type="range" id="empOpacidad" min="2" max="20" value="8" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"></div></div>
+
+<!-- PAGOS AUTO -->
+<div class="mt-4 bg-[#0F172A] text-white rounded-[28px] p-4"><h3 class="font-black text-[14px]">💳 Conectar pagos - 1 clic</h3><p class="text-[10px] opacity-60">Cada usuario pone sus llaves aquí, sin Vercel</p>
+<div class="mt-4 bg-white text-black rounded-2xl p-3"><div class="flex justify-between"><b class="text-[12px]">🔵 Mercado Pago</b><span id="mpStatus" class="text-[9px] bg-red-100 px-2 py-1 rounded-full">No conectado</span></div><input id="inputMP" placeholder="APP_USR-..." class="w-full border-2 border-black p-2 rounded-xl mt-2 text-[11px]"><button onclick="conectarMP()" class="w-full mt-2 bg-[#009EE3] text-white py-2 rounded-xl font-black text-[11px]">Conectar Mercado Pago</button><p class="text-[8px] text-gray-500 mt-1">MercadoPago -> Developers -> Credenciales -> Access Token</p></div>
+<div class="mt-3 bg-white text-black rounded-2xl p-3"><div class="flex justify-between"><b class="text-[12px]">🟠 Clip</b><span id="clipStatus" class="text-[9px] bg-red-100 px-2 py-1 rounded-full">No conectado</span></div><input id="inputClip" placeholder="clip_..." class="w-full border-2 border-black p-2 rounded-xl mt-2 text-[11px]"><input id="inputClipTerm" placeholder="ID terminal (opcional)" class="w-full border-2 border-black p-2 rounded-xl mt-2 text-[11px]"><button onclick="conectarClip()" class="w-full mt-2 bg-[#FF4D00] text-white py-2 rounded-xl font-black text-[11px]">Conectar Clip</button></div>
+<div class="mt-3 bg-white text-black rounded-2xl p-3"><div class="flex justify-between"><b class="text-[12px]">🟣 Stripe Mundial</b><span id="stripeStatus" class="text-[9px] bg-red-100 px-2 py-1 rounded-full">No conectado</span></div><input id="inputStripe" placeholder="sk_live_..." class="w-full border-2 border-black p-2 rounded-xl mt-2 text-[11px]"><button onclick="conectarStripe()" class="w-full mt-2 bg-[#635BFF] text-white py-2 rounded-xl font-black text-[11px]">Conectar Stripe</button></div>
 </div>
-<div class="mt-3 bg-white rounded-[28px] p-4 shadow-sm">
-<h3 class="font-black text-[13px]">➕ Nuevo cliente</h3>
-<input id="cliNombre" placeholder="Nombre / Alias *" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]">
-<div class="grid grid-cols-2 gap-2 mt-2">
-<input id="cliTel" type="tel" placeholder="Celular: 443..." class="border-2 border-black p-3 rounded-xl font-bold text-[13px]">
-<input id="cliWhat" type="tel" placeholder="WhatsApp (si es diferente)" class="border-2 border-black p-3 rounded-xl text-[13px]">
+
+<input id="empNombre" placeholder="Nombre negocio" class="w-full border-2 border-black p-3 rounded-xl mt-4 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="CP" class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="Mensaje ticket" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea><label class="flex gap-2 items-center mt-3 text-[12px] font-bold"><input type="checkbox" id="empImprimirAuto"> Imprimir automático</label><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR CONFIG</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button><div id="ticketVista" class="mt-6 bg-[#FFF8F0] border-2 border-dashed p-3 rounded-xl"><p class="text-[10px] font-bold text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-3 rounded-xl text-[12px] font-mono shadow-sm"></div></div></div></div>
+
+<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 pb-8"><h2 class="font-black text-[18px]">Cobrar $ <span id="cobroTotal">0</span></h2><div class="grid grid-cols-2 gap-3 mt-4"><button onclick="setMetodo('efectivo')" id="m-efectivo" class="metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]">💵 Efectivo</button><button onclick="setMetodo('tarjeta')" id="m-tarjeta" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">💳 Tarjeta</button></div><div id="efectivoBox" class="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-3"><input id="pagoRecibido" type="number" placeholder="¿Con cuánto paga?" class="w-full border-2 border-black p-3 rounded-xl font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black text-[14px]">Cambio: $<span id="cambio">0.00</span></p></div>
+<div class="mt-4 grid grid-cols-1 gap-2">
+<button onclick="generarLink('mp')" class="bg-[#009EE3] text-white py-3 rounded-xl font-bold text-[12px]">🔗 Generar Link Mercado Pago MX</button>
+<button onclick="generarLink('clip')" class="bg-[#FF4D00] text-white py-3 rounded-xl font-bold text-[12px]">🔗 Generar Link Clip</button>
+<button onclick="generarLink('terminal')" class="bg-black text-white py-3 rounded-xl font-bold text-[12px]">💳 Mandar a terminal física</button>
+<button onclick="generarLink('stripe')" class="bg-[#635BFF] text-white py-3 rounded-xl font-bold text-[12px]">🌍 Link Stripe Mundial</button>
 </div>
-<input id="cliDir" placeholder="Dirección / Colonia" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]">
-<label class="flex items-center gap-2 mt-2 text-[11px] font-bold"><input type="checkbox" id="cliWhatIgual" checked onchange="document.getElementById('cliWhat').value=document.getElementById('cliTel').value"> WhatsApp igual que celular</label>
-<div class="grid grid-cols-2 gap-2 mt-3">
-<button onclick="addCliente()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">💾 Guardar cliente</button>
-<button onclick="importarContacto()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📇 Importar de contactos</button>
-</div>
-<p id="cliMsg" class="hidden mt-2 text-[11px] font-bold text-center p-2 rounded-xl"></p>
-</div>
-<div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm">
-<div class="flex justify-between items-center"><h3 class="font-black text-[12px]">Mis clientes (<span id="cliCount">0</span>)</h3><input id="buscCli" placeholder="🔍 Buscar..." class="border-2 p-2 rounded-xl text-[11px] w-32" oninput="renderClientes()"></div>
-<div id="listaClientes" class="mt-4 space-y-3"></div>
-</div>
-</div>
-body{font-family:system-ui;background:#fff7ed;margin:0}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:white;border-bottom:1px solid #eee}
-h1{font-size:22px;margin:0}
-.card{background:white;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-input{width:100%;padding:12px;border-radius:12px;border:2px solid #000;margin:6px 0;font-size:16px;box-sizing:border-box}
-.btn{width:100%;padding:14px;border-radius:12px;border:0;background:black;color:white;font-weight:bold;font-size:16px}
-.pay-box{background:black;color:white;border-radius:16px;padding:16px}
-</style>
-</head>
-<body>
-<header>
-  <div style="display:flex;align-items:center;gap:8px">
-    <img src="https://i.imgur.com/8Km9tLL.png" width="36" style="border-radius:50%">
-    <h1>Mi Negocio 10.1 Pagos Auto</h1>
-  </div>
-  <button style="background:black;color:white;border-radius:20px;padding:8px 14px;border:0">Config</button>
-</header>
-<div id="tab-config" class="p-3 hidden">
-<div class="bg-white rounded-[28px] p-5 shadow-sm">
-<h2 class="font-black text-[18px]">⚙️ Config Ticket + Logo</h2>
-<div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3">
-<p class="font-black text-[12px]">📸 Logo</p>
-<input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]">
-<div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-20 h-20 object-contain rounded-xl border-2 border-black bg-white"><div><p class="text-[11px] font-bold">Vista previa</p><button onclick="quitarLogo()" class="mt-1 text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-bold">X Quitar</button></div></div>
-<div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarLogo" checked> En ticket</label><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarFondo" checked> De fondo</label></div>
-<div class="mt-3"><p class="text-[10px] font-bold">Opacidad fondo: <span id="opacidadVal">8%</span></p><input type="range" id="empOpacidad" min="2" max="20" value="8" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"></div>
-</div>
-<input id="empNombre" placeholder="Nombre negocio" class="w-full border-2 border-black p-3 rounded-xl mt-4 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="CP" class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="Mensaje ticket" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea><label class="flex gap-2 items-center mt-3 text-[12px] font-bold"><input type="checkbox" id="empImprimirAuto"> Imprimir automático</label><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR CONFIG</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket centrado</button><div id="ticketVista" class="mt-6 bg-[#FFF8F0] border-2 border-dashed p-3 rounded-xl"><p class="text-[10px] font-bold text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-3 rounded-xl text-[12px] font-mono shadow-sm"></div></div></div>
-<div class="card pay-box">
-  <h3>💳 Conectar pagos - Mercado Pago</h3>
-  <p style="opacity:.8;font-size:13px">Pega tu Access Token de Mercado Pago y se guardará automático.</p>
-  <input id="mp_token" placeholder="APP_USR-xxxxxxxxxxxxxxxx" style="background:#222;color:white;border-color:#444">
-  <button class="btn" style="background:white;color:black;margin-top:8px" onclick="guardarToken()">Conectar pagos</button>
-  <p id="status" style="font-size:13px;margin-top:8px"></p>
-</div>
-<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 pb-8"><h2 class="font-black text-[18px]">Cobrar $ <span id="cobroTotal">0</span></h2><div class="grid grid-cols-2 gap-3 mt-4"><button onclick="setMetodo('efectivo')" id="m-efectivo" class="metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]">💵 Efectivo</button><button onclick="setMetodo('tarjeta')" id="m-tarjeta" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">💳 Tarjeta</button><button onclick="setMetodo('transferencia')" id="m-transferencia" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">🏦 Transferencia</button><button onclick="setMetodo('otro')" id="m-otro" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">📦 Otros</button></div><div id="efectivoBox" class="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-3"><p class="font-black text-[12px]">¿Con cuánto paga?</p><input id="pagoRecibido" type="number" placeholder="$" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black text-[14px]">Cambio: $<span id="cambio">0.00</span></p></div><button onclick="confirmarCobro()" class="w-full mt-5 bg-black text-white py-4 rounded-2xl font-black text-[16px]">CONFIRMAR COBRO</button><button onclick="cerrarCobro()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[12px]">Cancelar</button></div></div>
+<button onclick="confirmarCobro()" class="w-full mt-5 bg-black text-white py-4 rounded-2xl font-black text-[16px]">CONFIRMAR COBRO MANUAL</button><button onclick="cerrarCobro()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[12px]">Cancelar</button></div></div>
+
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto z-30">
 <button onclick="showTab('costos')" id="n-costos" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-book"></i><span class="text-[7px]">Crear</span></button>
 <button onclick="showTab('vender')" id="n-vender" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-store"></i><span class="text-[7px]">Catalogo</span></button>
 <button onclick="showTab('inventario')" id="n-inventario" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[7px]">Inventario</span></button>
 <button onclick="showTab('finanzas')" id="n-finanzas" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-chart-line"></i><span class="text-[7px]">Finanzas</span></button>
-<button onclick="showTab('clientes')" id="n-clientes" class="flex flex-col items-center text-black"><i class="fa-solid fa-users"></i><span class="text-[7px] font-bold">Clientes</span></button>
-<div class="card">
-  <h2>⚙️ Config Ticket + Logo</h2>
-  <label>📷 Logo</label>
-  <input type="file">
-  <div style="margin:8px 0">Vista previa - Snoopy</div>
-  <input value="Mi Negocio">
-  <input value="La que sea">
-  <div style="display:flex;gap:8px">
-    <input value="5966666">
-    <input value="3510000000">
-  </div>
+<button onclick="showTab('clientes')" id="n-clientes" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-users"></i><span class="text-[7px]">Clientes</span></button>
 </div>
 </div></div>
+
 <script>
 let editId=null, editCliId=null, carrito=[], fotoTemp='', logoTemp='', metodoPago='efectivo';
-function getCats(){ let c=JSON.parse(localStorage.getItem('categoriasV2')||'[]'); if(!c.length){ c=[{id:'recetario',nombre:'Base',grupo:'recetario'},{id:'catalogo',nombre:'Venta',grupo:'catalogo'}]; localStorage.setItem('categoriasV2',JSON.stringify(c)); } return c; }
-function getProd(){ return JSON.parse(localStorage.getItem('productosV2')||'[]'); }
-function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos')||'[]'); }
-function getFacts(){ return JSON.parse(localStorage.getItem('facturas')||'[]'); }
-function getInv(){ return JSON.parse(localStorage.getItem('inventarioMaestro')||'[]'); }
-function getCli(){ return JSON.parse(localStorage.getItem('clientesV2')|| localStorage.getItem('clientes')||'[]'); }
-function getEmp(){ return JSON.parse(localStorage.getItem('empresaConfig')||'{"nombre":"Mi Negocio","direccion":"","cp":"","tel":"","rfc":"","mensaje":"¡Gracias por tu compra!","autoPrint":false,"logo":"","mostrarLogo":true,"mostrarFondo":true,"opacidad":8}'); }
-function toBase(cant,uni){ if(uni=='kg') return cant*1000; if(uni=='L') return cant*1000; if(uni=='m') return cant*100; return cant; }
+function getCats(){let c=JSON.parse(localStorage.getItem('categoriasV2')||'[]');if(!c.length){c=[{id:'recetario',nombre:'Base',grupo:'recetario'},{id:'catalogo',nombre:'Venta',grupo:'catalogo'}];localStorage.setItem('categoriasV2',JSON.stringify(c));}return c;}
+function getProd(){return JSON.parse(localStorage.getItem('productosV2')||'[]');}
+function getFijos(){return JSON.parse(localStorage.getItem('gastosFijos')||'[]');}
+function getFacts(){return JSON.parse(localStorage.getItem('facturas')||'[]');}
+function getInv(){return JSON.parse(localStorage.getItem('inventarioMaestro')||'[]');}
+function getCli(){return JSON.parse(localStorage.getItem('clientesV2')||'[]');}
+function getEmp(){return JSON.parse(localStorage.getItem('empresaConfig')||'{"nombre":"Mi Negocio","direccion":"","cp":"","tel":"","rfc":"","mensaje":"¡Gracias!","autoPrint":false,"logo":"","mostrarLogo":true,"mostrarFondo":true,"opacidad":8}');}
+function getPagos(){return JSON.parse(localStorage.getItem('pagosConfig')||'{"mp":"","clip":"","clip_term":"","stripe":""}');}
+function toBase(c,u){if(u=='kg')return c*1000;if(u=='L')return c*1000;if(u=='m')return c*100;return c;}
+
 function showTab(t){
-  ['costos','vender','inventario','finanzas','clientes','config'].forEach(x=>{
-    let el=document.getElementById('tab-'+x); if(el) el.classList.toggle('hidden',x!=t);
-    let nb=document.getElementById('n-'+x); if(nb){ nb.classList.toggle('text-black',x==t); nb.classList.toggle('text-gray-400',x!=t); }
-function guardarToken(){
-  const token = document.getElementById('mp_token').value;
-  if(!token){ alert('Pega tu token'); return; }
-  fetch('/api/save_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})})
-  .then(r=>r.json()).then(d=>{
-    document.getElementById('status').innerText = d.message;
-  });
-  if(t=='costos') setCrear('menu');
-  if(t=='finanzas') renderFinanzas();
-  if(t=='vender') { renderVenta(); renderClientesSel(); renderCarrito(); }
-  if(t=='inventario') renderInventarioMaster();
-  if(t=='clientes') { renderClientes(); }
-  if(t=='config') cargarEmpresa();
-  actualizarFondo();
+ ['costos','vender','inventario','finanzas','clientes','config'].forEach(x=>{
+  let el=document.getElementById('tab-'+x); if(el) el.classList.toggle('hidden',x!=t);
+  let nb=document.getElementById('n-'+x); if(nb){nb.classList.toggle('text-black',x==t); nb.classList.toggle('text-gray-400',x!=t);}
+ });
+ if(t=='costos') setCrear('menu');
+ if(t=='finanzas') renderFinanzas();
+ if(t=='vender'){renderVenta();renderClientesSel();renderCarrito();}
+ if(t=='inventario') renderInventarioMaster();
+ if(t=='clientes') renderClientes();
+ if(t=='config'){cargarEmpresa();checkPagos();}
+ actualizarFondo();
 }
-function setCrear(v){
-  document.getElementById('crear-menu').classList.toggle('hidden',v!='menu');
-  document.getElementById('crear-base').classList.toggle('hidden',v!='base');
-  document.getElementById('crear-producto').classList.toggle('hidden',v!='producto');
-  if(v=='menu') renderInventario();
-  if(v=='base'){ document.getElementById('insumos').innerHTML=''; addInsumo({}); calc(); }
-  if(v=='producto'){ document.getElementById('basesSel').innerHTML=''; document.getElementById('extrasSel').innerHTML=''; fotoTemp=''; let pv=document.getElementById('fotoPreview'); if(pv) pv.classList.add('hidden'); addBase(); calc2(); }
+function setCrear(v){document.getElementById('crear-menu').classList.toggle('hidden',v!='menu');document.getElementById('crear-base').classList.toggle('hidden',v!='base');document.getElementById('crear-producto').classList.toggle('hidden',v!='producto');if(v=='menu')renderInventario();if(v=='base'){document.getElementById('insumos').innerHTML='';addInsumo({});calc();}if(v=='producto'){document.getElementById('basesSel').innerHTML='';document.getElementById('extrasSel').innerHTML='';fotoTemp='';let pv=document.getElementById('fotoPreview');if(pv)pv.classList.add('hidden');addBase();calc2();}}
+function previewFoto(i){if(i.files&&i.files[0]){let r=new FileReader();r.onload=function(e){fotoTemp=e.target.result;document.getElementById('fotoImg').src=fotoTemp;document.getElementById('fotoPreview').classList.remove('hidden');};r.readAsDataURL(i.files[0]);}}
+function quitarFoto(){fotoTemp='';document.getElementById('fotoPreview').classList.add('hidden');document.getElementById('fotoInput').value='';}
+function previewLogo(i){if(i.files&&i.files[0]){let r=new FileReader();r.onload=function(e){logoTemp=e.target.result;document.getElementById('logoPreview').src=logoTemp;document.getElementById('logoPreviewBox').classList.remove('hidden');actualizarFondo();actualizarVistaTicket();};r.readAsDataURL(i.files[0]);}}
+function quitarLogo(){logoTemp='';document.getElementById('logoPreviewBox').classList.add('hidden');document.getElementById('logoInput').value='';actualizarFondo();actualizarVistaTicket();}
+function actualizarFondo(){let emp=getEmp();let logo=logoTemp||emp.logo||'';let mostrar=document.getElementById('empMostrarFondo')?.checked??emp.mostrarFondo;let op=parseInt(document.getElementById('empOpacidad')?.value||emp.opacidad||8);let bg=document.getElementById('logoBg');let h=document.getElementById('logoHeader');if(logo&&mostrar){bg.src=logo;bg.classList.remove('hidden');bg.style.opacity=(op/100);}else{bg.classList.add('hidden');}if(logo){h.src=logo;h.classList.remove('hidden');}else{h.classList.add('hidden');}}
+function cargarEmpresa(){let emp=getEmp();document.getElementById('empNombre').value=emp.nombre||'';document.getElementById('empDireccion').value=emp.direccion||'';document.getElementById('empCP').value=emp.cp||'';document.getElementById('empTel').value=emp.tel||'';document.getElementById('empRFC').value=emp.rfc||'';document.getElementById('empMensaje').value=emp.mensaje||'';document.getElementById('empImprimirAuto').checked=emp.autoPrint||false;document.getElementById('empMostrarLogo').checked=emp.mostrarLogo!==false;document.getElementById('empMostrarFondo').checked=emp.mostrarFondo!==false;document.getElementById('empOpacidad').value=emp.opacidad||8;document.getElementById('opacidadVal').innerText=(emp.opacidad||8)+'%';logoTemp=emp.logo||'';if(logoTemp){document.getElementById('logoPreview').src=logoTemp;document.getElementById('logoPreviewBox').classList.remove('hidden');}actualizarFondo();actualizarVistaTicket();checkPagos();}
+function guardarEmpresa(){let emp={nombre:document.getElementById('empNombre').value.trim()||'Mi Negocio',direccion:document.getElementById('empDireccion').value.trim(),cp:document.getElementById('empCP').value.trim(),tel:document.getElementById('empTel').value.trim(),rfc:document.getElementById('empRFC').value.trim(),mensaje:document.getElementById('empMensaje').value.trim()||'¡Gracias!',autoPrint:document.getElementById('empImprimirAuto').checked,mostrarLogo:document.getElementById('empMostrarLogo').checked,mostrarFondo:document.getElementById('empMostrarFondo').checked,opacidad:parseInt(document.getElementById('empOpacidad').value)||8,logo:logoTemp||getEmp().logo||''};localStorage.setItem('empresaConfig',JSON.stringify(emp));alert('✅ Config guardada');actualizarFondo();actualizarVistaTicket();}
+
+// PAGOS AUTO
+function conectarMP(){let v=document.getElementById('inputMP').value.trim();if(!v.includes('APP_USR')){alert('Debe empezar con APP_USR-');return;}let p=getPagos();p.mp=v;localStorage.setItem('pagosConfig',JSON.stringify(p));alert('✅ Mercado Pago conectado');checkPagos();}
+function conectarClip(){let v=document.getElementById('inputClip').value.trim();let t=document.getElementById('inputClipTerm').value.trim();if(!v){alert('Pega tu X-API-KEY');return;}let p=getPagos();p.clip=v;p.clip_term=t;localStorage.setItem('pagosConfig',JSON.stringify(p));alert('✅ Clip conectado');checkPagos();}
+function conectarStripe(){let v=document.getElementById('inputStripe').value.trim();if(!v.startsWith('sk_')){alert('Debe empezar con sk_live_ o sk_test_');return;}let p=getPagos();p.stripe=v;localStorage.setItem('pagosConfig',JSON.stringify(p));alert('✅ Stripe conectado');checkPagos();}
+function checkPagos(){let p=getPagos();let mp=document.getElementById('mpStatus'),cl=document.getElementById('clipStatus'),st=document.getElementById('stripeStatus');if(!mp)return;mp.innerText=p.mp?'✅ Conectado':'❌ No conectado';mp.className=p.mp?'text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-full':'text-[9px] bg-red-100 text-red-600 px-2 py-1 rounded-full';cl.innerText=p.clip?'✅ Conectado':'❌ No conectado';cl.className=p.clip?'text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-full':'text-[9px] bg-red-100 text-red-600 px-2 py-1 rounded-full';st.innerText=p.stripe?'✅ Conectado':'❌ No conectado';st.className=p.stripe?'text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-full':'text-[9px] bg-red-100 text-red-600 px-2 py-1 rounded-full';}
+
+function addCliente(){let n=document.getElementById('cliNombre').value.trim(),tel=document.getElementById('cliTel').value.trim(),what=document.getElementById('cliWhat').value.trim()||tel,dir=document.getElementById('cliDir').value.trim(),msg=document.getElementById('cliMsg');if(!n){msg.className='mt-2 text-[11px] font-bold p-2 rounded-xl bg-red-100 text-red-600';msg.innerText='Pon nombre';msg.classList.remove('hidden');return;}let cli=getCli();if(editCliId){let idx=cli.findIndex(c=>c.id==editCliId);if(idx>=0){cli[idx].nombre=n;cli[idx].tel=tel;cli[idx].whatsapp=what;cli[idx].direccion=dir;}editCliId=null;}else{cli.push({id:Date.now().toString(),nombre:n,tel,whatsapp:what,direccion:dir});}localStorage.setItem('clientesV2',JSON.stringify(cli));document.getElementById('cliNombre').value='';document.getElementById('cliTel').value='';document.getElementById('cliWhat').value='';document.getElementById('cliDir').value='';msg.className='mt-2 text-[11px] font-bold p-2 rounded-xl bg-green-100 text-green-700';msg.innerText='✅ Guardado';msg.classList.remove('hidden');setTimeout(()=>msg.classList.add('hidden'),2000);renderClientes();renderClientesSel();}
+function renderClientes(){let cli=getCli();let q=(document.getElementById('buscCli')?.value||'').toLowerCase();let f=cli.filter(c=>(c.nombre||'').toLowerCase().includes(q));document.getElementById('cliCount').innerText=cli.length;let h='';if(!f.length)h='<p class="text-[11px] text-gray-400 text-center py-6">Sin clientes</p>';f.forEach(c=>{let wa=(c.whatsapp||c.tel||'').replace(/\\D/g,'').slice(-10);let link=wa?`https://wa.me/52${wa}`:'';h+=`<div class="bg-gray-50 border p-3 rounded-2xl"><div class="flex justify-between"><div><b class="text-[13px]">${c.nombre}</b><br><span class="text-[11px]">${c.tel||''}</span><br><span class="text-[10px] text-gray-500">${c.direccion||''}</span></div><div class="flex gap-1">${link?`<a href="${link}" target="_blank" class="w-8 h-8 bg-[#25D366] text-white rounded-full flex items-center justify-center"><i class="fa-brands fa-whatsapp"></i></a>`:''}</div></div><div class="flex gap-2 mt-2"><button onclick="editarCliente('${c.id}')" class="flex-1 bg-white border-2 border-black py-2 rounded-xl text-[11px] font-bold">Editar</button><button onclick="borrarCliente('${c.id}')" class="bg-red-50 text-red-500 px-3 rounded-xl text-[11px]">X</button><button onclick="usarCliente('${c.id}')" class="flex-1 bg-black text-white py-2 rounded-xl text-[11px]">Usar</button></div></div>`;});document.getElementById('listaClientes').innerHTML=h;}
+function editarCliente(id){let c=getCli().find(x=>x.id==id);if(!c)return;document.getElementById('cliNombre').value=c.nombre;document.getElementById('cliTel').value=c.tel;document.getElementById('cliWhat').value=c.whatsapp;document.getElementById('cliDir').value=c.direccion;editCliId=id;}
+function borrarCliente(id){if(!confirm('¿Borrar?'))return;let cli=getCli().filter(c=>c.id!=id);localStorage.setItem('clientesV2',JSON.stringify(cli));renderClientes();renderClientesSel();}
+function usarCliente(id){showTab('vender');setTimeout(()=>{document.getElementById('selCliente').value=id;},200);}
+async function importarContacto(){try{if(navigator.contacts&&window.ContactsManager){const cs=await navigator.contacts.select(['name','tel'],{multiple:false});if(cs.length){document.getElementById('cliNombre').value=cs[0].name[0]||'';document.getElementById('cliTel').value=cs[0].tel[0]||'';document.getElementById('cliWhat').value=cs[0].tel[0]||'';return;}}let n=prompt('Nombre:');if(!n)return;let t=prompt('Cel:')||'';document.getElementById('cliNombre').value=n;document.getElementById('cliTel').value=t;document.getElementById('cliWhat').value=t;}catch(e){alert(e.message);}}
+function renderClientesSel(){let cli=getCli();let sel=document.getElementById('selCliente');if(sel)sel.innerHTML='<option value="">Mostrador</option>'+cli.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');}
+function addInventario(){let n=document.getElementById('inv-nombre').value.trim(),p=parseFloat(document.getElementById('inv-precio').value),u=document.getElementById('inv-unidad').value;if(!n||!p)return;let inv=getInv();let ex=inv.find(x=>x.nombre.toLowerCase()==n.toLowerCase());if(ex){ex.precio=p;ex.unidad=u;}else{inv.push({id:Date.now().toString(),nombre:n,precio:p,unidad:u});}localStorage.setItem('inventarioMaestro',JSON.stringify(inv));document.getElementById('inv-nombre').value='';document.getElementById('inv-precio').value='';renderInventarioMaster();}
+function renderInventarioMaster(){let inv=getInv();let q=(document.getElementById('buscInv')?.value||'').toLowerCase();let f=inv.filter(x=>x.nombre.toLowerCase().includes(q));let h='';f.forEach(it=>{let idx=getInv().findIndex(x=>x.id==it.id);h+=`<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b><br><span class="text-[11px]">$${it.precio}/${it.unidad}</span></div><input type="number" value="${it.precio}" onchange="let inv=getInv();inv[${idx}].precio=parseFloat(this.value)||0;localStorage.setItem('inventarioMaestro',JSON.stringify(inv));calc();calc2();" class="w-20 border-2 border-black p-2 rounded-xl font-black"><button onclick="let inv=getInv();inv.splice(${idx},1);localStorage.setItem('inventarioMaestro',JSON.stringify(inv));renderInventarioMaster();" class="text-red-400 font-black px-2">X</button></div>`;});document.getElementById('listaInvMaster').innerHTML=h;}
+function addInsumo(d={}){let inv=getInv();let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join('');let div=document.createElement('div');div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100';div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="cambiarInv(this)"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-3 gap-2 mt-2 bg-white p-2 rounded-xl"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-2 rounded-lg font-bold" oninput="calc()"><select class="in-uu border-2 border-black p-2 rounded-lg text-[11px]" onchange="calc()"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>pza</option></select><div class="col-span-3 text-right font-black text-[12px]">Me sale: $<span class="in-sub">0.00</span></div></div><input type="hidden" class="in-pc"><input type="hidden" class="in-uc"><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`;document.getElementById('insumos').appendChild(div);if(d.invId){cambiarInv(div.querySelector('.in-n'));}}
+function cambiarInv(sel){let row=sel.closest('div');let id=sel.value;if(!id)return;let it=getInv().find(x=>x.id==id);if(!it)return;row.dataset.invId=id;row.querySelector('.in-pc').value=it.precio;row.querySelector('.in-uc').value=it.unidad;calc();}
+function calc(){try{let tot=0;let rc=parseFloat(document.getElementById('rendCant').value)||1;let ru=document.getElementById('rendUni').value;document.getElementById('r-cant-label').innerText=rc;document.getElementById('r-uni-label').innerText=ru;document.getElementById('r-uni-label2').innerText=ru;document.querySelectorAll('#insumos > div').forEach(row=>{let invId=row.dataset.invId||row.querySelector('.in-n')?.value;let it=getInv().find(x=>x.id==invId);if(it){row.querySelector('.in-pc').value=it.precio;row.querySelector('.in-uc').value=it.unidad;}let pc=parseFloat(row.querySelector('.in-pc').value)||0,cu=parseFloat(row.querySelector('.in-cu').value)||0;if(!pc||!cu){row.querySelector('.in-sub').innerText='0.00';return;}let uc=row.querySelector('.in-uc').value||'g',uu=row.querySelector('.in-uu').value||'g';let base=(pc/1000)*toBase(cu,uu);if(uc=='pza')base=pc*cu;if(uc=='kg'&&uu=='kg')base=pc*cu;if(uc=='L'&&uu=='L')base=pc*cu;row.querySelector('.in-sub').innerText=base.toFixed(2);tot+=base;});document.getElementById('c-ing').innerText=tot.toFixed(2);let gf=parseFloat(document.getElementById('c-fijos')?.innerText||'0')||0;let total=tot+gf;document.getElementById('costo').innerText=total.toFixed(2);document.getElementById('costo-unit').innerText=(rc>0?total/rc:0).toFixed(2);let m=parseFloat(document.getElementById('margen').value)||0;let vm=document.getElementById('ventaManual').value;let ve=document.getElementById('venta');if(vm&&parseFloat(vm)>0)ve.innerText=parseFloat(vm).toFixed(2);else ve.innerText=(total*(1+m/100)).toFixed(2);}catch(e){}}
+function addBase(){let bases=getProd().filter(p=>getCats().find(c=>c.id==p.tipo)?.grupo=='recetario');if(!bases.length)return alert('Primero crea una BASE');let div=document.createElement('div');div.className='bg-white border-2 border-black rounded-xl p-3 space-y-2';let opts=bases.map(b=>`<option value="${b.id}" data-costo="${b.costo}" data-cant="${b.rendimiento?.cant||1}" data-uni="${b.rendimiento?.uni||'pza'}">${b.nombre} $${b.costo.toFixed(2)}</option>`).join('');div.innerHTML=`<select class="b-sel w-full border-2 p-2 rounded-lg font-bold text-[12px]" onchange="calc2()">${opts}</select><div class="grid grid-cols-3 gap-2 items-center bg-amber-50 p-2 rounded-xl"><input type="number" value="60" class="b-cant-used border-2 border-black p-2 rounded-lg font-black" oninput="calc2()"><select class="b-uni-used border-2 border-black p-2 rounded-lg text-[11px] font-bold" onchange="calc2()"><option>ml</option><option>L</option><option>g</option><option>kg</option><option>pza</option></select><div class="bg-black text-white rounded-lg p-2 text-center"><div class="text-[8px] opacity-60">COSTO</div><div class="font-black text-[12px]">$<span class="b-sub">0.00</span></div></div></div><button onclick="this.parentElement.remove();calc2()" class="w-full text-[10px] text-red-400">Quitar</button>`;document.getElementById('basesSel').appendChild(div);calc2();}
+function addExtra(){let inv=getInv();let opts=inv.map(i=>`<option value="inv-${i.id}" data-c="${i.precio}" data-u="${i.unidad}">📦 ${i.nombre} $${i.precio}/${i.unidad}</option>`).join('');let div=document.createElement('div');div.className='bg-white border-2 p-2 rounded-xl';div.innerHTML=`<select class="e-sel w-full border-2 p-2 rounded-lg font-bold text-[11px]" onchange="calc2()">${opts}</select><div class="grid grid-cols-3 gap-2 mt-2"><input type="number" value="100" class="e-cant border-2 border-black p-2 rounded-lg font-bold" oninput="calc2()"><select class="e-uni border-2 p-2 rounded-lg text-[11px]" onchange="calc2()"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>pza</option></select><div class="bg-gray-100 rounded-lg p-2 text-center font-black">$<span class="e-sub">0.00</span></div></div><button onclick="this.parentElement.remove();calc2()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`;document.getElementById('extrasSel').appendChild(div);calc2();}
+function calc2(){try{let tot=0;document.querySelectorAll('#basesSel > div').forEach(r=>{let sel=r.querySelector('.b-sel');if(!sel?.options[sel.selectedIndex])return;let costoBase=parseFloat(sel.options[sel.selectedIndex].dataset.costo)||0;let rendCant=parseFloat(sel.options[sel.selectedIndex].dataset.cant)||1;let rendUni=sel.options[sel.selectedIndex].dataset.uni||'pza';let cantUsada=parseFloat(r.querySelector('.b-cant-used').value)||0;let uniUsada=r.querySelector('.b-uni-used').value;let costoProp=rendCant>0?(costoBase/toBase(rendCant,rendUni))*toBase(cantUsada,uniUsada):0;r.querySelector('.b-sub').innerText=costoProp.toFixed(2);tot+=costoProp;});document.querySelectorAll('#extrasSel > div').forEach(r=>{let sel=r.querySelector('.e-sel');if(!sel?.options[sel.selectedIndex])return;let c=parseFloat(sel.options[sel.selectedIndex].dataset.c)||0;let cant=parseFloat(r.querySelector('.e-cant').value)||0;let uni=r.querySelector('.e-uni').value;let sub=(c/1000)*toBase(cant,uni);if(sel.value.includes('pza'))sub=c*cant;r.querySelector('.e-sub').innerText=sub.toFixed(2);tot+=sub;});document.getElementById('c-ing2').innerText=tot.toFixed(2);let m=parseFloat(document.getElementById('margen2').value)||0;let vm=document.getElementById('ventaManual2').value;let ve=document.getElementById('venta2');if(vm&&parseFloat(vm)>0)ve.innerText=parseFloat(vm).toFixed(2);else ve.innerText=(tot*(1+m/100)).toFixed(2);}catch(e){}}
+function guardarProd(tipo){let isBase=tipo=='recetario';let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd');let nom=nomEl.value.trim();if(!nom){alert('Pon nombre');return;}let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0;let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0;if(costo==0){alert('Agrega ingredientes');return;}let rendimiento=isBase?{cant:parseFloat(document.getElementById('rendCant').value)||1,uni:document.getElementById('rendUni').value}:null;let ings=[];if(isBase){document.querySelectorAll('#insumos > div').forEach(row=>{let sel=row.querySelector('.in-n');ings.push({invId:row.dataset.invId||sel?.value,cu:row.querySelector('.in-cu').value,uu:row.querySelector('.in-uu').value});});}else{document.querySelectorAll('#basesSel > div').forEach(r=>{ings.push({tipo:'rec',id:r.querySelector('.b-sel').value,cantUsada:r.querySelector('.b-cant-used').value,uniUsada:r.querySelector('.b-uni-used').value});});document.querySelectorAll('#extrasSel > div').forEach(r=>{ings.push({tipo:'extra',id:r.querySelector('.e-sel').value,cant:r.querySelector('.e-cant').value,uni:r.querySelector('.e-uni').value});});}let cats=getCats();let tipoId=isBase?cats.find(c=>c.grupo=='recetario')?.id:cats.find(c=>c.grupo=='catalogo')?.id;let ps=getProd();let fotoToSave=isBase?'':(fotoTemp||(editId?(ps.find(x=>x.id==editId)?.foto||'') : ''));if(editId){let idx=ps.findIndex(x=>x.id==editId);if(idx>=0){ps[idx].nombre=nom;ps[idx].costo=costo;ps[idx].venta=venta;ps[idx].tipo=tipoId;ps[idx].ingredientes=ings;if(rendimiento)ps[idx].rendimiento=rendimiento;if(!isBase)ps[idx].foto=fotoToSave;}}else{ps.push({id:Date.now(),tipo:tipoId,nombre:nom,costo,venta,ingredientes:ings,rendimiento,foto:fotoToSave});}localStorage.setItem('productosV2',JSON.stringify(ps));alert('✅ Guardado: '+nom);cancelEdit();renderInventario();renderVenta();setCrear('menu');}
+function renderInventario(){let ps=getProd();let cs=getCats();let h='';ps.forEach((p,i)=>{let cat=cs.find(c=>c.id==p.tipo);let rend=p.rendimiento?` Rinde ${p.rendimiento.cant}${p.rendimiento.uni}`:'';h+=`<div class="bg-white p-3 rounded-2xl flex gap-3 shadow-sm mt-3 border items-center">${p.foto?`<img src="${p.foto}" class="w-12 h-12 rounded-xl object-cover border">`:''}<div class="flex-1"><b class="text-[13px]">${p.nombre}</b><span class="text-[10px] text-gray-500">${rend}</span><br><span class="text-[11px]">$${p.costo.toFixed(2)} → $${p.venta.toFixed(2)}</span></div><button onclick="editarProd(${p.id})" class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-[11px] font-black">Editar</button><button onclick="if(confirm('Borrar?')){let pr=getProd();pr.splice(${i},1);localStorage.setItem('productosV2',JSON.stringify(pr));renderInventario();renderVenta();}" class="text-red-400 ml-1 font-black">X</button></div>`;});document.getElementById('listaInv').innerHTML=h||'<p class="text-[11px] text-gray-400 text-center py-4">Sin recetas</p>';}
+function editarProd(id){let p=getProd().find(x=>x.id==id);if(!p)return;editId=id;let esBase=getCats().find(c=>c.id==p.tipo)?.grupo=='recetario';if(esBase){setCrear('base');document.getElementById('nombre').value=p.nombre;if(p.rendimiento){document.getElementById('rendCant').value=p.rendimiento.cant;document.getElementById('rendUni').value=p.rendimiento.uni;}document.getElementById('insumos').innerHTML='';if(p.ingredientes){p.ingredientes.forEach(ing=>{addInsumo({invId:ing.invId,cu:ing.cu});});}calc();}else{setCrear('producto');document.getElementById('nombreProd').value=p.nombre;fotoTemp=p.foto||'';if(fotoTemp){document.getElementById('fotoImg').src=fotoTemp;document.getElementById('fotoPreview').classList.remove('hidden');}}document.getElementById('btnCancel').classList.remove('hidden');}
+function cancelEdit(){editId=null;fotoTemp='';document.getElementById('nombre').value='';document.getElementById('nombreProd').value='';document.getElementById('insumos').innerHTML='';document.getElementById('ventaManual').value='';document.getElementById('ventaManual2').value='';let pv=document.getElementById('fotoPreview');if(pv)pv.classList.add('hidden');document.getElementById('btnCancel').classList.add('hidden');setCrear('menu');}
+function renderVenta(){let cs=getCats();let ids=cs.filter(c=>c.grupo=='catalogo').map(c=>c.id);let ps=getProd().filter(p=>ids.includes(p.tipo));let h='';ps.forEach(p=>{let fotoHtml=p.foto?`<img src="${p.foto}" class="w-full h-20 object-cover rounded-t-2xl">`:`<div class="w-full h-20 bg-gray-100 rounded-t-2xl flex items-center justify-center text-[20px]">🍗</div>`;h+=`<div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col">${fotoHtml}<button onclick="addCart(${p.id})" class="w-full text-left p-3 flex-1"><b class="text-[13px] leading-tight block">${p.nombre}</b><p class="text-green-600 font-black text-[14px]">$${p.venta.toFixed(2)}</p></button></div>`;});document.getElementById('listaVenta').innerHTML=h||'<p class="text-center text-gray-400 py-10 col-span-2">Crea productos con foto</p>';}
+function addCart(id){let p=getProd().find(x=>x.id==id);let ex=carrito.find(x=>x.id==id);if(ex)ex.qty++;else carrito.push({...p,qty:1});renderCarrito();}
+function renderCarrito(){if(!carrito.length){document.getElementById('ticket').innerHTML='<p class="text-[12px] text-gray-400 text-center py-4">Vacío</p>';document.getElementById('c-total').innerText='0';return;}let t=0,html='';carrito.forEach((x,idx)=>{t+=x.venta*x.qty;html+=`<div class="flex gap-2 items-center bg-gray-50 p-2 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${x.nombre}</b><br><span class="text-[11px] text-gray-500">$${x.venta.toFixed(2)} c/u</span></div><div class="flex items-center gap-1"><button onclick="cambiarQty(${idx},-1)" class="w-8 h-8 bg-white border-2 border-black rounded-full font-black">-</button><span class="w-6 text-center font-black text-[14px]">${x.qty}</span><button onclick="cambiarQty(${idx},1)" class="w-8 h-8 bg-black text-white rounded-full font-black">+</button></div><div class="text-right min-w-[60px]"><b class="text-[13px]">$${(x.venta*x.qty).toFixed(0)}</b><br><button onclick="quitarDelCarrito(${idx})" class="text-[10px] text-red-500 font-bold">X Quitar</button></div></div>`;});document.getElementById('ticket').innerHTML=html;document.getElementById('c-total').innerText=t.toFixed(0);}
+function cambiarQty(idx,d){carrito[idx].qty+=d;if(carrito[idx].qty<=0)carrito.splice(idx,1);renderCarrito();}
+function quitarDelCarrito(idx){carrito.splice(idx,1);renderCarrito();}
+function limpiarCarrito(){carrito=[];renderCarrito();}
+function abrirCobro(){if(!carrito.length)return alert('Carrito vacio');document.getElementById('cobroTotal').innerText=document.getElementById('c-total').innerText;document.getElementById('pagoRecibido').value='';document.getElementById('cambio').innerText='0.00';setMetodo('efectivo');document.getElementById('modalCobro').classList.remove('hidden');}
+function cerrarCobro(){document.getElementById('modalCobro').classList.add('hidden');}
+function setMetodo(m){metodoPago=m;document.querySelectorAll('.metodo-btn').forEach(b=>{b.className='metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]';});let sel=document.getElementById('m-'+m);if(sel)sel.className='metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]';document.getElementById('efectivoBox').classList.toggle('hidden',m!='efectivo');}
+function calcCambio(){let total=parseFloat(document.getElementById('c-total').innerText)||0;let rec=parseFloat(document.getElementById('pagoRecibido').value)||0;document.getElementById('cambio').innerText=(rec>0? (rec-total>0?rec-total:0):0).toFixed(2);}
+
+async function generarLink(tipo){
+ let pagos=getPagos();
+ let total=document.getElementById('c-total').innerText;
+ let concepto=carrito.map(c=>c.nombre+' x'+c.qty).join(', ')||'Venta';
+ let sel=document.getElementById('selCliente');let cli=getCli().find(c=>c.id==sel.value);
+ let tokenMP = pagos.mp || '';
+ let tokenClip = pagos.clip || '';
+ let tokenStripe = pagos.stripe || '';
+ let waNum = (cli?.whatsapp||cli?.tel||'').replace(/\\D/g,'').slice(-10);
+
+ try{
+  if(tipo=='mp'){
+    if(!tokenMP) return alert('Primero conecta Mercado Pago en Config');
+    // Intenta via backend si tienes env, si no directo
+    let res = await fetch('/api/mp/link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total, concepto, token:tokenMP})});
+    let j = res.ok? await res.json() : null;
+    let link = j?.link;
+    if(!link){
+      // Fallback directo al API de MP desde el navegador
+      let r2 = await fetch('https://api.mercadopago.com/checkout/preferences',{method:'POST',headers:{'Authorization':'Bearer '+tokenMP,'Content-Type':'application/json'},body:JSON.stringify({items:[{title:concepto.slice(0,100),quantity:1,unit_price:parseFloat(total)}]})});
+      let j2 = await r2.json(); link=j2.init_point;
+    }
+    if(link){
+      let msg=`Hola ${cli?.nombre||'cliente'}! Tu link de pago Mercado Pago por $${total}: ${link}`;
+      if(waNum && confirm('Link MP: '+link+'\\n¿Enviar por WhatsApp a '+ (cli?.nombre||'') +'?')) window.open(`https://wa.me/52${waNum}?text=${encodeURIComponent(msg)}`,'_blank'); else prompt('Copia tu link MP:',link);
+    } else alert('Error MP');
+  }
+  if(tipo=='stripe'){
+    if(!tokenStripe) return alert('Conecta Stripe en Config');
+    let res = await fetch('/api/stripe/link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total, concepto, token:tokenStripe})});
+    let j = await res.json();
+    let link = j.link;
+    if(!link){
+      // Fallback: usar Stripe Checkout Session directo
+      let fd=new URLSearchParams();
+      fd.append('mode','payment');fd.append('success_url','https://gocio-mauve.vercel.app?pagado=ok');
+      fd.append('line_items[0][price_data][currency]','mxn');
+      fd.append('line_items[0][price_data][product_data][name]',concepto.slice(0,100));
+      fd.append('line_items[0][price_data][unit_amount]',Math.round(parseFloat(total)*100));
+      fd.append('line_items[0][quantity]','1');
+      let r2 = await fetch('https://api.stripe.com/v1/checkout/sessions',{method:'POST',headers:{'Authorization':'Bearer '+tokenStripe,'Content-Type':'application/x-www-form-urlencoded'},body:fd});
+      let j2=await r2.json(); link=j2.url;
+    }
+    if(link){ let msg=`Tu link de pago internacional por $${total}: ${link}`; if(waNum && confirm('Link Stripe: '+link+'\\n¿WhatsApp?')) window.open(`https://wa.me/52${waNum}?text=${encodeURIComponent(msg)}`,'_blank'); else prompt('Copia Stripe:',link);}
+  }
+  if(tipo=='clip' || tipo=='terminal'){
+    if(!tokenClip) return alert('Conecta Clip en Config');
+    let res = await fetch('/api/clip/link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total, concepto, token:tokenClip, term:pagos.clip_term, modo:tipo})});
+    let j = await res.json();
+    let link=j.link;
+    if(link){ prompt('Link Clip:',link); if(tipo=='terminal') alert('¡Monto enviado a tu terminal Clip! Debe sonar con $'+total); }
+    else alert('Revisa tu token Clip');
+  }
+ }catch(e){ alert('Error: '+e.message); }
 }
-function previewFoto(input){ if(input.files&&input.files[0]){ let reader=new FileReader(); reader.onload=function(e){ fotoTemp=e.target.result; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); }; reader.readAsDataURL(input.files[0]); } }
-function quitarFoto(){ fotoTemp=''; document.getElementById('fotoPreview').classList.add('hidden'); document.getElementById('fotoInput').value=''; }
-function previewLogo(input){ if(input.files&&input.files[0]){ let reader=new FileReader(); reader.onload=function(e){ logoTemp=e.target.result; document.getElementById('logoPreview').src=logoTemp; document.getElementById('logoPreviewBox').classList.remove('hidden'); actualizarFondo(); actualizarVistaTicket(); }; reader.readAsDataURL(input.files[0]); } }
-function quitarLogo(){ logoTemp=''; document.getElementById('logoPreviewBox').classList.add('hidden'); document.getElementById('logoInput').value=''; actualizarFondo(); actualizarVistaTicket(); }
-function actualizarFondo(){
-  let emp=getEmp(); let logo=logoTemp||emp.logo||''; let mostrarFondo=document.getElementById('empMostrarFondo')?.checked?? emp.mostrarFondo; let op=parseInt(document.getElementById('empOpacidad')?.value || emp.opacidad || 8);
-  let bg=document.getElementById('logoBg'); let header=document.getElementById('logoHeader');
-  if(logo && mostrarFondo){ bg.src=logo; bg.classList.remove('hidden'); bg.style.opacity=(op/100); } else { bg.classList.add('hidden'); }
-  if(logo){ header.src=logo; header.classList.remove('hidden'); } else { header.classList.add('hidden'); }
-}
-function cargarEmpresa(){ let emp=getEmp(); document.getElementById('empNombre').value=emp.nombre||''; document.getElementById('empDireccion').value=emp.direccion||''; document.getElementById('empCP').value=emp.cp||''; document.getElementById('empTel').value=emp.tel||''; document.getElementById('empRFC').value=emp.rfc||''; document.getElementById('empMensaje').value=emp.mensaje||''; document.getElementById('empImprimirAuto').checked=emp.autoPrint||false; document.getElementById('empMostrarLogo').checked=emp.mostrarLogo!==false; document.getElementById('empMostrarFondo').checked=emp.mostrarFondo!==false; document.getElementById('empOpacidad').value=emp.opacidad||8; document.getElementById('opacidadVal').innerText=(emp.opacidad||8)+'%'; logoTemp=emp.logo||''; if(logoTemp){ document.getElementById('logoPreview').src=logoTemp; document.getElementById('logoPreviewBox').classList.remove('hidden'); } actualizarFondo(); actualizarVistaTicket(); }
-function guardarEmpresa(){ let emp={nombre:document.getElementById('empNombre').value.trim()||'Mi Negocio',direccion:document.getElementById('empDireccion').value.trim(),cp:document.getElementById('empCP').value.trim(),tel:document.getElementById('empTel').value.trim(),rfc:document.getElementById('empRFC').value.trim(),mensaje:document.getElementById('empMensaje').value.trim()||'¡Gracias!',autoPrint:document.getElementById('empImprimirAuto').checked,mostrarLogo:document.getElementById('empMostrarLogo').checked,mostrarFondo:document.getElementById('empMostrarFondo').checked,opacidad:parseInt(document.getElementById('empOpacidad').value)||8,logo:logoTemp||getEmp().logo||''}; localStorage.setItem('empresaConfig',JSON.stringify(emp)); alert('✅ Config guardada'); actualizarFondo(); actualizarVistaTicket(); }
-</script>
-</body>
-</html>
+
+function confirmarCobro(){if(!carrito.length)return;let total=parseFloat(document.getElementById('c-total').innerText)||0;let rec=parseFloat(document.getElementById('pagoRecibido').value)||0;if(metodoPago=='efectivo'&&rec>0&&rec<total){alert('Falta dinero');return;}let facts=getFacts();let now=new Date();let iso=now.toISOString().split('T')[0];let cliId=document.getElementById('selCliente').value;let cli=getCli().find(c=>c.id==cliId);let concepto='Venta'+(cli?' a '+cli.nombre:'')+': '+carrito.map(c=>c.nombre+' x'+c.qty).join(', ')+' ['+metodoPago+']';facts.push({id:Date.now(),concepto,monto:total,fecha:iso,fechaObj:now.getTime(),tipo:'entrada',metodo:metodoPago,recibido:rec,cambio:rec-total});localStorage.setItem('facturas',JSON.stringify(facts));let ultimoTicket={fecha:now,items:[...carrito],total,metodo:metodoPago,recibido:rec,cambio:rec-total,cliente:cli?.nombre||'Mostrador',clienteDir:cli?.direccion||'',clienteTel:cli?.tel||''};cerrarCobro();carrito=[];renderCarrito();renderFinanzas();generarTicket(ultimoTicket);let emp=getEmp();if(emp.autoPrint){setTimeout(()=>imprimirTicket(),500);}else{if(confirm('¿Imprimir ticket?')) imprimirTicket();}}
+function generarTicket(data){let emp=getEmp();let logoHtml='';if(emp.mostrarLogo&&emp.logo){logoHtml=`<div style="width:100%; text-align:center; margin:0 auto 10px auto;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px; max-height:90px; object-fit:contain;"></div>`;}let html=`${logoHtml}<div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-bottom:8px;"><b style="font-size:16px; display:block; text-align:center;">${emp.nombre}</b><span style="font-size:10px; display:block; text-align:center;">${emp.direccion||''}<br>${emp.cp?'CP: '+emp.cp:''} ${emp.tel?'Tel: '+emp.tel:''}<br>${emp.rfc?'RFC: '+emp.rfc:''}</span></div><div style="font-size:10px; margin-bottom:8px;">Fecha: ${data.fecha.toLocaleString()}<br>Cliente: ${data.cliente}${data.clienteTel?' - '+data.clienteTel:''}<br>${data.clienteDir?'Dir: '+data.clienteDir+'<br>':''}Metodo: ${data.metodo.toUpperCase()}</div><div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}</div><div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;"><span>TOTAL</span><span>$${data.total.toFixed(2)}</span></div>${data.metodo=='efectivo'&&data.recibido?`<div style="font-size:11px; margin-top:4px;">Recibido: $${data.recibido.toFixed(2)}<br>Cambio: $${(data.cambio>0?data.cambio:0).toFixed(2)}</div>`:''}<div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px; font-size:11px;">${emp.mensaje}<br><br>¡Gracias!</div>`;document.getElementById('ticketContenido').innerHTML=html;return html;}
+function actualizarVistaTicket(){let fake={fecha:new Date(),items:[{nombre:'Alitas',qty:2,venta:57},{nombre:'Crepas',qty:1,venta:180}],total:294,metodo:'efectivo',recibido:300,cambio:6,cliente:'Mostrador'};generarTicket(fake);}
+function imprimirTicket(){let c=document.getElementById('ticketContenido').innerHTML;let w=window.open('','','width=300,height=600');w.document.write('<html><head><title>Ticket</title><style>body{font-family:monospace; font-size:12px; width:58mm; margin:0 auto; text-align:center;} img{display:block; margin:0 auto; max-width:90px;}</style></head><body>'+c+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>');w.document.close();}
+function probarTicket(){let fake={fecha:new Date(),items:[{nombre:'Alitas',qty:2,venta:57}],total:57,metodo:'efectivo',recibido:100,cambio:43,cliente:'Mostrador'};generarTicket(fake);imprimirTicket();}
+function openGasto(){let m=document.getElementById('modalGasto');if(m)m.classList.remove('hidden');}
+function renderFinanzas(){let facts=getFacts();let h='';facts.slice().sort((a,b)=>b.fechaObj-a.fechaObj).forEach(f=>{let isE=f.tipo=='entrada';let badge=f.metodo?`<span class="text-[8px] bg-gray-200 px-1 rounded ml-1">${f.metodo}</span>`:'';h+=`<div class="flex justify-between py-2 border-b"><div><p class="text-[12px] font-bold">${f.concepto}${badge}</p><p class="text-[10px] text-gray-400">${f.fecha}</p></div><p class="font-black text-[13px] ${isE?'text-green-600':'text-red-600'}">${isE?'+':'-'}$${f.monto.toFixed(0)}</p></div>`;});let el=document.getElementById('flu-lista');if(el)el.innerHTML=h||'<p class="text-[11px] text-gray-400 text-center py-6">Sin movimientos</p>';}
+function addFijo(d={}){let div=document.createElement('div');div.className='flex gap-2 items-center bg-gray-50 p-2 rounded-xl border';div.innerHTML=`<input value="${d.nombre||''}" placeholder="Renta" class="f-n flex-1 bg-transparent font-bold text-[13px] p-2 outline-none" oninput="calcFijos()"><input type="number" value="${d.monto||''}" placeholder="$" class="f-m w-28 border-2 border-black p-2.5 rounded-xl font-black" oninput="calcFijos()"><button onclick="this.parentElement.remove();calcFijos()" class="text-red-400 w-8 h-8 bg-white rounded-full font-black">X</button>`;let cont=document.getElementById('gastosFijos');if(cont)cont.appendChild(div);}
+function calcFijos(){let tot=0,arr=[];document.querySelectorAll('#gastosFijos > div').forEach(r=>{let n=r.querySelector('.f-n')?.value||'';let m=parseFloat(r.querySelector('.f-m')?.value)||0;if(n||m){arr.push({nombre:n,monto:m});tot+=m;}});localStorage.setItem('gastosFijos',JSON.stringify(arr));let pm=parseFloat(document.getElementById('prodMes')?.value)||100;localStorage.setItem('prodMes',pm);let por=pm>0?tot/pm:0;let tm=document.getElementById('totMes');if(tm)tm.innerText=tot.toFixed(0);let pr=document.getElementById('porRec');if(pr)pr.innerText=por.toFixed(2);let cf=document.getElementById('c-fijos');if(cf)cf.innerText=por.toFixed(2);calc();calc2();}
+let gf=getFijos();if(gf.length){gf.forEach(g=>addFijo(g));}else{addFijo({nombre:'Renta',monto:3000});}
+let prodMesEl=document.getElementById('prodMes');if(prodMesEl)prodMesEl.value=localStorage.getItem('prodMes')||100;
+let today=new Date().toISOString().split('T')[0];let gd=document.getElementById('g-fecha');if(gd)gd.value=today;
+document.getElementById('cliTel')?.addEventListener('input',()=>{if(document.getElementById('cliWhatIgual').checked){document.getElementById('cliWhat').value=document.getElementById('cliTel').value;}});
+calcFijos();renderInventario();renderVenta();renderFinanzas();renderInventarioMaster();renderClientes();renderClientesSel();showTab('config');actualizarVistaTicket();actualizarFondo();
+</script></body></html>
 """
 
-// CLIENTES NUEVO
-function addCliente(){
-  let nombre=document.getElementById('cliNombre').value.trim();
-  let tel=document.getElementById('cliTel').value.trim();
-  let what=document.getElementById('cliWhat').value.trim() || tel;
-  let dir=document.getElementById('cliDir').value.trim();
-  let msg=document.getElementById('cliMsg');
-  if(!nombre){ msg.className='mt-2 text-[11px] font-bold text-center p-2 rounded-xl bg-red-100 text-red-600'; msg.innerText='Pon nombre / alias'; msg.classList.remove('hidden'); return; }
-  let cli=getCli();
-  if(editCliId){
-    let idx=cli.findIndex(c=>c.id==editCliId);
-    if(idx>=0){ cli[idx].nombre=nombre; cli[idx].tel=tel; cli[idx].whatsapp=what; cli[idx].direccion=dir; }
-    editCliId=null;
-    document.querySelector('#tab-clientes button.bg-black').innerText='💾 Guardar cliente';
-  } else {
-    cli.push({id:Date.now().toString(),nombre,tel,whatsapp:what,direccion:dir});
-  }
-  localStorage.setItem('clientesV2',JSON.stringify(cli));
-  localStorage.setItem('clientes',JSON.stringify(cli));
-  document.getElementById('cliNombre').value=''; document.getElementById('cliTel').value=''; document.getElementById('cliWhat').value=''; document.getElementById('cliDir').value='';
-  msg.className='mt-2 text-[11px] font-bold text-center p-2 rounded-xl bg-green-100 text-green-700'; msg.innerText='✅ Cliente guardado'; msg.classList.remove('hidden'); setTimeout(()=>msg.classList.add('hidden'),2000);
-  renderClientes(); renderClientesSel();
-}
-function renderClientes(){
-  let cli=getCli();
-  let q=(document.getElementById('buscCli')?.value||'').toLowerCase();
-  let filtered=cli.filter(c=> (c.nombre||'').toLowerCase().includes(q) || (c.tel||'').includes(q));
-  document.getElementById('cliCount').innerText=cli.length;
-  let h='';
-  if(!filtered.length){ h='<p class="text-[11px] text-gray-400 text-center py-6">Sin clientes - agrega uno arriba o importa de contactos</p>'; }
-  filtered.forEach(c=>{
-    let telClean=(c.tel||'').replace(/\\D/g,'');
-    let waClean=(c.whatsapp||c.tel||'').replace(/\\D/g,'');
-    let waLink=waClean? `https://wa.me/52${waClean.slice(-10)}` : '';
-    h+=`<div class="bg-gray-50 border-2 border-black/5 p-3 rounded-2xl">
-      <div class="flex justify-between items-start">
-        <div class="flex-1"><b class="text-[14px]">${c.nombre}</b>${c.tel? `<br><span class="text-[11px]">📞 ${c.tel}</span>`:''}${c.direccion? `<br><span class="text-[10px] text-gray-500">📍 ${c.direccion}</span>`:''}</div>
-        <div class="flex gap-1">
-          ${waLink? `<a href="${waLink}" target="_blank" class="w-8 h-8 bg-[#25D366] text-white rounded-full flex items-center justify-center text-[12px]"><i class="fa-brands fa-whatsapp"></i></a>`:''}
-          ${telClean? `<a href="tel:${telClean}" class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[10px]">📞</a>`:''}
-        </div>
-      </div>
-      <div class="flex gap-2 mt-2">
-        <button onclick="editarCliente('${c.id}')" class="flex-1 bg-white border-2 border-black py-2 rounded-xl font-bold text-[11px]">✏️ Editar</button>
-        <button onclick="borrarCliente('${c.id}')" class="bg-red-50 text-red-500 border-2 border-red-100 px-3 py-2 rounded-xl font-bold text-[11px]">🗑️</button>
-        <button onclick="usarCliente('${c.id}')" class="flex-1 bg-black text-white py-2 rounded-xl font-bold text-[11px]">Usar en venta</button>
-      </div>
-    </div>`;
-  });
-  document.getElementById('listaClientes').innerHTML=h;
-}
-function editarCliente(id){ let c=getCli().find(x=>x.id==id); if(!c) return; document.getElementById('cliNombre').value=c.nombre||''; document.getElementById('cliTel').value=c.tel||''; document.getElementById('cliWhat').value=c.whatsapp||''; document.getElementById('cliDir').value=c.direccion||''; editCliId=id; document.querySelector('#tab-clientes button.bg-black').innerText='💾 Actualizar cliente'; window.scrollTo(0,0); }
-function borrarCliente(id){ if(!confirm('¿Borrar cliente?')) return; let cli=getCli().filter(c=>c.id!=id); localStorage.setItem('clientesV2',JSON.stringify(cli)); localStorage.setItem('clientes',JSON.stringify(cli)); renderClientes(); renderClientesSel(); }
-function usarCliente(id){ let c=getCli().find(x=>x.id==id); if(!c) return; showTab('vender'); setTimeout(()=>{ let sel=document.getElementById('selCliente'); if(sel){ sel.value=c.id; } },200); }
-async function importarContacto(){
-  let msg=document.getElementById('cliMsg');
-  try{
-    if('contacts' in navigator && 'ContactsManager' in window){
-      const props=['name','tel']; const opts={multiple:false};
-      const contacts=await navigator.contacts.select(props,opts);
-      if(contacts.length){
-        let name=contacts[0].name?.[0]||'Sin nombre';
-        let tel=contacts[0].tel?.[0]||'';
-        document.getElementById('cliNombre').value=name;
-        document.getElementById('cliTel').value=tel;
-        document.getElementById('cliWhat').value=tel;
-        msg.className='mt-2 text-[11px] font-bold text-center p-2 rounded-xl bg-green-100 text-green-700'; msg.innerText='✅ Contacto importado: '+name+' - ahora guarda'; msg.classList.remove('hidden');
-        return;
-      }
-    } else {
-      // Fallback manual
-      let nombre=prompt('Tu navegador no permite importar automático, escribe el nombre:');
-      if(!nombre) return;
-      let tel=prompt('Celular de '+nombre+':')||'';
-      let dir=prompt('Dirección (opcional):')||'';
-      document.getElementById('cliNombre').value=nombre;
-      document.getElementById('cliTel').value=tel;
-      document.getElementById('cliWhat').value=tel;
-      document.getElementById('cliDir').value=dir;
-      msg.className='mt-2 text-[11px] font-bold text-center p-2 rounded-xl bg-amber-100'; msg.innerText='Completa y dale Guardar'; msg.classList.remove('hidden');
-    }
-  }catch(e){
-    alert('No se pudo importar, agrega manual: '+e.message);
-  }
-}
-function renderClientesSel(){ let cli=getCli(); let sel=document.getElementById('selCliente'); if(sel) sel.innerHTML='<option value="">Mostrador</option>'+cli.map(c=>`<option value="${c.id}">${c.nombre}${c.tel?' - '+c.tel:''}</option>`).join(''); }
-TOKEN_FILE = "/tmp/mp_token.txt"
+@app.route('/api/mp/link', methods=['POST'])
+def mp_link():
+    d=request.json
+    token=d.get('token') or MP_TOKEN
+    if not token: return jsonify({"error":"No token"}),400
+    r=requests.post("https://api.mercadopago.com/checkout/preferences",headers={"Authorization": f"Bearer {token}"},json={"items":[{"title":d.get('concepto','Venta')[:100],"quantity":1,"unit_price":float(d.get('total',0))}]})
+    j=r.json()
+    return jsonify({"link": j.get('init_point'), "id": j.get('id'), "raw":j})
 
-function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value), u=document.getElementById('inv-unidad').value; if(!n||!p) return; let inv=getInv(); let ex=inv.find(x=>x.nombre.toLowerCase()==n.toLowerCase()); if(ex){ ex.precio=p; ex.unidad=u; } else { inv.push({id:Date.now().toString(),nombre:n,precio:p,unidad:u}); } localStorage.setItem('inventarioMaestro',JSON.stringify(inv)); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; renderInventarioMaster(); }
-function renderInventarioMaster(){ let inv=getInv(); let q=(document.getElementById('buscInv')?.value||'').toLowerCase(); let filtered=inv.filter(x=>x.nombre.toLowerCase().includes(q)); let h=''; filtered.forEach(it=>{ let idx=getInv().findIndex(x=>x.id==it.id); h+=`<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b><br><span class="text-[11px]">$${it.precio}/${it.unidad}</span></div><input type="number" value="${it.precio}" onchange="let inv=getInv(); inv[${idx}].precio=parseFloat(this.value)||0; localStorage.setItem('inventarioMaestro',JSON.stringify(inv)); calc(); calc2();" class="w-20 border-2 border-black p-2 rounded-xl font-black"><button onclick="let inv=getInv(); inv.splice(${idx},1); localStorage.setItem('inventarioMaestro',JSON.stringify(inv)); renderInventarioMaster();" class="text-red-400 font-black px-2">X</button></div>`; }); document.getElementById('listaInvMaster').innerHTML=h; }
-function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="cambiarInv(this)"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-3 gap-2 mt-2 bg-white p-2 rounded-xl"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-2 rounded-lg font-bold" oninput="calc()"><select class="in-uu border-2 border-black p-2 rounded-lg text-[11px]" onchange="calc()"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>pza</option></select><div class="col-span-3 text-right font-black text-[12px]">Me sale: $<span class="in-sub">0.00</span></div></div><input type="hidden" class="in-pc"><input type="hidden" class="in-uc"><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.invId){ cambiarInv(div.querySelector('.in-n')); } }
-function cambiarInv(sel){ let row=sel.closest('div'); let id=sel.value; if(!id) return; let it=getInv().find(x=>x.id==id); if(!it) return; row.dataset.invId=id; row.querySelector('.in-pc').value=it.precio; row.querySelector('.in-uc').value=it.unidad; calc(); }
-function calc(){ try{ let tot=0; let rc=parseFloat(document.getElementById('rendCant').value)||1; let ru=document.getElementById('rendUni').value; document.getElementById('r-cant-label').innerText=rc; document.getElementById('r-uni-label').innerText=ru; document.getElementById('r-uni-label2').innerText=ru; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.dataset.invId||row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); if(it){ row.querySelector('.in-pc').value=it.precio; row.querySelector('.in-uc').value=it.unidad; } let pc=parseFloat(row.querySelector('.in-pc').value)||0, cu=parseFloat(row.querySelector('.in-cu').value)||0; if(!pc||!cu){ row.querySelector('.in-sub').innerText='0.00'; return; } let uc=row.querySelector('.in-uc').value||'g', uu=row.querySelector('.in-uu').value||'g'; let baseCost=0; if(uc=='kg'||uc=='L'){ baseCost=(pc/1000)*toBase(cu,uu); } else if(uc=='g'||uc=='ml'){ baseCost=(pc/1000)*cu; } else if(uc=='pza'){ baseCost=pc*cu; } else baseCost=pc*cu; if(uc=='kg'&&uu=='kg') baseCost=pc*cu; if(uc=='L'&&uu=='L') baseCost=pc*cu; row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let gf=parseFloat(document.getElementById('c-fijos')?.innerText||'0')||0; let total=tot+gf; document.getElementById('costo').innerText=total.toFixed(2); document.getElementById('costo-unit').innerText=(rc>0?total/rc:0).toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; let ventaEl=document.getElementById('venta'); if(vm&&parseFloat(vm)>0){ ventaEl.innerText=parseFloat(vm).toFixed(2); } else { ventaEl.innerText=(total*(1+m/100)).toFixed(2); } }catch(e){} }
-function addBase(){ let bases=getProd().filter(p=>getCats().find(c=>c.id==p.tipo)?.grupo=='recetario'); if(!bases.length) return alert('Primero crea una BASE'); let div=document.createElement('div'); div.className='bg-white border-2 border-black rounded-xl p-3 space-y-2'; let opts=bases.map(b=>`<option value="${b.id}" data-costo="${b.costo}" data-cant="${b.rendimiento?.cant||1}" data-uni="${b.rendimiento?.uni||'pza'}">${b.nombre} Rinde ${b.rendimiento?.cant||1}${b.rendimiento?.uni||''} $${b.costo.toFixed(2)}</option>`).join(''); div.innerHTML=`<select class="b-sel w-full border-2 p-2 rounded-lg font-bold text-[12px]" onchange="calc2()">${opts}</select><div class="grid grid-cols-3 gap-2 items-center bg-amber-50 p-2 rounded-xl"><input type="number" value="60" class="b-cant-used border-2 border-black p-2 rounded-lg font-black" oninput="calc2()"><select class="b-uni-used border-2 border-black p-2 rounded-lg text-[11px] font-bold" onchange="calc2()"><option>ml</option><option>L</option><option>g</option><option>kg</option><option>pza</option></select><div class="bg-black text-white rounded-lg p-2 text-center"><div class="text-[8px] opacity-60">COSTO</div><div class="font-black text-[12px]">$<span class="b-sub">0.00</span></div></div></div><button onclick="this.parentElement.remove();calc2()" class="w-full text-[10px] text-red-400">Quitar</button>`; document.getElementById('basesSel').appendChild(div); calc2(); }
-function addExtra(){ let inv=getInv(); let optsInv=inv.map(i=>`<option value="inv-${i.id}" data-c="${i.precio}" data-u="${i.unidad}">📦 ${i.nombre} $${i.precio}/${i.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-white border-2 p-2 rounded-xl'; div.innerHTML=`<select class="e-sel w-full border-2 p-2 rounded-lg font-bold text-[11px]" onchange="calc2()">${optsInv}</select><div class="grid grid-cols-3 gap-2 mt-2"><input type="number" value="100" class="e-cant border-2 border-black p-2 rounded-lg font-bold" oninput="calc2()"><select class="e-uni border-2 p-2 rounded-lg text-[11px]" onchange="calc2()"><option>g</option><option>kg</option><option>ml</option><option>L</option><option>pza</option></select><div class="bg-gray-100 rounded-lg p-2 text-center font-black">$<span class="e-sub">0.00</span></div></div><button onclick="this.parentElement.remove();calc2()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('extrasSel').appendChild(div); calc2(); }
-function calc2(){ try{ let tot=0; document.querySelectorAll('#basesSel > div').forEach(r=>{ let sel=r.querySelector('.b-sel'); if(!sel?.options[sel.selectedIndex]) return; let costoBase=parseFloat(sel.options[sel.selectedIndex].dataset.costo)||0; let rendCant=parseFloat(sel.options[sel.selectedIndex].dataset.cant)||1; let rendUni=sel.options[sel.selectedIndex].dataset.uni||'pza'; let cantUsada=parseFloat(r.querySelector('.b-cant-used').value)||0; let uniUsada=r.querySelector('.b-uni-used').value; let costoProp=rendCant>0? (costoBase/toBase(rendCant,rendUni))*toBase(cantUsada,uniUsada) : 0; r.querySelector('.b-sub').innerText=costoProp.toFixed(2); tot+=costoProp; }); document.querySelectorAll('#extrasSel > div').forEach(r=>{ let sel=r.querySelector('.e-sel'); if(!sel?.options[sel.selectedIndex]) return; let c=parseFloat(sel.options[sel.selectedIndex].dataset.c)||0; let cant=parseFloat(r.querySelector('.e-cant').value)||0; let uni=r.querySelector('.e-uni').value; let sub=(c/1000)*toBase(cant,uni); if(sel.value.includes('pza')) sub=c*cant; r.querySelector('.e-sub').innerText=sub.toFixed(2); tot+=sub; }); document.getElementById('c-ing2').innerText=tot.toFixed(2); let m=parseFloat(document.getElementById('margen2').value)||0; let vm=document.getElementById('ventaManual2').value; let ve=document.getElementById('venta2'); if(vm&&parseFloat(vm)>0) ve.innerText=parseFloat(vm).toFixed(2); else ve.innerText=(tot*(1+m/100)).toFixed(2); }catch(e){} }
-function guardarProd(tipo){
-  let isBase=tipo=='recetario'; let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd'); let nom=nomEl.value.trim(); if(!nom){ alert('Pon nombre'); return; }
-  let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0; let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0; if(costo==0){ alert('Agrega ingredientes'); return; }
-  let rendimiento=isBase?{cant:parseFloat(document.getElementById('rendCant').value)||1, uni:document.getElementById('rendUni').value}:null;
-  let ings=[]; if(isBase){ document.querySelectorAll('#insumos > div').forEach(row=>{ let sel=row.querySelector('.in-n'); ings.push({invId:row.dataset.invId||sel?.value,cu:row.querySelector('.in-cu').value,uu:row.querySelector('.in-uu').value}); }); } else { document.querySelectorAll('#basesSel > div').forEach(r=>{ ings.push({tipo:'rec',id:r.querySelector('.b-sel').value,cantUsada:r.querySelector('.b-cant-used').value,uniUsada:r.querySelector('.b-uni-used').value}); }); document.querySelectorAll('#extrasSel > div').forEach(r=>{ ings.push({tipo:'extra',id:r.querySelector('.e-sel').value,cant:r.querySelector('.e-cant').value,uni:r.querySelector('.e-uni').value}); }); }
-  let cats=getCats(); let tipoId=isBase?cats.find(c=>c.grupo=='recetario')?.id:cats.find(c=>c.grupo=='catalogo')?.id; let ps=getProd(); let fotoToSave = isBase? '' : (fotoTemp || (editId? (ps.find(x=>x.id==editId)?.foto||'') : ''));
-  if(editId){ let idx=ps.findIndex(x=>x.id==editId); if(idx>=0){ ps[idx].nombre=nom; ps[idx].costo=costo; ps[idx].venta=venta; ps[idx].tipo=tipoId; ps[idx].ingredientes=ings; if(rendimiento) ps[idx].rendimiento=rendimiento; if(!isBase) ps[idx].foto=fotoToSave; } } else { ps.push({id:Date.now(),tipo:tipoId,nombre:nom,costo,venta,ingredientes:ings,rendimiento,foto:fotoToSave}); }
-  localStorage.setItem('productosV2',JSON.stringify(ps)); alert('✅ Guardado: '+nom); cancelEdit(); renderInventario(); renderVenta(); setCrear('menu');
-}
-function renderInventario(){ let ps=getProd(); let cs=getCats(); let h=''; ps.forEach((p,i)=>{ let cat=cs.find(c=>c.id==p.tipo); let esBase=cat?.grupo=='recetario'; let rend=p.rendimiento?` Rinde ${p.rendimiento.cant}${p.rendimiento.uni}`:''; h+=`<div class="bg-white p-3 rounded-2xl flex gap-3 shadow-sm mt-3 border items-center">${p.foto?`<img src="${p.foto}" class="w-12 h-12 rounded-xl object-cover border">`:''}<div class="flex-1"><b class="text-[13px]">${p.nombre}</b><span class="text-[10px] text-gray-500">${rend}</span><br><span class="text-[11px]">$${p.costo.toFixed(2)} → $${p.venta.toFixed(2)}</span></div><button onclick="editarProd(${p.id})" class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-[11px] font-black">Editar</button><button onclick="if(confirm('Borrar?')){let pr=getProd(); pr.splice(${i},1); localStorage.setItem('productosV2',JSON.stringify(pr)); renderInventario(); renderVenta();}" class="text-red-400 ml-1 font-black">X</button></div>`; }); document.getElementById('listaInv').innerHTML=h||'<p class="text-[11px] text-gray-400 text-center py-4">Sin recetas</p>'; }
-function editarProd(id){ let p=getProd().find(x=>x.id==id); if(!p) return; editId=id; let esBase=getCats().find(c=>c.id==p.tipo)?.grupo=='recetario'; if(esBase){ setCrear('base'); document.getElementById('nombre').value=p.nombre; if(p.rendimiento){ document.getElementById('rendCant').value=p.rendimiento.cant; document.getElementById('rendUni').value=p.rendimiento.uni; } document.getElementById('insumos').innerHTML=''; if(p.ingredientes){ p.ingredientes.forEach(ing=>{ addInsumo({invId:ing.invId,cu:ing.cu}); }); } calc(); } else { setCrear('producto'); document.getElementById('nombreProd').value=p.nombre; fotoTemp=p.foto||''; if(fotoTemp){ document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); } } document.getElementById('btnCancel').classList.remove('hidden'); }
-function cancelEdit(){ editId=null; fotoTemp=''; document.getElementById('nombre').value=''; document.getElementById('nombreProd').value=''; document.getElementById('insumos').innerHTML=''; document.getElementById('ventaManual').value=''; document.getElementById('ventaManual2').value=''; let pv=document.getElementById('fotoPreview'); if(pv) pv.classList.add('hidden'); document.getElementById('btnCancel').classList.add('hidden'); setCrear('menu'); }
-function renderVenta(){ let cs=getCats(); let ids=cs.filter(c=>c.grupo=='catalogo').map(c=>c.id); let ps=getProd().filter(p=>ids.includes(p.tipo)); let h=''; ps.forEach(p=>{ let fotoHtml=p.foto?`<img src="${p.foto}" class="w-full h-20 object-cover rounded-t-2xl">`:`<div class="w-full h-20 bg-gray-100 rounded-t-2xl flex items-center justify-center text-[20px]">🍗</div>`; h+=`<div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col">${fotoHtml}<button onclick="addCart(${p.id})" class="w-full text-left p-3 flex-1"><b class="text-[13px] leading-tight block">${p.nombre}</b><p class="text-green-600 font-black text-[14px]">$${p.venta.toFixed(2)}</p></button></div>`; }); document.getElementById('listaVenta').innerHTML=h||'<p class="text-center text-gray-400 py-10 col-span-2">Crea productos con foto</p>'; }
-function addCart(id){ let p=getProd().find(x=>x.id==id); let ex=carrito.find(x=>x.id==id); if(ex) ex.qty++; else carrito.push({...p,qty:1}); renderCarrito(); }
-function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket').innerHTML='<p class="text-[12px] text-gray-400 text-center py-4">Vacío</p>'; document.getElementById('c-total').innerText='0'; return; } let t=0, html=''; carrito.forEach((x,idx)=>{ t+=x.venta*x.qty; html+=`<div class="flex gap-2 items-center bg-gray-50 p-2 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${x.nombre}</b><br><span class="text-[11px] text-gray-500">$${x.venta.toFixed(2)} c/u</span></div><div class="flex items-center gap-1"><button onclick="cambiarQty(${idx},-1)" class="w-8 h-8 bg-white border-2 border-black rounded-full font-black">-</button><span class="w-6 text-center font-black text-[14px]">${x.qty}</span><button onclick="cambiarQty(${idx},1)" class="w-8 h-8 bg-black text-white rounded-full font-black">+</button></div><div class="text-right min-w-[60px]"><b class="text-[13px]">$${(x.venta*x.qty).toFixed(0)}</b><br><button onclick="quitarDelCarrito(${idx})" class="text-[10px] text-red-500 font-bold">X Quitar</button></div></div>`; }); document.getElementById('ticket').innerHTML=html; document.getElementById('c-total').innerText=t.toFixed(0); }
-function cambiarQty(idx,delta){ carrito[idx].qty+=delta; if(carrito[idx].qty<=0){ carrito.splice(idx,1); } renderCarrito(); }
-function quitarDelCarrito(idx){ carrito.splice(idx,1); renderCarrito(); }
-function limpiarCarrito(){ carrito=[]; renderCarrito(); }
-function abrirCobro(){ if(!carrito.length) return alert('Carrito vacio'); document.getElementById('cobroTotal').innerText=document.getElementById('c-total').innerText; document.getElementById('pagoRecibido').value=''; document.getElementById('cambio').innerText='0.00'; setMetodo('efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); }
-function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
-function setMetodo(m){ metodoPago=m; document.querySelectorAll('.metodo-btn').forEach(b=>{ b.className='metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]'; }); let sel=document.getElementById('m-'+m); if(sel) sel.className='metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]'; document.getElementById('efectivoBox').classList.toggle('hidden', m!='efectivo'); }
-function calcCambio(){ let total=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; let cambio=rec-total; document.getElementById('cambio').innerText=(cambio>0?cambio:0).toFixed(2); }
-function confirmarCobro(){
-  if(!carrito.length) return;
-  let total=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0;
-  if(metodoPago=='efectivo' && rec>0 && rec<total){ alert('Falta dinero'); return; }
-  let facts=getFacts(); let now=new Date(); let iso=now.toISOString().split('T')[0]; let cliId=document.getElementById('selCliente').value; let cli=getCli().find(c=>c.id==cliId);
-  let concepto='Venta'+(cli?' a '+cli.nombre:'')+': '+carrito.map(c=>c.nombre+' x'+c.qty).join(', ')+' ['+metodoPago+']';
-  facts.push({id:Date.now(),concepto,monto:total,fecha:iso,fechaObj:now.getTime(),tipo:'entrada',metodo:metodoPago,recibido:rec,cambio:rec-total});
-  localStorage.setItem('facturas',JSON.stringify(facts));
-  let ultimoTicket={fecha:now,items:[...carrito],total,metodo:metodoPago,recibido:rec,cambio:rec-total,cliente:cli?.nombre||'Mostrador',clienteDir:cli?.direccion||'',clienteTel:cli?.tel||''};
-  cerrarCobro(); carrito=[]; renderCarrito(); renderFinanzas(); generarTicket(ultimoTicket); let emp=getEmp(); if(emp.autoPrint){ setTimeout(()=>imprimirTicket(),500); } else { if(confirm('¿Imprimir ticket?')) imprimirTicket(); }
-}
-function generarTicket(data){
-  let emp=getEmp(); let logoHtml='';
-  if(emp.mostrarLogo && emp.logo){ logoHtml=`<div style="width:100%; text-align:center; margin:0 auto 10px auto;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px; max-height:90px; object-fit:contain;"></div>`; }
-  let html=`${logoHtml}
-  <div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-bottom:8px;">
-  <b style="font-size:16px; display:block; text-align:center;">${emp.nombre}</b>
-  <span style="font-size:10px; display:block; text-align:center;">${emp.direccion||''}<br>${emp.cp? 'CP: '+emp.cp:''} ${emp.tel? 'Tel: '+emp.tel:''}<br>${emp.rfc? 'RFC: '+emp.rfc:''}</span>
-  </div>
-  <div style="font-size:10px; margin-bottom:8px;">Fecha: ${data.fecha.toLocaleString()}<br>Cliente: ${data.cliente}${data.clienteTel? ' - '+data.clienteTel:''}<br>${data.clienteDir? 'Dir: '+data.clienteDir+'<br>':''}Metodo: ${data.metodo.toUpperCase()}</div>
-  <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">
-  ${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}
-  </div>
-  <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;"><span>TOTAL</span><span>$${data.total.toFixed(2)}</span></div>
-  ${data.metodo=='efectivo'&&data.recibido? `<div style="font-size:11px; margin-top:4px;">Recibido: $${data.recibido.toFixed(2)}<br>Cambio: $${(data.cambio>0?data.cambio:0).toFixed(2)}</div>` : ''}
-  <div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px; font-size:11px;">${emp.mensaje}<br><br>¡Gracias!</div>
-  <div style="text-align:center; margin-top:8px; font-size:8px;">Ticket no fiscal</div>`;
-  document.getElementById('ticketContenido').innerHTML=html; return html;
-}
-function actualizarVistaTicket(){ let fake={fecha:new Date(),items:[{nombre:'Alitas búfalo',qty:2,venta:57},{nombre:'Crepas',qty:1,venta:180}],total:294,metodo:'efectivo',recibido:300,cambio:6,cliente:'Mostrador'}; generarTicket(fake); }
-function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><title>Ticket</title><style>body{font-family:monospace; font-size:12px; width:58mm; margin:0 auto; text-align:center;} img{display:block; margin:0 auto; max-width:90px;} @media print { @page { margin:0; } }</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\/script></body></html>'); w.document.close(); }
-function probarTicket(){ guardarEmpresa(); let fake={fecha:new Date(),items:[{nombre:'Alitas búfalo',qty:2,venta:57},{nombre:'Crepas',qty:1,venta:180}],total:294,metodo:'efectivo',recibido:300,cambio:6,cliente:'Mostrador'}; generarTicket(fake); imprimirTicket(); }
-function setFin(v){ renderFinanzas(); }
-function addMov(){ let concepto=document.getElementById('g-concepto')?.value.trim(), monto=parseFloat(document.getElementById('g-monto')?.value), fecha=document.getElementById('g-fecha')?.value; if(!concepto||!monto||!fecha) return alert('Faltan'); let facts=getFacts(); facts.push({id:Date.now(),concepto,monto,fecha,fechaObj:new Date(fecha+'T00:00:00').getTime(),tipo:document.getElementById('g-tipo').value}); localStorage.setItem('facturas',JSON.stringify(facts)); document.getElementById('modalGasto').classList.add('hidden'); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; renderFinanzas(); }
-function openGasto(){ let m=document.getElementById('modalGasto'); if(m) m.classList.remove('hidden'); }
-function renderFinanzas(){ let facts=getFacts(); let h=''; facts.slice().sort((a,b)=>b.fechaObj-a.fechaObj).forEach(f=>{ let isE=f.tipo=='entrada'; let badge=f.metodo? `<span class="text-[8px] bg-gray-200 px-1 rounded ml-1">${f.metodo}</span>`:''; h+=`<div class="flex justify-between items-center py-2 border-b"><div><p class="text-[12px] font-bold">${f.concepto}${badge}</p><p class="text-[10px] text-gray-400">${f.fecha}</p></div><p class="font-black text-[13px] ${isE?'text-green-600':'text-red-600'}">${isE?'+':'-'}$${f.monto.toFixed(0)}</p></div>`; }); let el=document.getElementById('flu-lista'); if(el) el.innerHTML=h||'<p class="text-[11px] text-gray-400 text-center py-6">Sin movimientos</p>'; }
-function addFijo(d={}){ let div=document.createElement('div'); div.className='flex gap-2 items-center bg-gray-50 p-2 rounded-xl border'; div.innerHTML=`<input value="${d.nombre||''}" placeholder="Renta" class="f-n flex-1 bg-transparent font-bold text-[13px] p-2 outline-none" oninput="calcFijos()"><input type="number" value="${d.monto||''}" placeholder="$" class="f-m w-28 border-2 border-black p-2.5 rounded-xl font-black" oninput="calcFijos()"><button onclick="this.parentElement.remove();calcFijos()" class="text-red-400 w-8 h-8 bg-white rounded-full font-black">X</button>`; let cont=document.getElementById('gastosFijos'); if(cont) cont.appendChild(div); }
-function calcFijos(){ let tot=0,arr=[]; document.querySelectorAll('#gastosFijos > div').forEach(r=>{ let n=r.querySelector('.f-n')?.value||''; let m=parseFloat(r.querySelector('.f-m')?.value)||0; if(n||m){ arr.push({nombre:n,monto:m}); tot+=m; } }); localStorage.setItem('gastosFijos',JSON.stringify(arr)); let pm=parseFloat(document.getElementById('prodMes')?.value)||100; localStorage.setItem('prodMes',pm); let por=pm>0?tot/pm:0; let tm=document.getElementById('totMes'); if(tm) tm.innerText=tot.toFixed(0); let pr=document.getElementById('porRec'); if(pr) pr.innerText=por.toFixed(2); let cf=document.getElementById('c-fijos'); if(cf) cf.innerText=por.toFixed(2); calc(); calc2(); }
-let gf=getFijos(); if(gf.length){ gf.forEach(g=>addFijo(g)); } else { addFijo({nombre:'Renta',monto:3000}); }
-let prodMesEl=document.getElementById('prodMes'); if(prodMesEl) prodMesEl.value=localStorage.getItem('prodMes')||100;
-let today=new Date().toISOString().split('T')[0]; let gd=document.getElementById('g-fecha'); if(gd) gd.value=today;
-@app.route('/')
-def home():
-    return render_template_string(HTML)
-
-document.getElementById('cliTel').addEventListener('input',()=>{ if(document.getElementById('cliWhatIgual').checked){ document.getElementById('cliWhat').value=document.getElementById('cliTel').value; } });
-@app.route('/api/save_token', methods=['POST'])
-def save_token():
-    data = request.get_json()
-    token = data.get('token','').strip()
-    if not token.startswith('APP_USR-'):
-        return jsonify({"message": "❌ Token no válido, debe empezar con APP_USR-"}), 400
-    # Guardar token
-    with open(TOKEN_FILE,'w') as f:
-        f.write(token)
-    # Probar token con Mercado Pago
+@app.route('/api/clip/link', methods=['POST'])
+def clip_link():
+    d=request.json
+    token=d.get('token') or CLIP_KEY
+    term=d.get('term') or CLIP_TERMINAL
+    if not token: return jsonify({"error":"No clip key"}),400
     try:
-        r = requests.get("https://api.mercadopago.com/users/me", headers={"Authorization": f"Bearer {token}"}, timeout=10)
-        if r.status_code == 200:
-            return jsonify({"message": "✅ Conectado a Mercado Pago correctamente"})
-        else:
-            return jsonify({"message": f"⚠️ Token guardado pero MP respondió {r.status_code}: {r.text[:100]}"})
+        r=requests.post("https://api.payclip.com/v2/checkout",headers={"X-API-KEY": token,"Content-Type":"application/json"},json={"amount":float(d.get('total',0)),"currency":"MXN","description":d.get('concepto','Venta')[:100]}, timeout=10)
+        j=r.json()
+        link=j.get('checkout_url') or j.get('payment_url') or j.get('url')
+        if d.get('modo')=='terminal' and term:
+            rt=requests.post(f"https://api.payclip.com/v2/terminals/{term}/payments",headers={"X-API-KEY": token},json={"amount":float(d.get('total',0))}, timeout=10)
+            return jsonify({"link":link,"terminal":rt.json()})
+        return jsonify({"link":link,"raw":j})
     except Exception as e:
-        return jsonify({"message": f"✅ Token guardado (no se pudo validar: {e})"})
+        return jsonify({"error":str(e)}),500
 
-calcFijos(); renderInventario(); renderVenta(); renderFinanzas(); renderInventarioMaster(); renderClientes(); renderClientesSel(); showTab('clientes'); actualizarVistaTicket(); actualizarFondo();
-</script></body></html>
-""" 
-# Vercel necesita esto
-if __name__ == '__main__':
-    app.run()
+@app.route('/api/stripe/link', methods=['POST'])
+def stripe_link():
+    d=request.json
+    token=d.get('token') or STRIPE_KEY
+    if not token: return jsonify({"error":"No stripe key"}),400
+    try:
+        import urllib.parse
+        data={
+            "mode":"payment",
+            "success_url":"https://gocio-mauve.vercel.app?pagado=ok",
+            "line_items[0][price_data][currency]":"mxn",
+            "line_items[0][price_data][product_data][name]":d.get('concepto','Venta')[:100],
+            "line_items[0][price_data][unit_amount]": int(float(d.get('total',0))*100),
+            "line_items[0][quantity]":1
+        }
+        r=requests.post("https://api.stripe.com/v1/checkout/sessions",auth=(token,''),data=data, timeout=10)
+        j=r.json()
+        return jsonify({"link": j.get('url'), "raw":j})
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
