@@ -1,11 +1,13 @@
-from flask import Flask
+from flask import Flask, request, jsonify, render_template_string
+import requests
 app = Flask(__name__)
+
 @app.route('/')
 def home():
  return """
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mi Negocio 9.9 Clientes</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Mi Negocio 9.9.1 Pagos</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 input,select,textarea{color:#000!important;background:#fff!important}
 .logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;height:360px;pointer-events:none;z-index:0;opacity:0.08;object-fit:contain;}
@@ -14,7 +16,7 @@ input,select,textarea{color:#000!important;background:#fff!important}
 <body class="bg-[#FFF8F0] min-h-screen"><div class="max-w-md mx-auto pb-[110px] relative">
 <img id="logoBg" class="logo-watermark hidden">
 <div id="appContent">
-<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><h1 class="font-black">Mi Negocio 9.9</h1></div><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button></div>
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><h1 class="font-black">Mi Negocio 9.9.1</h1></div><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button></div>
 
 <div id="tab-costos" class="p-3 hidden"><div id="crear-menu" class="space-y-4"><div class="bg-white rounded-[28px] p-5 shadow-sm text-center"><h2 class="font-black text-[18px]">Crear</h2><button onclick="setCrear('base')" class="w-full mt-5 bg-[#FFF8F0] border-2 border-black rounded-[20px] p-5 text-left flex gap-4 items-center"><div class="w-14 h-14 bg-orange-200 rounded-2xl flex items-center justify-center">🧑‍🍳</div><b>1. Crear BASE</b></button><button onclick="setCrear('producto')" class="w-full mt-3 bg-[#0F172A] rounded-[20px] p-5 text-left flex gap-4 items-center text-white"><div class="w-14 h-14 bg-[#4FD1C5] rounded-2xl flex items-center justify-center">🛍️</div><b>2. Producto con FOTO</b></button></div><div class="bg-white rounded-[20px] p-4 shadow-sm"><div id="listaInv"></div></div></div>
 <div id="crear-base" class="hidden"><button onclick="setCrear('menu')" class="mb-3 text-[12px] font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4 shadow-sm"><h2 class="font-black">BASE</h2><input id="nombre" placeholder="Ej: Salsa búfalo" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div id="insumos" class="mt-4 space-y-3"></div><button onclick="addInsumo()" class="w-full mt-3 bg-orange-100 border-2 py-3 rounded-2xl font-black text-[12px]">+ Ingrediente</button><div class="mt-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-3"><div class="flex gap-2 mt-2"><input id="rendCant" type="number" value="10" class="flex-1 border-2 border-black p-3 rounded-xl font-black" oninput="calc()"><select id="rendUni" class="border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option>L</option><option>ml</option><option>kg</option><option>g</option><option>pza</option></select></div></div><div class="mt-3 p-4 bg-[#0F172A] text-white rounded-[16px]"><div class="flex justify-between text-[13px]"><span>Ingredientes</span><b>$<span id="c-ing">0.00</span></b></div><div class="flex justify-between text-amber-300 text-[12px]"><span>+ Fijos</span><b>$<span id="c-fijos">0.00</span></b></div><div class="font-black text-[16px] border-t border-white/20 mt-2 pt-2"><div class="flex justify-between"><span>Total por <span id="r-cant-label">10</span><span id="r-uni-label">L</span>:</span><span>$<span id="costo">0.00</span></span></div><div class="text-[11px] text-green-300">Costo por 1 <span id="r-uni-label2">L</span>: $<span id="costo-unit">0.00</span></div><div class="flex justify-between mt-2 text-[#4FD1C5]"><span>Venta:</span><span>$<span id="venta">0.00</span></span></div></div><div class="mt-3 flex gap-2 bg-white/10 p-2 rounded-xl"><input id="margen" type="number" value="50" class="w-16 text-black rounded-lg text-center font-black py-2" oninput="calc()"><input id="ventaManual" type="number" placeholder="$ final" class="flex-1 text-black rounded-lg px-2 py-2 font-black" oninput="calc()"></div></div><button onclick="guardarProd('recetario')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR BASE</button><button id="btnCancel" onclick="cancelEdit()" class="hidden w-full mt-2 bg-gray-100 py-3 rounded-2xl text-[11px]">Cancelar</button></div></div>
@@ -24,37 +26,43 @@ input,select,textarea{color:#000!important;background:#fff!important}
 <div id="tab-vender" class="p-3 hidden"><div id="listaVenta" class="grid grid-cols-2 gap-3"></div><div class="mt-6 bg-white rounded-[28px] p-4 shadow-xl border-2 border-black"><select id="selCliente" class="w-full border-2 border-black p-3 rounded-xl text-[12px] font-bold"><option value="">Mostrador</option></select><div id="ticket" class="mt-4 space-y-2">Vacio</div><div class="flex justify-between font-black text-[20px] mt-4 border-t-2 pt-3">Total $ <span id="c-total">0</span></div><button onclick="abrirCobro()" class="w-full mt-3 bg-black text-white py-4 rounded-2xl font-black text-[16px]">COBRAR</button><button onclick="limpiarCarrito()" class="w-full mt-2 bg-gray-100 py-2 rounded-xl text-[11px] font-bold">Vaciar</button></div></div>
 <div id="tab-inventario" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><h2 class="font-black">📦 Inventario</h2></div><div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div class="grid grid-cols-5 gap-2"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]"><input id="inv-precio" type="number" placeholder="$30" class="border-2 border-black p-3 rounded-xl font-black text-[13px]"><select id="inv-unidad" class="border-2 border-black p-3 rounded-xl text-[11px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>pza</option><option>m</option></select><button onclick="addInventario()" class="bg-black text-white rounded-xl font-black text-xl">+</button></div><div id="inv-msg" class="hidden mt-3 p-2 rounded-xl text-center font-bold text-[12px]"></div><input id="buscInv" placeholder="🔍 Buscar..." class="w-full border-2 p-3 rounded-xl mt-3 text-[12px]" oninput="renderInventarioMaster()"><div id="listaInvMaster" class="mt-4 space-y-2"></div></div></div>
 <div id="tab-finanzas" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">Finanzas</h2><button onclick="openGasto()" class="bg-[#4FD1C5] text-black w-10 h-10 rounded-xl font-black text-xl">+</button></div></div><div id="fin-flujo" class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div id="flu-lista" class="mt-4 space-y-2"></div></div></div>
-
-<!-- CLIENTES 9.9 NUEVO -->
-<div id="tab-clientes" class="p-3">
-<div class="bg-[#2D3748] rounded-[28px] p-4 text-white">
-<h2 class="font-black text-[16px]">👥 Clientes</h2><p class="text-[11px] opacity-70">Guarda con WhatsApp y dirección</p>
-</div>
-
-<div class="mt-3 bg-white rounded-[28px] p-4 shadow-sm">
-<h3 class="font-black text-[13px]">➕ Nuevo cliente</h3>
-<input id="cliNombre" placeholder="Nombre / Alias *" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]">
-<div class="grid grid-cols-2 gap-2 mt-2">
-<input id="cliTel" type="tel" placeholder="Celular: 443..." class="border-2 border-black p-3 rounded-xl font-bold text-[13px]">
-<input id="cliWhat" type="tel" placeholder="WhatsApp (si es diferente)" class="border-2 border-black p-3 rounded-xl text-[13px]">
-</div>
-<input id="cliDir" placeholder="Dirección / Colonia" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]">
-<label class="flex items-center gap-2 mt-2 text-[11px] font-bold"><input type="checkbox" id="cliWhatIgual" checked onchange="document.getElementById('cliWhat').value=document.getElementById('cliTel').value"> WhatsApp igual que celular</label>
-
-<div class="grid grid-cols-2 gap-2 mt-3">
-<button onclick="addCliente()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">💾 Guardar cliente</button>
-<button onclick="importarContacto()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📇 Importar de contactos</button>
-</div>
-<p id="cliMsg" class="hidden mt-2 text-[11px] font-bold text-center p-2 rounded-xl"></p>
-</div>
-
-<div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm">
-<div class="flex justify-between items-center"><h3 class="font-black text-[12px]">Mis clientes (<span id="cliCount">0</span>)</h3><input id="buscCli" placeholder="🔍 Buscar..." class="border-2 p-2 rounded-xl text-[11px] w-32" oninput="renderClientes()"></div>
-<div id="listaClientes" class="mt-4 space-y-3"></div>
-</div>
-</div>
+<div id="tab-clientes" class="p-3"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><h2 class="font-black text-[16px]">👥 Clientes</h2><p class="text-[11px] opacity-70">Guarda con WhatsApp y dirección</p></div><div class="mt-3 bg-white rounded-[28px] p-4 shadow-sm"><h3 class="font-black text-[13px]">➕ Nuevo cliente</h3><input id="cliNombre" placeholder="Nombre / Alias *" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="cliTel" type="tel" placeholder="Celular: 443..." class="border-2 border-black p-3 rounded-xl font-bold text-[13px]"><input id="cliWhat" type="tel" placeholder="WhatsApp (si es diferente)" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="cliDir" placeholder="Dirección / Colonia" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><label class="flex items-center gap-2 mt-2 text-[11px] font-bold"><input type="checkbox" id="cliWhatIgual" checked onchange="document.getElementById('cliWhat').value=document.getElementById('cliTel').value"> WhatsApp igual que celular</label><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="addCliente()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">💾 Guardar cliente</button><button onclick="importarContacto()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📇 Importar de contactos</button></div><p id="cliMsg" class="hidden mt-2 text-[11px] font-bold text-center p-2 rounded-xl"></p></div><div class="mt-3 bg-white rounded-[20px] p-4 shadow-sm"><div class="flex justify-between items-center"><h3 class="font-black text-[12px]">Mis clientes (<span id="cliCount">0</span>)</h3><input id="buscCli" placeholder="🔍 Buscar..." class="border-2 p-2 rounded-xl text-[11px] w-32" oninput="renderClientes()"></div><div id="listaClientes" class="mt-4 space-y-3"></div></div></div>
 
 <div id="tab-config" class="p-3 hidden">
+
+<!-- NUEVO PAGOS -->
+<div class="bg-black rounded-[28px] p-5 shadow-sm text-white mb-3">
+<h2 class="font-black text-[16px]">💳 Pasarelas de Pago</h2>
+<p class="text-[11px] opacity-70 mt-1">Conecta tu terminal o link de pago. Se guarda solo en tu cel.</p>
+
+<div class="mt-4 bg-white/10 p-3 rounded-2xl">
+<p class="font-black text-[11px]">Mercado Pago</p>
+<input id="mpToken" placeholder="APP_USR-..." class="w-full border-0 p-3 rounded-xl mt-2 text-[12px] text-black">
+<p class="text-[9px] opacity-60 mt-1">Mercado Pago > Credenciales > Access Token</p>
+</div>
+
+<div class="mt-3 bg-white/10 p-3 rounded-2xl">
+<p class="font-black text-[11px]">Clip (Terminal)</p>
+<input id="clipKey" placeholder="API Key de Clip" class="w-full border-0 p-3 rounded-xl mt-2 text-[12px] text-black">
+<p class="text-[9px] opacity-60 mt-1">Clip Dashboard > Developers > API Key</p>
+</div>
+
+<div class="mt-3 bg-[#635bff]/30 border border-[#635bff] p-3 rounded-2xl">
+<p class="font-black text-[11px]">Stripe - Cobro Internacional 🌎</p>
+<input id="stripeKey" placeholder="sk_live_... o sk_test_..." class="w-full border-0 p-3 rounded-xl mt-2 text-[12px] text-black">
+<div class="grid grid-cols-2 gap-2 mt-2">
+<select id="stripeCurrency" class="p-2 rounded-xl text-[12px] font-bold text-black"><option value="mxn">MXN - Pesos</option><option value="usd">USD - Dólar</option><option value="eur">EUR - Euro</option><option value="cop">COP - Colombia</option><option value="ars">ARS - Argentina</option><option value="pen">PEN - Perú</option></select>
+<input id="stripeEmail" placeholder="Tu email Stripe (opcional)" class="p-2 rounded-xl text-[11px] text-black">
+</div>
+<p class="text-[9px] opacity-70 mt-1">Stripe acepta todas las tarjetas del mundo.</p>
+</div>
+
+<button onclick="guardarPagos()" class="w-full mt-4 bg-white text-black py-3 rounded-2xl font-black text-[13px]">💾 Guardar Pasarelas</button>
+<p id="pagosMsg" class="text-[11px] text-center mt-2 text-green-300"></p>
+<div class="mt-3 text-[10px] opacity-60">Tu link de pago se crea al cobrar, en la moneda que elijas.</div>
+</div>
+<!-- FIN NUEVO PAGOS -->
+
 <div class="bg-white rounded-[28px] p-5 shadow-sm">
 <h2 class="font-black text-[18px]">⚙️ Config Ticket + Logo</h2>
 <div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3">
@@ -67,7 +75,22 @@ input,select,textarea{color:#000!important;background:#fff!important}
 <input id="empNombre" placeholder="Nombre negocio" class="w-full border-2 border-black p-3 rounded-xl mt-4 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="CP" class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="Mensaje ticket" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea><label class="flex gap-2 items-center mt-3 text-[12px] font-bold"><input type="checkbox" id="empImprimirAuto"> Imprimir automático</label><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR CONFIG</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket centrado</button><div id="ticketVista" class="mt-6 bg-[#FFF8F0] border-2 border-dashed p-3 rounded-xl"><p class="text-[10px] font-bold text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-3 rounded-xl text-[12px] font-mono shadow-sm"></div></div></div>
 </div>
 
-<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 pb-8"><h2 class="font-black text-[18px]">Cobrar $ <span id="cobroTotal">0</span></h2><div class="grid grid-cols-2 gap-3 mt-4"><button onclick="setMetodo('efectivo')" id="m-efectivo" class="metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]">💵 Efectivo</button><button onclick="setMetodo('tarjeta')" id="m-tarjeta" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">💳 Tarjeta</button><button onclick="setMetodo('transferencia')" id="m-transferencia" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">🏦 Transferencia</button><button onclick="setMetodo('otro')" id="m-otro" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">📦 Otros</button></div><div id="efectivoBox" class="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-3"><p class="font-black text-[12px]">¿Con cuánto paga?</p><input id="pagoRecibido" type="number" placeholder="$" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black text-[14px]">Cambio: $<span id="cambio">0.00</span></p></div><button onclick="confirmarCobro()" class="w-full mt-5 bg-black text-white py-4 rounded-2xl font-black text-[16px]">CONFIRMAR COBRO</button><button onclick="cerrarCobro()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[12px]">Cancelar</button></div></div>
+<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 pb-8 max-h-[90vh] overflow-y-auto"><h2 class="font-black text-[18px]">Cobrar $ <span id="cobroTotal">0</span></h2>
+
+<div class="grid grid-cols-2 gap-3 mt-4"><button onclick="setMetodo('efectivo')" id="m-efectivo" class="metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]">💵 Efectivo</button><button onclick="setMetodo('tarjeta')" id="m-tarjeta" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">💳 Tarjeta</button><button onclick="setMetodo('transferencia')" id="m-transferencia" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">🏦 Transferencia</button><button onclick="setMetodo('otro')" id="m-otro" class="metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]">📦 Otros</button></div>
+
+<!-- NUEVO BOTONES LINK -->
+<div class="mt-4 bg-gray-900 rounded-2xl p-3">
+<p class="text-white font-black text-[11px] mb-2">🌎 COBRAR CON LINK (Terminal / Online)</p>
+<div class="grid grid-cols-1 gap-2">
+<button onclick="cobrarCon('mp')" class="w-full bg-[#009ee3] text-white py-3 rounded-xl font-black text-[12px]">🔗 Link Mercado Pago</button>
+<button onclick="cobrarCon('clip')" class="w-full bg-[#ff4f00] text-white py-3 rounded-xl font-black text-[12px]">🔗 Link Clip</button>
+<button onclick="cobrarCon('stripe')" class="w-full bg-[#635bff] text-white py-3 rounded-xl font-black text-[12px]">🔗 Link Stripe (USD/MXN/EUR) - Internacional</button>
+</div>
+<div id="linkPagoBox" class="hidden mt-3 bg-white rounded-xl p-3"><p class="text-[11px] font-bold">Link generado:</p><a id="linkPagoA" href="#" target="_blank" class="text-[12px] text-blue-600 break-all font-bold"></a><button onclick="copiarLink()" class="mt-2 w-full bg-black text-white py-2 rounded-xl text-[11px]">Copiar link</button><button onclick="compartirWhatsApp()" class="mt-2 w-full bg-[#25D366] text-white py-2 rounded-xl text-[11px]">Enviar por WhatsApp</button></div>
+</div>
+
+<div id="efectivoBox" class="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-3"><p class="font-black text-[12px]">¿Con cuánto paga?</p><input id="pagoRecibido" type="number" placeholder="$" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black text-[14px]">Cambio: $<span id="cambio">0.00</span></p></div><button onclick="confirmarCobro()" class="w-full mt-5 bg-black text-white py-4 rounded-2xl font-black text-[16px]">CONFIRMAR COBRO</button><button onclick="cerrarCobro()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[12px]">Cancelar</button></div></div>
 
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto z-30">
 <button onclick="showTab('costos')" id="n-costos" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-book"></i><span class="text-[7px]">Crear</span></button>
@@ -79,7 +102,7 @@ input,select,textarea{color:#000!important;background:#fff!important}
 </div></div>
 
 <script>
-let editId=null, editCliId=null, carrito=[], fotoTemp='', logoTemp='', metodoPago='efectivo';
+let editId=null, editCliId=null, carrito=[], fotoTemp='', logoTemp='', metodoPago='efectivo', lastLink='';
 function getCats(){ let c=JSON.parse(localStorage.getItem('categoriasV2')||'[]'); if(!c.length){ c=[{id:'recetario',nombre:'Base',grupo:'recetario'},{id:'catalogo',nombre:'Venta',grupo:'catalogo'}]; localStorage.setItem('categoriasV2',JSON.stringify(c)); } return c; }
 function getProd(){ return JSON.parse(localStorage.getItem('productosV2')||'[]'); }
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos')||'[]'); }
@@ -87,6 +110,7 @@ function getFacts(){ return JSON.parse(localStorage.getItem('facturas')||'[]'); 
 function getInv(){ return JSON.parse(localStorage.getItem('inventarioMaestro')||'[]'); }
 function getCli(){ return JSON.parse(localStorage.getItem('clientesV2')|| localStorage.getItem('clientes')||'[]'); }
 function getEmp(){ return JSON.parse(localStorage.getItem('empresaConfig')||'{"nombre":"Mi Negocio","direccion":"","cp":"","tel":"","rfc":"","mensaje":"¡Gracias por tu compra!","autoPrint":false,"logo":"","mostrarLogo":true,"mostrarFondo":true,"opacidad":8}'); }
+function getPagos(){ return JSON.parse(localStorage.getItem('pagosConfig')||'{"mp":"","clip":"","stripe":"","currency":"mxn"}'); }
 function toBase(cant,uni){ if(uni=='kg') return cant*1000; if(uni=='L') return cant*1000; if(uni=='m') return cant*100; return cant; }
 function showTab(t){
   ['costos','vender','inventario','finanzas','clientes','config'].forEach(x=>{
@@ -98,7 +122,7 @@ function showTab(t){
   if(t=='vender') { renderVenta(); renderClientesSel(); renderCarrito(); }
   if(t=='inventario') renderInventarioMaster();
   if(t=='clientes') { renderClientes(); }
-  if(t=='config') cargarEmpresa();
+  if(t=='config') { cargarEmpresa(); cargarPagos(); }
   actualizarFondo();
 }
 function setCrear(v){
@@ -122,7 +146,21 @@ function actualizarFondo(){
 function cargarEmpresa(){ let emp=getEmp(); document.getElementById('empNombre').value=emp.nombre||''; document.getElementById('empDireccion').value=emp.direccion||''; document.getElementById('empCP').value=emp.cp||''; document.getElementById('empTel').value=emp.tel||''; document.getElementById('empRFC').value=emp.rfc||''; document.getElementById('empMensaje').value=emp.mensaje||''; document.getElementById('empImprimirAuto').checked=emp.autoPrint||false; document.getElementById('empMostrarLogo').checked=emp.mostrarLogo!==false; document.getElementById('empMostrarFondo').checked=emp.mostrarFondo!==false; document.getElementById('empOpacidad').value=emp.opacidad||8; document.getElementById('opacidadVal').innerText=(emp.opacidad||8)+'%'; logoTemp=emp.logo||''; if(logoTemp){ document.getElementById('logoPreview').src=logoTemp; document.getElementById('logoPreviewBox').classList.remove('hidden'); } actualizarFondo(); actualizarVistaTicket(); }
 function guardarEmpresa(){ let emp={nombre:document.getElementById('empNombre').value.trim()||'Mi Negocio',direccion:document.getElementById('empDireccion').value.trim(),cp:document.getElementById('empCP').value.trim(),tel:document.getElementById('empTel').value.trim(),rfc:document.getElementById('empRFC').value.trim(),mensaje:document.getElementById('empMensaje').value.trim()||'¡Gracias!',autoPrint:document.getElementById('empImprimirAuto').checked,mostrarLogo:document.getElementById('empMostrarLogo').checked,mostrarFondo:document.getElementById('empMostrarFondo').checked,opacidad:parseInt(document.getElementById('empOpacidad').value)||8,logo:logoTemp||getEmp().logo||''}; localStorage.setItem('empresaConfig',JSON.stringify(emp)); alert('✅ Config guardada'); actualizarFondo(); actualizarVistaTicket(); }
 
-// CLIENTES NUEVO
+function cargarPagos(){ let p=getPagos(); document.getElementById('mpToken').value=p.mp||''; document.getElementById('clipKey').value=p.clip||''; document.getElementById('stripeKey').value=p.stripe||''; document.getElementById('stripeCurrency').value=p.currency||'mxn'; }
+function guardarPagos(){ let p={mp:document.getElementById('mpToken').value.trim(),clip:document.getElementById('clipKey').value.trim(),stripe:document.getElementById('stripeKey').value.trim(),currency:document.getElementById('stripeCurrency').value}; localStorage.setItem('pagosConfig',JSON.stringify(p)); document.getElementById('pagosMsg').innerText='✅ Pasarelas guardadas'; setTimeout(()=>document.getElementById('pagosMsg').innerText='',3000); }
+
+function cobrarCon(tipo){
+  let total=parseFloat(document.getElementById('c-total').innerText)||0; if(!total) return alert('Carrito vacio'); let cfg=getPagos();
+  let body={amount:total, tipo:tipo, currency:document.getElementById('stripeCurrency').value, mp_token:cfg.mp, clip_key:cfg.clip, stripe_key:cfg.stripe};
+  document.getElementById('linkPagoBox').classList.add('hidden');
+  fetch('/api/create_payment_link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()).then(d=>{
+    if(d.url){ lastLink=d.url; document.getElementById('linkPagoA').innerText=d.url; document.getElementById('linkPagoA').href=d.url; document.getElementById('linkPagoBox').classList.remove('hidden'); }
+    else alert('Error: '+(d.error||JSON.stringify(d)));
+  }).catch(e=>alert('Error '+e));
+}
+function copiarLink(){ navigator.clipboard.writeText(lastLink).then(()=>alert('Link copiado')); }
+function compartirWhatsApp(){ let cliId=document.getElementById('selCliente').value; let cli=getCli().find(c=>c.id==cliId); let tel=cli?.whatsapp||cli?.tel||''; let num=tel.replace(/\\D/g,'').slice(-10); let msg=`Hola ${cli?.nombre||''} aquí tu link de pago por $${document.getElementById('c-total').innerText}: ${lastLink}`; let url= num? `https://wa.me/52${num}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`; window.open(url,'_blank'); }
+
 function addCliente(){
   let nombre=document.getElementById('cliNombre').value.trim();
   let tel=document.getElementById('cliTel').value.trim();
@@ -192,7 +230,6 @@ async function importarContacto(){
         return;
       }
     } else {
-      // Fallback manual
       let nombre=prompt('Tu navegador no permite importar automático, escribe el nombre:');
       if(!nombre) return;
       let tel=prompt('Celular de '+nombre+':')||'';
@@ -235,7 +272,7 @@ function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket')
 function cambiarQty(idx,delta){ carrito[idx].qty+=delta; if(carrito[idx].qty<=0){ carrito.splice(idx,1); } renderCarrito(); }
 function quitarDelCarrito(idx){ carrito.splice(idx,1); renderCarrito(); }
 function limpiarCarrito(){ carrito=[]; renderCarrito(); }
-function abrirCobro(){ if(!carrito.length) return alert('Carrito vacio'); document.getElementById('cobroTotal').innerText=document.getElementById('c-total').innerText; document.getElementById('pagoRecibido').value=''; document.getElementById('cambio').innerText='0.00'; setMetodo('efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); }
+function abrirCobro(){ if(!carrito.length) return alert('Carrito vacio'); document.getElementById('cobroTotal').innerText=document.getElementById('c-total').innerText; document.getElementById('pagoRecibido').value=''; document.getElementById('cambio').innerText='0.00'; document.getElementById('linkPagoBox').classList.add('hidden'); setMetodo('efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); }
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function setMetodo(m){ metodoPago=m; document.querySelectorAll('.metodo-btn').forEach(b=>{ b.className='metodo-btn border-2 border-black bg-white p-4 rounded-2xl font-black text-[13px]'; }); let sel=document.getElementById('m-'+m); if(sel) sel.className='metodo-btn border-2 border-black bg-black text-white p-4 rounded-2xl font-black text-[13px]'; document.getElementById('efectivoBox').classList.toggle('hidden', m!='efectivo'); }
 function calcCambio(){ let total=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; let cambio=rec-total; document.getElementById('cambio').innerText=(cambio>0?cambio:0).toFixed(2); }
@@ -269,7 +306,7 @@ function generarTicket(data){
   document.getElementById('ticketContenido').innerHTML=html; return html;
 }
 function actualizarVistaTicket(){ let fake={fecha:new Date(),items:[{nombre:'Alitas búfalo',qty:2,venta:57},{nombre:'Crepas',qty:1,venta:180}],total:294,metodo:'efectivo',recibido:300,cambio:6,cliente:'Mostrador'}; generarTicket(fake); }
-function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><title>Ticket</title><style>body{font-family:monospace; font-size:12px; width:58mm; margin:0 auto; text-align:center;} img{display:block; margin:0 auto; max-width:90px;} @media print { @page { margin:0; } }</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\/script></body></html>'); w.document.close(); }
+function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><title>Ticket</title><style>body{font-family:monospace; font-size:12px; width:58mm; margin:0 auto; text-align:center;} img{display:block; margin:0 auto; max-width:90px;} @media print { @page { margin:0; } }</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); w.document.close(); }
 function probarTicket(){ guardarEmpresa(); let fake={fecha:new Date(),items:[{nombre:'Alitas búfalo',qty:2,venta:57},{nombre:'Crepas',qty:1,venta:180}],total:294,metodo:'efectivo',recibido:300,cambio:6,cliente:'Mostrador'}; generarTicket(fake); imprimirTicket(); }
 function setFin(v){ renderFinanzas(); }
 function addMov(){ let concepto=document.getElementById('g-concepto')?.value.trim(), monto=parseFloat(document.getElementById('g-monto')?.value), fecha=document.getElementById('g-fecha')?.value; if(!concepto||!monto||!fecha) return alert('Faltan'); let facts=getFacts(); facts.push({id:Date.now(),concepto,monto,fecha,fechaObj:new Date(fecha+'T00:00:00').getTime(),tipo:document.getElementById('g-tipo').value}); localStorage.setItem('facturas',JSON.stringify(facts)); document.getElementById('modalGasto').classList.add('hidden'); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; renderFinanzas(); }
@@ -281,8 +318,50 @@ let gf=getFijos(); if(gf.length){ gf.forEach(g=>addFijo(g)); } else { addFijo({n
 let prodMesEl=document.getElementById('prodMes'); if(prodMesEl) prodMesEl.value=localStorage.getItem('prodMes')||100;
 let today=new Date().toISOString().split('T')[0]; let gd=document.getElementById('g-fecha'); if(gd) gd.value=today;
 
-document.getElementById('cliTel').addEventListener('input',()=>{ if(document.getElementById('cliWhatIgual').checked){ document.getElementById('cliWhat').value=document.getElementById('cliTel').value; } });
+document.getElementById('cliTel')?.addEventListener('input',()=>{ if(document.getElementById('cliWhatIgual').checked){ document.getElementById('cliWhat').value=document.getElementById('cliTel').value; } });
 
 calcFijos(); renderInventario(); renderVenta(); renderFinanzas(); renderInventarioMaster(); renderClientes(); renderClientesSel(); showTab('clientes'); actualizarVistaTicket(); actualizarFondo();
 </script></body></html>
 """
+@app.route('/api/create_payment_link', methods=['POST'])
+def create_payment_link():
+    data = request.get_json() or {}
+    tipo = data.get('tipo')
+    amount = float(data.get('amount') or 0)
+    currency = (data.get('currency') or 'mxn').lower()
+    try:
+        if tipo == 'mp':
+            tok = data.get('mp_token') or ''
+            if not tok.startswith('APP_USR-'): return jsonify({"error":"Pon tu Access Token de Mercado Pago en Config"}),400
+            r = requests.post("https://api.mercadopago.com/checkout/preferences", headers={"Authorization": f"Bearer {tok}", "Content-Type":"application/json"}, json={"items":[{"title":"Venta Mi Negocio","quantity":1,"unit_price":amount}]}, timeout=10)
+            j = r.json()
+            url = j.get('init_point') or j.get('sandbox_init_point')
+            if not url: return jsonify({"error": str(j)}),400
+            return jsonify({"url": url})
+        elif tipo == 'stripe':
+            sk = data.get('stripe_key') or ''
+            if not sk.startswith('sk_'): return jsonify({"error":"Pon tu Secret Key de Stripe sk_live_... en Config"}),400
+            # Stripe Checkout Session
+            # amount in cents
+            import math
+            unit_amount = int(math.floor(amount*100))
+            r = requests.post("https://api.stripe.com/v1/checkout/sessions",
+                auth=(sk,''),
+                data={"payment_method_types[]":"card","line_items[0][price_data][currency]":currency,"line_items[0][price_data][product_data][name]":"Venta Mi Negocio","line_items[0][price_data][unit_amount]":unit_amount,"line_items[0][quantity]":1,"mode":"payment","success_url":"https://example.com/success","cancel_url":"https://example.com/cancel"},
+                timeout=10)
+            j = r.json()
+            if 'url' in j: return jsonify({"url": j['url']})
+            if 'error' in j: return jsonify({"error": j['error'].get('message')}),400
+            return jsonify({"error": str(j)}),400
+        elif tipo == 'clip':
+            # Clip - generamos Payment Link via API (simplificado)
+            api_key = data.get('clip_key') or ''
+            if not api_key: return jsonify({"error":"Pon tu API Key de Clip en Config"}),400
+            # Clip API requiere otro flujo, por ahora devolvemos instruccion para usar dashboard con monto
+            # Si tienes el endpoint real: POST https://api.payclip.com/...
+            # Aquí te generamos un link de referencia que puedes usar manual
+            return jsonify({"url": f"https://dashboard.clip.mx/payment-links/create?amount={amount}"})
+        else:
+            return jsonify({"error":"Tipo no soportado"}),400
+    except Exception as e:
+        return jsonify({"error": str(e)}),500
