@@ -2,11 +2,9 @@ from flask import Flask, jsonify, send_file, request
 import os, json
 from datetime import datetime
 app = Flask(__name__)
-
 BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
 os.makedirs(BASE_DATA, exist_ok=True)
 USERS_FILE = os.path.join(BASE_DATA, 'users.json')
-
 def load_users():
     try:
         if os.path.exists(USERS_FILE):
@@ -20,15 +18,13 @@ def save_users(u):
 def get_user_file(negocio_id):
     safe = negocio_id.replace("@","_at_").replace(".","_")
     return os.path.join(BASE_DATA, f"{safe}.json")
-
 @app.route('/manifest.json')
 def manifest():
-    return jsonify({"name": "Mi Negocio 10.1","short_name": "Mi Negocio","start_url": "/","display": "standalone"})
+    return jsonify({"name": "Mi Negocio 10.2","short_name": "Mi Negocio","start_url": "/","display": "standalone"})
 @app.route('/logo.png')
 def logo_file():
     if os.path.exists('logo.png'): return send_file('logo.png', mimetype='image/png')
     return "", 204
-
 @app.route('/api/register', methods=['POST'])
 def api_register():
     try:
@@ -39,14 +35,12 @@ def api_register():
         with open(get_user_file(email),'w') as f: json.dump({},f)
         return jsonify({"ok":True,"email":email,"negocio_id":email})
     except Exception as e: return jsonify({"ok":False,"msg":str(e)}),500
-
 @app.route('/api/login', methods=['POST'])
 def api_login():
     d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
     users=load_users()
     if email not in users or users[email]['password']!=pwd: return jsonify({"ok":False,"msg":"Correo o contraseña incorrecta"}),401
     return jsonify({"ok":True,"email":email,"negocio_id":users[email]['negocio_id'],"rol":users[email]['rol']})
-
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
     d=request.json; owner=d.get('owner_email','').lower().strip(); owner_pwd=d.get('owner_password',''); colab=d.get('colab_email','').lower().strip(); colab_pwd=d.get('colab_password','') or '1234'
@@ -54,7 +48,6 @@ def api_invite():
     if owner not in users or users[owner]['password']!=owner_pwd: return jsonify({"ok":False,"msg":"No autorizado"}),403
     users[colab]={"password":colab_pwd,"negocio_id":users[owner]['negocio_id'],"rol":"colab"}; save_users(users)
     return jsonify({"ok":True,"msg":f"{colab} agregado"})
-
 @app.route('/api/load', methods=['GET'])
 def api_load():
     email=request.args.get('email','').lower().strip(); users=load_users()
@@ -62,7 +55,6 @@ def api_load():
     fname=get_user_file(users[email]['negocio_id'])
     data=json.load(open(fname)) if os.path.exists(fname) else {}
     return jsonify({"ok":True,"data":data})
-
 @app.route('/api/save', methods=['POST'])
 def api_save():
     d=request.json; email=d.get('email','').lower().strip(); data=d.get('data',{})
@@ -70,58 +62,68 @@ def api_save():
     if email not in users: return jsonify({"ok":False}),404
     with open(get_user_file(users[email]['negocio_id']),'w') as f: json.dump(data,f)
     return jsonify({"ok":True})
-
 @app.route('/')
 def home():
  return """<!DOCTYPE html>
 <html><head>
 <link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mi Negocio 10.1 Calendario</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Mi Negocio 10.2 Hora Local</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>input,select,textarea{color:#000!important;background:#fff!important}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;height:360px;pointer-events:none;z-index:0;opacity:0.08;object-fit:contain;}#appContent{position:relative;z-index:1;}</style></head>
 <body class="bg-[#FFF8F0] min-h-screen"><div class="max-w-md mx-auto pb-[120px] relative">
 <img id="logoBg" class="logo-watermark hidden"><div id="appContent">
 <div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6">
-<h1 class="font-black text-[24px]">Mi Negocio 10.1</h1><p class="text-[12px] text-gray-500 mt-1">Calendario + login multi-celular</p>
+<h1 class="font-black text-[24px]">Mi Negocio 10.2</h1><p class="text-[12px] text-gray-500 mt-1">Hora celular + calendario</p>
 <div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6">
 <input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]">
 <input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3">
 <button onclick="hacerLogin()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">ENTRAR</button>
 <button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button>
 <p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
-
-<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.1</h1><p id="userLabel" class="text-[10px] text-gray-500"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
-
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.2</h1><p id="userLabel" class="text-[10px] text-gray-500"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
 <div id="tab-vender" class="p-3 hidden">
 <div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva / Editar</button></div><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div id="listaCatsEdit" class="space-y-2 mb-3"></div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
 <div id="listaVenta" class="grid grid-cols-2 gap-3"></div>
 <div class="mt-6 bg-white rounded-[28px] p-4 shadow-xl border-2 border-black"><div class="flex justify-between items-center"><select id="selCliente" class="flex-1 border-2 border-black p-3 rounded-xl text-[12px] font-bold"><option value="">Mostrador</option></select><span id="vendedorBadge" class="ml-2 text-[9px] bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-bold"></span></div><div id="ticket" class="mt-4 space-y-2">Vacio</div><div class="flex justify-between font-black text-[20px] mt-4 border-t-2 pt-3">Total $ <span id="c-total">0</span></div><button onclick="abrirCobro()" class="w-full mt-3 bg-black text-white py-4 rounded-2xl font-black">COBRAR</button></div>
 </div>
-
 <div id="tab-costos" class="p-3"><div id="crear-menu" class="space-y-4">
 <div class="bg-white rounded-[28px] p-5 shadow-sm border-2 border-black"><h2 class="font-black">💰 Gastos Fijos</h2><div class="grid grid-cols-5 gap-2 mt-3"><input id="fijoNombre" placeholder="Ej: Renta" class="col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[12px]"><input id="fijoMonto" type="number" placeholder="$3000" class="col-span-2 border-2 border-black p-3 rounded-xl font-black text-[12px]"><button onclick="addFijo()" class="bg-black text-white rounded-xl font-black">+</button></div><div id="listaFijos" class="mt-3 space-y-2"></div><div class="mt-3 bg-black text-white p-3 rounded-xl flex justify-between font-black"><span>Total Fijos/mes</span><span>$<span id="totalFijos">0</span></span></div><div class="mt-2 bg-amber-50 border-2 p-3 rounded-xl"><input id="lotesMes" type="number" value="30" class="w-full border-2 border-black p-2 rounded-xl font-black" oninput="localStorage.setItem('lotesMes_'+negocioId,this.value); renderFijos(); calc(); guardarEnNube();"></div></div>
 <div class="bg-white rounded-[28px] p-5 shadow-sm text-center"><button onclick="setCrear('base')" class="w-full bg-[#FFF8F0] border-2 border-black rounded-[20px] p-5 font-black">1. Crear BASE (receta editable)</button><button onclick="setCrear('producto')" class="w-full mt-3 bg-[#0F172A] text-white rounded-[20px] p-5 font-black">2. Producto compuesto + Categoría</button></div><div class="bg-white rounded-[20px] p-4"><h3 class="font-black text-[12px] mb-2">Mis recetas y productos (✏️ para editar)</h3><div id="listaInv"></div></div></div>
 <div id="crear-base" class="hidden"><button onclick="cancelarEdicion()" class="mb-3 font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4 shadow-sm"><h2 class="font-black" id="tituloBase">BASE</h2><input id="nombre" placeholder="Ej: Salsa búfalo" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div id="insumos" class="mt-4 space-y-3"></div><button onclick="addInsumo()" class="w-full mt-3 bg-orange-100 border-2 py-3 rounded-2xl font-black text-[12px]">+ Ingrediente con unidad</button><div class="mt-4 bg-amber-50 border-2 p-3 rounded-2xl"><div class="flex gap-2"><input id="rendCant" type="number" value="10" class="flex-1 border-2 border-black p-3 rounded-xl font-black" oninput="calc()"><select id="rendUni" class="border-2 border-black p-3 rounded-xl font-bold" onchange="calc()"><option>L</option><option>ml</option><option>kg</option><option>g</option><option>pza</option><option>m</option><option>cm</option></select></div></div><div class="mt-3 p-4 bg-[#0F172A] text-white rounded-[16px]"><div class="flex justify-between"><span>Ingredientes</span><b>$<span id="c-ing">0.00</span></b></div><div class="flex justify-between text-amber-300 text-[12px]"><span>+ Fijos</span><b>$<span id="c-fijos">0.00</span></b></div><div class="font-black border-t border-white/20 mt-2 pt-2 flex justify-between"><span>Total</span><span>$<span id="costo">0.00</span></span></div><div class="flex justify-between mt-2 text-[#4FD1C5]"><span>Venta</span><span>$<span id="venta">0.00</span></span></div><div class="mt-3 flex gap-2 bg-white/10 p-2 rounded-xl"><input id="margen" type="number" value="50" class="w-16 text-black rounded-lg text-center font-black py-2" oninput="calc()"><input id="ventaManual" type="number" placeholder="$ final" class="flex-1 text-black rounded-lg px-2 py-2 font-black" oninput="calc()"></div></div><button id="btnGuardarBase" onclick="guardarProd('recetario')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR BASE</button></div></div>
 <div id="crear-producto" class="hidden"><button onclick="cancelarEdicion()" class="mb-3 font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4"><h2 class="font-black" id="tituloProd">Producto compuesto</h2><input id="nombreProd" placeholder="Ej: Alitas búfalo" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div class="mt-3 bg-blue-50 border-2 border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-black">📂 Categoría</p><select id="prodCategoria" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-bold text-[12px]"></select><div class="mt-2 flex gap-2"><input id="quickCat" placeholder="Nueva categoría" class="flex-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="addCategoriaVentaDesdeProd()" class="bg-black text-white px-3 rounded-xl text-[11px] font-bold">Crear</button></div></div><div class="mt-3"><input type="file" id="fotoInput" accept="image/*" onchange="previewFoto(this)" class="w-full mt-2 text-[12px]"><div id="fotoPreview" class="mt-2 hidden"><img id="fotoImg" class="w-24 h-24 object-cover rounded-xl border-2 border-black"></div></div><div class="mt-4 bg-amber-50 border-2 p-3 rounded-2xl"><p class="text-[11px] font-black">Bases que lleva:</p><div id="basesSel" class="mt-2 space-y-3"></div><button onclick="addBase()" class="w-full mt-2 bg-white border-2 py-2 rounded-xl font-bold text-[11px]">+ Base</button></div><div class="mt-3 p-4 bg-black text-white rounded-[16px]"><div class="flex justify-between"><span>Costo</span><b>$<span id="c-ing2">0.00</span></b></div><div class="flex justify-between font-black text-[16px] mt-1"><span>Venta</span><span class="text-[#4FD1C5]">$<span id="venta2">0.00</span></span></div><div class="mt-2 flex gap-2"><input id="margen2" type="number" value="100" class="w-14 text-black rounded-lg text-center font-black py-1" oninput="calc2()"><input id="ventaManual2" type="number" placeholder="$ final" class="ml-auto w-20 text-black rounded-lg px-2 py-1 font-black" oninput="calc2()"></div></div><button id="btnGuardarProd" onclick="guardarProd('catalogo')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR EN CATEGORÍA</button></div></div></div>
-
 <div id="tab-config" class="p-3 hidden"><div class="bg-white rounded-[28px] p-5 shadow-sm"><h2 class="font-black">⚙️ Config y Colaboradores</h2>
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-3"><input id="colabEmail" type="email" placeholder="colaborador@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
 <div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3"><p class="font-black text-[12px]">📸 Logo</p><input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]"><div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-20 h-20 object-contain rounded-xl border-2 border-black bg-white"><button onclick="quitarLogo()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-bold">X Quitar</button></div><div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarLogo" checked> Logo ticket</label><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarFondo" checked> Fondo</label></div><div class="mt-3"><input type="range" id="empOpacidad" min="2" max="20" value="8" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"><span id="opacidadVal" class="text-[10px]">8%</span></div></div><input id="empNombre" placeholder="Nombre negocio" class="w-full border-2 border-black p-3 rounded-xl mt-4 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="CP" class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="Mensaje ticket" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold">🧾 Probar ticket</button><div id="ticketVista" class="mt-6 border-2 border-dashed p-3 rounded-xl"><div id="ticketContenido" class="bg-white p-3 rounded-xl text-[12px] font-mono shadow-sm"></div></div></div></div>
-
 <div id="tab-clientes" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><div class="flex justify-between"><h2 class="font-black">👥 Clientes</h2><button onclick="openImportModal()" class="bg-[#25D366] px-3 py-2 rounded-xl font-black text-[11px]">📇 Importar</button></div></div><div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaClientes" class="mt-4 space-y-3"></div></div></div>
 <div id="tab-inventario" class="p-3 hidden"><div class="bg-white rounded-[20px] p-4"><div class="grid grid-cols-5 gap-2"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-3 rounded-xl font-bold"><input id="inv-precio" type="number" placeholder="$30" class="border-2 border-black p-3 rounded-xl font-black"><select id="inv-unidad" class="border-2 border-black p-3 rounded-xl text-[10px] font-bold"><option>kg</option><option>g</option><option>gr</option><option>mg</option><option>L</option><option>ml</option><option>pza</option><option>m</option><option>cm</option><option>lb</option><option>oz</option></select><button onclick="addInventario()" class="bg-black text-white rounded-xl font-black">+</button></div><div id="listaInvMaster" class="mt-4"></div></div></div>
-
 <div id="tab-finanzas" class="p-3 hidden">
 <div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">📅 Finanzas Calendario</h2><button onclick="openGasto()" class="bg-[#4FD1C5] text-black w-10 h-10 rounded-xl font-black text-xl">+</button></div><div class="grid grid-cols-3 gap-2 mt-3"><div class="bg-white/10 rounded-xl p-2 text-center"><p class="text-[9px] opacity-60">BALANCE</p><p class="font-black text-[14px]" id="fin-balance">$0</p></div><div class="bg-green-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">ENTRADAS</p><p class="font-black text-[14px] text-green-300" id="fin-entradas">$0</p></div><div class="bg-red-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">SALIDAS</p><p class="font-black text-[14px] text-red-300" id="fin-salidas">$0</p></div></div><div class="flex gap-2 mt-4 bg-white/10 p-1 rounded-xl"><button onclick="setVistaCal('dia')" id="vc-dia" class="flex-1 py-2 rounded-lg font-black text-[11px] bg-white text-black">Día</button><button onclick="setVistaCal('semana')" id="vc-semana" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Semana</button><button onclick="setVistaCal('mes')" id="vc-mes" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Mes</button><button onclick="setVistaCal('ano')" id="vc-ano" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Año</button></div></div>
 <div class="mt-3 bg-white rounded-[24px] p-4 shadow-sm"><div class="flex justify-between items-center"><button onclick="moverCal(-1)" class="w-9 h-9 bg-gray-100 rounded-full font-black"><</button><h3 id="calTitulo" class="font-black text-[14px]"></h3><button onclick="moverCal(1)" class="w-9 h-9 bg-gray-100 rounded-full font-black">></button></div><div id="calGrid" class="mt-4"></div><div id="calSemana" class="mt-4 hidden"></div><div id="calAno" class="mt-4 hidden grid grid-cols-3 gap-2"></div></div>
 <div id="desgloseDia" class="mt-3 bg-white rounded-[24px] p-4 shadow-sm border-2 border-black"><h3 class="font-black text-[13px]">Desglose del <span id="fechaSelLabel"></span></h3><div class="grid grid-cols-3 gap-2 mt-3 text-center"><div class="bg-green-50 border-2 border-green-200 p-2 rounded-xl"><p class="text-[9px]">ENTRADAS</p><p id="diaEntradas" class="font-black text-green-600">$0</p><p id="diaNumEntradas" class="text-[9px]">0 ventas</p></div><div class="bg-red-50 border-2 border-red-200 p-2 rounded-xl"><p class="text-[9px]">SALIDAS</p><p id="diaSalidas" class="font-black text-red-600">$0</p></div><div class="bg-black text-white p-2 rounded-xl"><p class="text-[9px]">GANANCIA</p><p id="diaGanancia" class="font-black text-[#4FD1C5]">$0</p></div></div><div id="flu-lista" class="mt-4 space-y-2"></div></div>
 </div>
-
 <div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5"><h2 class="font-black">Cobrar $<span id="cobroTotal">0</span></h2><input id="pagoRecibido" type="number" placeholder="$" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black">Cambio: $<span id="cambio">0.00</span> • <span id="vendedorCobro" class="text-blue-600"></span></p><button onclick="confirmarCobro()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">CONFIRMAR</button><button onclick="cerrarCobro()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl">Cancelar</button></div></div>
 <div id="modalGasto" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5"><input id="g-concepto" placeholder="Concepto" class="w-full border-2 border-black p-3 rounded-xl"><input id="g-monto" type="number" placeholder="Monto" class="w-full border-2 border-black p-3 rounded-xl mt-2"><input type="hidden" id="g-tipo" value="salida"><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="document.getElementById('g-tipo').value='salida'" class="border-2 border-black p-3 rounded-xl font-bold bg-red-500 text-white">SALIDA</button><button onclick="document.getElementById('g-tipo').value='entrada'" class="border-2 border-black p-3 rounded-xl font-bold">ENTRADA</button></div><button onclick="guardarGasto()" class="w-full mt-4 bg-black text-white py-3 rounded-xl font-black">Guardar</button><button onclick="cerrarGasto()" class="w-full mt-2 bg-gray-100 py-2 rounded-xl">Cerrar</button></div></div>
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto z-30"><button onclick="showTab('costos')" id="n-costos" class="flex flex-col items-center text-black"><i class="fa-solid fa-book"></i><span class="text-[7px] font-bold">Crear</span></button><button onclick="showTab('vender')" id="n-vender" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-store"></i><span class="text-[7px]">Catalogo</span></button><button onclick="showTab('inventario')" id="n-inventario" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[7px]">Inventario</span></button><button onclick="showTab('finanzas')" id="n-finanzas" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-chart-line"></i><span class="text-[7px]">Finanzas</span></button><button onclick="showTab('clientes')" id="n-clientes" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-users"></i><span class="text-[7px]">Clientes</span></button></div></div></div>
 <script>
 let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null;
-let vistaCal='mes', fechaVista=new Date(), fechaSel=new Date().toISOString().split('T')[0];
+
+// === FUNCIONES DE HORA LOCAL ARREGLADAS ===
+function getFechaLocal(){
+  return new Date().toLocaleString('es-MX', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: true
+  });
+}
+function getFechaSoloLocal(){
+  // Fecha YYYY-MM-DD con hora del cel, no UTC
+  return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Mexico_City'});
+}
+function getHoraActualStr(){
+  return new Date().toLocaleTimeString('es-MX', {timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit'});
+}
+
+let vistaCal='mes', fechaVista=new Date(), fechaSel=getFechaSoloLocal();
 
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
 async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada, ahora entra',true);}
@@ -163,8 +165,15 @@ function quitarLogo(){ logoTemp=''; document.getElementById('logoPreviewBox').cl
 function actualizarFondo(){ let emp=getEmp(); let logo=logoTemp||emp.logo||''; let mostrarFondo=document.getElementById('empMostrarFondo')?.checked?? emp.mostrarFondo; let op=parseInt(document.getElementById('empOpacidad')?.value || emp.opacidad || 8); let bg=document.getElementById('logoBg'); let header=document.getElementById('logoHeader'); if(logo && mostrarFondo){ bg.src=logo; bg.classList.remove('hidden'); bg.style.opacity=(op/100); } else { bg.classList.add('hidden'); } if(logo){ header.src=logo; header.classList.remove('hidden'); } else { header.classList.add('hidden'); } }
 function cargarEmpresa(){ let emp=getEmp(); document.getElementById('empNombre').value=emp.nombre||''; document.getElementById('empDireccion').value=emp.direccion||''; document.getElementById('empCP').value=emp.cp||''; document.getElementById('empTel').value=emp.tel||''; document.getElementById('empRFC').value=emp.rfc||''; document.getElementById('empMensaje').value=emp.mensaje||''; document.getElementById('empMostrarLogo').checked=emp.mostrarLogo!==false; document.getElementById('empMostrarFondo').checked=emp.mostrarFondo!==false; document.getElementById('empOpacidad').value=emp.opacidad||8; document.getElementById('opacidadVal').innerText=(emp.opacidad||8)+'%'; logoTemp=emp.logo||''; if(logoTemp){ document.getElementById('logoPreview').src=logoTemp; document.getElementById('logoPreviewBox').classList.remove('hidden'); } actualizarFondo(); actualizarVistaTicket(); }
 function guardarEmpresa(){ let emp={nombre:document.getElementById('empNombre').value.trim()||'Mi Negocio',direccion:document.getElementById('empDireccion').value.trim(),cp:document.getElementById('empCP').value.trim(),tel:document.getElementById('empTel').value.trim(),rfc:document.getElementById('empRFC').value.trim(),mensaje:document.getElementById('empMensaje').value.trim()||'¡Gracias!',mostrarLogo:document.getElementById('empMostrarLogo').checked,mostrarFondo:document.getElementById('empMostrarFondo').checked,opacidad:parseInt(document.getElementById('empOpacidad').value)||8,logo:logoTemp||getEmp().logo||''}; setItem('empresaConfig',emp); alert('✅ Guardada'); actualizarFondo(); actualizarVistaTicket(); }
-function generarTicket(data){ let emp=getEmp(); let logoHtml=emp.mostrarLogo && emp.logo? `<div style="text-align:center;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px;"></div>` : ''; let html=`${logoHtml}<div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px;"><b>${emp.nombre}</b></div><div style="font-size:10px;">Fecha: ${data.fecha.toLocaleString()}<br>Cliente: ${data.cliente}<br>Vendedor: ${data.vendedor||currentUser}</div><div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}</div><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>$${data.total.toFixed(2)}</span></div><div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px;">${emp.mensaje}</div>`; document.getElementById('ticketContenido').innerHTML=html; return html; }
-function actualizarVistaTicket(){ generarTicket({fecha:new Date(),items:[{nombre:'Alitas',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser}); }
+function generarTicket(data){
+  let emp=getEmp();
+  let logoHtml=emp.mostrarLogo && emp.logo? `<div style="text-align:center;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px;"></div>` : '';
+  let fechaHora = data.fechaStr || getFechaLocal();
+  let html=`${logoHtml}<div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px;"><b>${emp.nombre}</b><br><span style="font-size:9px">${emp.direccion||''} ${emp.tel||''}</span></div><div style="font-size:10px;">Fecha: ${fechaHora}<br>Cliente: ${data.cliente}<br>Vendedor: ${data.vendedor||currentUser}</div><div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}</div><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>$${data.total.toFixed(2)}</span></div><div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px;">${emp.mensaje}</div>`;
+  document.getElementById('ticketContenido').innerHTML=html;
+  return html;
+}
+function actualizarVistaTicket(){ generarTicket({fecha:new Date(),fechaStr:getFechaLocal(),items:[{nombre:'Alitas',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser}); }
 function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto; text-align:center;} img{display:block; margin:0 auto;}</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); w.document.close(); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value), u=document.getElementById('inv-unidad').value; if(!n||!p) return; let inv=getInv(); inv.push({id:Date.now().toString(),nombre:n,precio:p,unidad:u}); setItem('inventarioMaestro',inv); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; renderInventarioMaster(); }
@@ -182,13 +191,22 @@ function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket')
 function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getElementById('modalCobro').classList.remove('hidden'); }
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
-function confirmarCobro(){ let facts=getFacts(); let now=new Date(); let total=parseFloat(document.getElementById('c-total').innerText)||0; facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:now.toISOString().split('T')[0],tipo:'entrada',vendedor:currentUser||'dueño'}); setItem('facturas',facts); let ultimo={fecha:now,items:[...carrito],total,cliente:document.getElementById('selCliente')?.value||'Mostrador',vendedor:currentUser}; generarTicket(ultimo); if(confirm('¿Imprimir ticket?')) imprimirTicket(); carrito=[]; renderCarrito(); renderCalendario(); cerrarCobro(); }
+function confirmarCobro(){
+  let facts=getFacts();
+  let fechaStr = getFechaLocal();
+  let fechaSolo = getFechaSoloLocal();
+  let total=parseFloat(document.getElementById('c-total').innerText)||0;
+  facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño'});
+  setItem('facturas',facts);
+  let ultimo={fecha:new Date(),fechaStr:fechaStr,items:[...carrito],total,cliente:document.getElementById('selCliente')?.value||'Mostrador',vendedor:currentUser};
+  generarTicket(ultimo);
+  if(confirm('¿Imprimir ticket? Hora: '+fechaStr)) imprimirTicket();
+  carrito=[]; renderCarrito(); renderCalendario(); cerrarCobro();
+}
 function renderClientes(){ let cli=getCli(); document.getElementById('listaClientes').innerHTML=cli.map(c=>`<div class="bg-gray-50 p-3 rounded-xl border flex justify-between"><div><b>${c.nombre}</b> ${c.tel}</div><button onclick="let cl=getCli().filter(x=>x.id!='${c.id}'); setItem('clientesV2',cl); renderClientes();" class="text-red-400">X</button></div>`).join(''); }
 function openGasto(){ document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
-function guardarGasto(){ let c=document.getElementById('g-concepto').value.trim(), m=parseFloat(document.getElementById('g-monto').value), t=document.getElementById('g-tipo').value; if(!c||!m) return; let f=getFacts(); f.push({id:Date.now(),concepto:c,monto:m,fecha:new Date().toISOString().split('T')[0],tipo:t,vendedor:currentUser}); setItem('facturas',f); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; cerrarGasto(); renderCalendario(); }
-
-// --- CALENDARIO NUEVO ---
+function guardarGasto(){ let c=document.getElementById('g-concepto').value.trim(), m=parseFloat(document.getElementById('g-monto').value), t=document.getElementById('g-tipo').value; if(!c||!m) return; let f=getFacts(); f.push({id:Date.now(),concepto:c,monto:m,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:t,vendedor:currentUser}); setItem('facturas',f); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; cerrarGasto(); renderCalendario(); }
 function setVistaCal(v){ vistaCal=v; ['dia','semana','mes','ano'].forEach(x=>{ let b=document.getElementById('vc-'+x); if(b) b.className='flex-1 py-2 rounded-lg font-bold text-[11px] '+(x==v?'bg-white text-black font-black':'bg-transparent text-white/60'); }); renderCalendario(); }
 function moverCal(dir){ if(vistaCal=='mes'||vistaCal=='dia'){ fechaVista.setMonth(fechaVista.getMonth()+dir); } else if(vistaCal=='ano'){ fechaVista.setFullYear(fechaVista.getFullYear()+dir); } else { fechaVista.setDate(fechaVista.getDate()+(dir*7)); } renderCalendario(); }
 function seleccionarDia(f){ fechaSel=f; renderCalendario(); }
@@ -197,7 +215,7 @@ function renderCalendario(){
   if(vistaCal=='mes'||vistaCal=='dia'){
     grid.classList.remove('hidden'); sem.classList.add('hidden'); ano.classList.add('hidden');
     let y=fechaVista.getFullYear(), m=fechaVista.getMonth();
-    titulo.innerText=fechaVista.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    titulo.innerText=fechaVista.toLocaleDateString('es-MX',{month:'long',year:'numeric', timeZone:'America/Mexico_City'});
     let primerDia=new Date(y,m,1).getDay(); let diasMes=new Date(y,m+1,0).getDate();
     let html='<div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400"><div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div></div><div class="grid grid-cols-7 gap-1 mt-2">';
     for(let i=0;i<primerDia;i++) html+='<div></div>';
@@ -206,20 +224,20 @@ function renderCalendario(){
       let diaFacts=facts.filter(f=>f.fecha==fechaStr);
       let ent=diaFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0);
       let sal=diaFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
-      let tiene=diaFacts.length>0; let esHoy=fechaStr==new Date().toISOString().split('T')[0]; let esSel=fechaStr==fechaSel;
+      let tiene=diaFacts.length>0; let hoy=getFechaSoloLocal(); let esHoy=fechaStr==hoy; let esSel=fechaStr==fechaSel;
       html+=`<button onclick="seleccionarDia('${fechaStr}')" class="aspect-square rounded-xl p-1 flex flex-col items-center justify-center border-2 ${esSel?'bg-black text-white border-black':'bg-gray-50 border-transparent'} ${esHoy&&!esSel?'border-black':''}"><span class="font-black text-[13px]">${d}</span>${tiene?`<span class="text-[8px] font-bold ${esSel?'text-green-300':(ent>sal?'text-green-600':'text-red-500')}">$${(ent-sal).toFixed(0)}</span><span class="w-1 h-1 rounded-full ${ent>sal?'bg-green-500':'bg-red-500'}"></span>`:'<span class="text-[8px] text-gray-300">-</span>'}</button>`;
     }
     html+='</div>'; grid.innerHTML=html;
-    let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha); return fd.getMonth()==m && fd.getFullYear()==y; });
+    let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha+'T12:00:00'); return fd.getMonth()==m && fd.getFullYear()==y; });
     let entMes=mesFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let salMes=mesFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
     document.getElementById('fin-balance').innerText='$'+(entMes-salMes).toFixed(0); document.getElementById('fin-entradas').innerText='$'+entMes.toFixed(0); document.getElementById('fin-salidas').innerText='$'+salMes.toFixed(0);
     renderDesgloseDia(fechaSel);
   } else if(vistaCal=='semana'){
     grid.classList.add('hidden'); sem.classList.remove('hidden'); ano.classList.add('hidden');
     let inicio=new Date(fechaVista); inicio.setDate(fechaVista.getDate()-inicio.getDay()); let fin=new Date(inicio); fin.setDate(inicio.getDate()+6);
-    titulo.innerText=`${inicio.toLocaleDateString()} - ${fin.toLocaleDateString()}`;
+    titulo.innerText=`${inicio.toLocaleDateString('es-MX',{timeZone:'America/Mexico_City'})} - ${fin.toLocaleDateString('es-MX',{timeZone:'America/Mexico_City'})}`;
     let html='<div class="space-y-2">'; let maxVal=1; let datos=[];
-    for(let i=0;i<7;i++){ let d=new Date(inicio); d.setDate(inicio.getDate()+i); let fechaStr=d.toISOString().split('T')[0]; let diaFacts=facts.filter(f=>f.fecha==fechaStr); let ent=diaFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=diaFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); datos.push({fechaStr,dia:d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric'}),ent,sal}); if(ent>maxVal) maxVal=ent; }
+    for(let i=0;i<7;i++){ let d=new Date(inicio); d.setDate(inicio.getDate()+i); let fechaStr=d.toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'}); let diaFacts=facts.filter(f=>f.fecha==fechaStr); let ent=diaFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=diaFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); datos.push({fechaStr,dia:d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',timeZone:'America/Mexico_City'}),ent,sal}); if(ent>maxVal) maxVal=ent; }
     datos.forEach(o=>{ let h=Math.max(8,(o.ent/maxVal)*100); html+=`<div class="flex items-center gap-2"><span class="w-14 text-[10px] font-bold">${o.dia}</span><div class="flex-1 bg-gray-100 rounded-full h-8 relative overflow-hidden"><div class="bg-green-500 h-full rounded-full" style="width:${h}%"></div><span class="absolute inset-0 flex items-center px-2 text-[10px] font-black">$${o.ent.toFixed(0)} / $${o.sal.toFixed(0)}</span></div><button onclick="seleccionarDia('${o.fechaStr}')" class="text-[10px] bg-black text-white px-2 py-1 rounded-full">Ver</button></div>`; });
     let totEnt=datos.reduce((s,o)=>s+o.ent,0), totSal=datos.reduce((s,o)=>s+o.sal,0);
     document.getElementById('fin-balance').innerText='$'+(totEnt-totSal).toFixed(0); document.getElementById('fin-entradas').innerText='$'+totEnt.toFixed(0); document.getElementById('fin-salidas').innerText='$'+totSal.toFixed(0);
@@ -227,24 +245,24 @@ function renderCalendario(){
   } else if(vistaCal=='ano'){
     grid.classList.add('hidden'); sem.classList.add('hidden'); ano.classList.remove('hidden');
     let y=fechaVista.getFullYear(); titulo.innerText=y; let html='';
-    for(let m=0;m<12;m++){ let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha); return fd.getMonth()==m && fd.getFullYear()==y; }); let ent=mesFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=mesFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); let nombre=new Date(y,m,1).toLocaleDateString('es-MX',{month:'short'}); html+=`<button onclick="fechaVista=new Date(${y},${m},1); setVistaCal('mes')" class="bg-gray-50 border-2 p-3 rounded-2xl text-left ${ent>0?'border-green-200 bg-green-50':''}"><p class="font-black text-[12px] uppercase">${nombre}</p><p class="text-[10px] text-green-600 font-bold">$${ent.toFixed(0)}</p><p class="text-[9px] text-red-400">-$${sal.toFixed(0)}</p><p class="text-[10px] font-black mt-1">G: $${(ent-sal).toFixed(0)}</p></button>`; }
+    for(let m=0;m<12;m++){ let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha+'T12:00:00'); return fd.getMonth()==m && fd.getFullYear()==y; }); let ent=mesFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=mesFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); let nombre=new Date(y,m,1).toLocaleDateString('es-MX',{month:'short',timeZone:'America/Mexico_City'}); html+=`<button onclick="fechaVista=new Date(${y},${m},1); setVistaCal('mes')" class="bg-gray-50 border-2 p-3 rounded-2xl text-left ${ent>0?'border-green-200 bg-green-50':''}"><p class="font-black text-[12px] uppercase">${nombre}</p><p class="text-[10px] text-green-600 font-bold">$${ent.toFixed(0)}</p><p class="text-[9px] text-red-400">-$${sal.toFixed(0)}</p><p class="text-[10px] font-black mt-1">G: $${(ent-sal).toFixed(0)}</p></button>`; }
     ano.innerHTML=html;
-    let anoFacts=facts.filter(f=> new Date(f.fecha).getFullYear()==y); let entAno=anoFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let salAno=anoFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
+    let anoFacts=facts.filter(f=> new Date(f.fecha+'T12:00:00').getFullYear()==y); let entAno=anoFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let salAno=anoFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
     document.getElementById('fin-balance').innerText='$'+(entAno-salAno).toFixed(0); document.getElementById('fin-entradas').innerText='$'+entAno.toFixed(0); document.getElementById('fin-salidas').innerText='$'+salAno.toFixed(0);
   }
 }
 function renderDesgloseDia(fechaStr){
   let facts=getFacts().filter(f=>f.fecha==fechaStr);
-  document.getElementById('fechaSelLabel').innerText=new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  let fechaLegible=new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Mexico_City'});
+  document.getElementById('fechaSelLabel').innerText=fechaLegible;
   let ent=facts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=facts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
   document.getElementById('diaEntradas').innerText='$'+ent.toFixed(0); document.getElementById('diaSalidas').innerText='$'+sal.toFixed(0); document.getElementById('diaGanancia').innerText='$'+(ent-sal).toFixed(0);
   document.getElementById('diaNumEntradas').innerText=facts.filter(f=>f.tipo=='entrada').length+' ventas';
-  document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fecha} • 👤 ${f.vendedor||'dueño'}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400 text-[12px] py-4">Sin movimientos este día</p>';
+  document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fechaHora||f.fecha} • 👤 ${f.vendedor||'dueño'}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400 text-[12px] py-4">Sin movimientos este día</p>';
 }
 function renderFinanzas(){ renderCalendario(); }
 </script>
 </body></html>
     """
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=5000)
