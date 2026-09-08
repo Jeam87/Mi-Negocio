@@ -18,7 +18,7 @@ def get_user_file(nid):
     safe=nid.replace("@","_at_").replace(".","_")
     return os.path.join(BASE_DATA, f"{safe}.json")
 @app.route('/manifest.json')
-def manifest(): return jsonify({"name":"Mi Negocio 10.6","short_name":"Mi Negocio","start_url":"/","display":"standalone"})
+def manifest(): return jsonify({"name":"Mi Negocio 10.7","short_name":"Mi Negocio","start_url":"/","display":"standalone"})
 @app.route('/logo.png')
 def logo_file():
     if os.path.exists('logo.png'): return send_file('logo.png', mimetype='image/png')
@@ -61,12 +61,12 @@ def api_save():
 def home():
  return """<!DOCTYPE html>
 <html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mi Negocio 10.6</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Mi Negocio 10.7</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>input,select,textarea{color:#000!important;background:#fff!important}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;height:360px;pointer-events:none;z-index:0;opacity:0.08;object-fit:contain;}#appContent{position:relative;z-index:1;}</style></head>
 <body class="bg-[#FFF8F0] min-h-screen"><div class="max-w-md mx-auto pb-[130px] relative">
 <img id="logoBg" class="logo-watermark hidden"><div id="appContent">
 <div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6">
-<h1 class="font-black text-[24px]">Mi Negocio 10.6</h1><p class="text-[11px] text-gray-500">Stock en g / kg / ml</p>
+<h1 class="font-black text-[24px]">Mi Negocio 10.7</h1><p class="text-[11px] text-gray-500">Fiado / Apartado + Stock g</p>
 <div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6">
 <input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]">
 <input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3">
@@ -74,7 +74,7 @@ def home():
 <button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button>
 <p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
 
-<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.6</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.7</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
 
 <div id="tab-vender" class="p-3 hidden">
 <div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva</button></div><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div id="listaCatsEdit" class="space-y-2 mb-3"></div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
@@ -105,7 +105,10 @@ def home():
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-3"><input id="colabEmail" type="email" placeholder="colab@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
 <div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3"><p class="font-black text-[12px]">📸 Logo</p><input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]"><div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-20 h-20 object-contain rounded-xl border-2 border-black bg-white"><button onclick="quitarLogo()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-bold">X</button></div><div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarLogo" checked> Logo ticket</label><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarFondo" checked> Fondo</label></div><div class="mt-3"><input type="range" id="empOpacidad" min="2" max="20" value="8" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"><span id="opacidadVal" class="text-[10px]">8%</span></div></div><input id="empNombre" placeholder="Nombre negocio" class="w-full border-2 border-black p-3 rounded-xl mt-4 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="CP" class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="Mensaje ticket" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold">🧾 Probar ticket</button><div id="ticketVista" class="mt-6 border-2 border-dashed p-3 rounded-xl"><div id="ticketContenido" class="bg-white p-3 rounded-xl text-[12px] font-mono shadow-sm"></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div></div></div>
 
-<div id="tab-clientes" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><div class="flex justify-between"><h2 class="font-black">👥 Clientes</h2></div><div class="grid grid-cols-5 gap-2 mt-3"><input id="cliNombre" placeholder="Nombre" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><input id="cliTel" placeholder="WhatsApp" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><button onclick="addCliente()" class="bg-[#25D366] text-white rounded-xl font-black">+</button></div></div><div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaClientes" class="space-y-3"></div></div></div>
+<div id="tab-clientes" class="p-3 hidden">
+<div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">👥 Clientes y Deudas</h2><span class="text-[10px] bg-red-500 px-2 py-1 rounded-full font-black" id="totalDeudaGlobal">$0 por cobrar</span></div><div class="grid grid-cols-5 gap-2 mt-3"><input id="cliNombre" placeholder="Nombre" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><input id="cliTel" placeholder="WhatsApp" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><button onclick="addCliente()" class="bg-[#25D366] text-white rounded-xl font-black">+</button></div></div>
+<div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaClientes" class="space-y-3"></div></div>
+</div>
 
 <div id="tab-inventario" class="p-3 hidden">
 <div class="bg-[#2D3748] rounded-[28px] p-4 text-white mb-3"><h2 class="font-black">📦 Inventario con Stock</h2><p class="text-[10px] opacity-70">Toca el stock para editar en gramos</p></div>
@@ -123,52 +126,70 @@ def home():
 
 <div id="tab-finanzas" class="p-3 hidden">
 <div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">📅 Finanzas</h2><div class="flex gap-2"><button onclick="openGasto()" class="bg-[#4FD1C5] text-black w-10 h-10 rounded-xl font-black text-xl">+</button><button onclick="abrirCierre()" class="bg-yellow-400 text-black px-3 h-10 rounded-xl font-black text-[11px]">📦 CIERRE</button></div></div><div class="grid grid-cols-3 gap-2 mt-3"><div class="bg-white/10 rounded-xl p-2 text-center"><p class="text-[9px] opacity-60">BALANCE</p><p class="font-black text-[14px]" id="fin-balance">$0</p></div><div class="bg-green-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">ENTRADAS</p><p class="font-black text-[14px] text-green-300" id="fin-entradas">$0</p></div><div class="bg-red-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">SALIDAS</p><p class="font-black text-[14px] text-red-300" id="fin-salidas">$0</p></div></div>
-<div class="mt-3 grid grid-cols-3 gap-2"><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💵 EFECTIVO</p><p class="font-black text-[12px] text-green-300" id="fin-efectivo">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💳 TARJETA</p><p class="font-black text-[12px] text-blue-300" id="fin-tarjeta">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">🏦 TRANSF</p><p class="font-black text-[12px] text-yellow-300" id="fin-transf">$0</p></div></div>
+<div class="mt-3 grid grid-cols-4 gap-2"><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💵 EFEC</p><p class="font-black text-[12px] text-green-300" id="fin-efectivo">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💳 TARJ</p><p class="font-black text-[12px] text-blue-300" id="fin-tarjeta">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">🏦 TRANS</p><p class="font-black text-[12px] text-yellow-300" id="fin-transf">$0</p></div><div class="bg-red-500/20 rounded-xl p-2 text-center border border-red-300"><p class="text-[8px]">📒 FIADO</p><p class="font-black text-[12px] text-red-300" id="fin-fiado">$0</p></div></div>
 <div class="flex gap-2 mt-4 bg-white/10 p-1 rounded-xl"><button onclick="setVistaCal('dia')" id="vc-dia" class="flex-1 py-2 rounded-lg font-black text-[11px] bg-white text-black">Día</button><button onclick="setVistaCal('semana')" id="vc-semana" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Semana</button><button onclick="setVistaCal('mes')" id="vc-mes" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Mes</button><button onclick="setVistaCal('ano')" id="vc-ano" class="flex-1 py-2 rounded-lg font-bold text-[11px]">Año</button></div></div>
 <div class="mt-3 bg-white rounded-[24px] p-4 shadow-sm"><div class="flex justify-between items-center"><button onclick="moverCal(-1)" class="w-9 h-9 bg-gray-100 rounded-full font-black"><</button><h3 id="calTitulo" class="font-black text-[14px]"></h3><button onclick="moverCal(1)" class="w-9 h-9 bg-gray-100 rounded-full font-black">></button></div><div id="calGrid" class="mt-4"></div><div id="calSemana" class="mt-4 hidden"></div><div id="calAno" class="mt-4 hidden grid grid-cols-3 gap-2"></div></div>
-<div id="desgloseDia" class="mt-3 bg-white rounded-[24px] p-4 shadow-sm border-2 border-black"><h3 class="font-black text-[13px]">Desglose del <span id="fechaSelLabel"></span></h3><div class="grid grid-cols-3 gap-2 mt-3 text-center"><div class="bg-green-50 border-2 border-green-200 p-2 rounded-xl"><p class="text-[9px]">ENTRADAS</p><p id="diaEntradas" class="font-black text-green-600">$0</p><p id="diaNumEntradas" class="text-[9px]">0 ventas</p></div><div class="bg-red-50 border-2 border-red-200 p-2 rounded-xl"><p class="text-[9px]">SALIDAS</p><p id="diaSalidas" class="font-black text-red-600">$0</p></div><div class="bg-black text-white p-2 rounded-xl"><p class="text-[9px]">GANANCIA</p><p id="diaGanancia" class="font-black text-[#4FD1C5]">$0</p></div></div><div class="mt-3 grid grid-cols-3 gap-2 text-center"><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">💵 EFECTIVO</p><p id="diaEfectivo" class="font-black text-[12px]">$0</p></div><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">💳 TARJETA</p><p id="diaTarjeta" class="font-black text-[12px]">$0</p></div><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">🏦 TRANSF</p><p id="diaTransf" class="font-black text-[12px]">$0</p></div></div><div id="flu-lista" class="mt-4 space-y-2"></div></div>
+<div id="desgloseDia" class="mt-3 bg-white rounded-[24px] p-4 shadow-sm border-2 border-black"><h3 class="font-black text-[13px]">Desglose del <span id="fechaSelLabel"></span></h3><div class="grid grid-cols-3 gap-2 mt-3 text-center"><div class="bg-green-50 border-2 border-green-200 p-2 rounded-xl"><p class="text-[9px]">ENTRADAS</p><p id="diaEntradas" class="font-black text-green-600">$0</p><p id="diaNumEntradas" class="text-[9px]">0 ventas</p></div><div class="bg-red-50 border-2 border-red-200 p-2 rounded-xl"><p class="text-[9px]">SALIDAS</p><p id="diaSalidas" class="font-black text-red-600">$0</p></div><div class="bg-black text-white p-2 rounded-xl"><p class="text-[9px]">GANANCIA</p><p id="diaGanancia" class="font-black text-[#4FD1C5]">$0</p></div></div><div class="mt-3 grid grid-cols-4 gap-2 text-center"><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">💵 EFECTIVO</p><p id="diaEfectivo" class="font-black text-[12px]">$0</p></div><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">💳 TARJETA</p><p id="diaTarjeta" class="font-black text-[12px]">$0</p></div><div class="bg-gray-50 border p-2 rounded-xl"><p class="text-[8px]">🏦 TRANSF</p><p id="diaTransf" class="font-black text-[12px]">$0</p></div><div class="bg-red-50 border p-2 rounded-xl"><p class="text-[8px]">📒 FIADO</p><p id="diaFiado" class="font-black text-[12px] text-red-600">$0</p></div></div><div id="flu-lista" class="mt-4 space-y-2"></div></div>
 </div>
 
-<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5">
+<div id="modalCobro" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto">
 <h2 class="font-black text-[14px]">Cobrar $<span id="cobroTotal">0</span> a <span id="cobroClienteNombre" class="text-blue-600"></span></h2>
 <p class="text-[11px] mt-1">Hora: <span id="cobroHora" class="font-black text-green-600"></span></p>
-<div class="mt-3"><p class="text-[11px] font-black">💳 Método de pago</p><div class="grid grid-cols-3 gap-2 mt-2"><button onclick="setMetodoPago('Efectivo')" id="mp-efectivo" class="py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black">💵 Efectivo</button><button onclick="setMetodoPago('Tarjeta')" id="mp-tarjeta" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black">💳 Tarjeta</button><button onclick="setMetodoPago('Transferencia')" id="mp-transferencia" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black">🏦 Transfer.</button></div><input type="hidden" id="metodoPago" value="Efectivo"></div>
-<input id="pagoRecibido" type="number" placeholder="$ Recibido (solo efectivo)" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-black text-[18px]" oninput="calcCambio()">
-<p class="mt-2 font-black text-[13px]">Cambio: $<span id="cambio">0.00</span> • <span id="vendedorCobro" class="text-blue-600 text-[11px]"></span></p>
+<div class="mt-3"><p class="text-[11px] font-black">💳 Método de pago</p>
+<div class="grid grid-cols-3 gap-2 mt-2">
+<button onclick="setMetodoPago('Efectivo')" id="mp-efectivo" class="py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black">💵 Efectivo</button>
+<button onclick="setMetodoPago('Tarjeta')" id="mp-tarjeta" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black">💳 Tarjeta</button>
+<button onclick="setMetodoPago('Transferencia')" id="mp-transferencia" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black">🏦 Transfer.</button>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-2">
+<button onclick="setMetodoPago('Fiado')" id="mp-fiado" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-orange-100 border-orange-400 text-orange-700">📒 Fiado</button>
+<button onclick="setMetodoPago('Apartado')" id="mp-apartado" class="py-3 rounded-xl border-2 font-bold text-[12px] bg-purple-100 border-purple-400 text-purple-700">📦 Apartado</button>
+</div>
+<input type="hidden" id="metodoPago" value="Efectivo"></div>
+<div id="boxPagoEfectivo"><input id="pagoRecibido" type="number" placeholder="$ Recibido (solo efectivo)" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-black text-[18px]" oninput="calcCambio()"><p class="mt-2 font-black text-[13px]">Cambio: $<span id="cambio">0.00</span></p></div>
+<div id="boxFiado" class="hidden mt-3 bg-orange-50 border-2 border-orange-300 p-3 rounded-xl"><p class="text-[11px] font-black text-orange-700">📒 Se guardará como deuda a <span id="fiadoClienteNombre"></span></p><p class="text-[10px] mt-1">En Clientes podrás ver cuánto debe y abonar después en efectivo / tarjeta / transferencia.</p><input id="fiadoAbono" type="number" placeholder="$ Abono inicial (opcional)" class="w-full border-2 border-black p-2 rounded-xl mt-2 text-[12px]"></div>
 <div class="grid grid-cols-2 gap-2 mt-4"><button onclick="confirmarCobro('print')" class="bg-black text-white py-4 rounded-2xl font-black text-[13px]">🖨️ IMPRIMIR</button><button onclick="confirmarCobro('whatsapp')" class="bg-[#25D366] text-white py-4 rounded-2xl font-black text-[13px]">📲 WHATSAPP</button></div>
-<button onclick="confirmarCobro('solo')" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Solo cobrar</button>
+<button onclick="confirmarCobro('solo')" id="btnSoloCobrar" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Solo cobrar</button>
 <button onclick="cerrarCobro()" class="w-full mt-2 bg-white border-2 border-black py-2 rounded-xl">Cancelar</button>
 </div></div>
 
-<div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre de caja - <span id="cierreFechaLabel"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div><div class="flex justify-between mt-2 border-t border-white/20 pt-2"><span>Ganancia</span><b id="cierreGanancia" class="text-[#4FD1C5]">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
+<div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre de caja - <span id="cierreFechaLabel"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div><div class="flex justify-between text-orange-300"><span>📒 Fiado</span><b id="cierreFiado">$0</b></div><div class="flex justify-between mt-2 border-t border-white/20 pt-2"><span>Ganancia</span><b id="cierreGanancia" class="text-[#4FD1C5]">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
+
+<div id="modalDeuda" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black">💰 Cuenta de <span id="deudaClienteNombre"></span></h2><p class="text-[11px] text-gray-500" id="deudaClienteTel"></p><div class="mt-3 bg-red-50 border-2 border-red-200 p-3 rounded-xl text-center"><p class="text-[11px]">Debe</p><p class="font-black text-[22px] text-red-600" id="deudaTotal">$0</p></div><div id="deudaLista" class="mt-3 space-y-2"></div><div class="mt-4 bg-green-50 border-2 border-green-200 p-3 rounded-xl"><p class="text-[11px] font-black">💵 Abonar</p><input id="abonoMonto" type="number" placeholder="$ Monto" class="w-full border-2 border-black p-2 rounded-xl mt-2"><div class="grid grid-cols-3 gap-2 mt-2"><button onclick="setAbonoMetodo('Efectivo')" id="ab-mp-efectivo" class="py-2 rounded-xl border-2 font-black text-[11px] bg-black text-white">Efectivo</button><button onclick="setAbonoMetodo('Tarjeta')" id="ab-mp-tarjeta" class="py-2 rounded-xl border-2 text-[11px] bg-white">Tarjeta</button><button onclick="setAbonoMetodo('Transferencia')" id="ab-mp-transferencia" class="py-2 rounded-xl border-2 text-[11px] bg-white">Transf.</button></div><input type="hidden" id="abonoMetodo" value="Efectivo"><button onclick="hacerAbono()" class="w-full mt-3 bg-[#25D366] text-white py-3 rounded-xl font-black">ABONAR</button></div><button onclick="cerrarDeuda()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
 
 <div id="modalGasto" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5"><input id="g-concepto" placeholder="Concepto" class="w-full border-2 border-black p-3 rounded-xl"><input id="g-monto" type="number" placeholder="Monto" class="w-full border-2 border-black p-3 rounded-xl mt-2"><input type="hidden" id="g-tipo" value="salida"><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="document.getElementById('g-tipo').value='salida'" class="border-2 border-black p-3 rounded-xl font-bold bg-red-500 text-white">SALIDA</button><button onclick="document.getElementById('g-tipo').value='entrada'" class="border-2 border-black p-3 rounded-xl font-bold">ENTRADA</button></div><button onclick="guardarGasto()" class="w-full mt-4 bg-black text-white py-3 rounded-xl font-black">Guardar</button><button onclick="cerrarGasto()" class="w-full mt-2 bg-gray-100 py-2 rounded-xl">Cerrar</button></div></div>
 
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto z-30"><button onclick="showTab('costos')" class="flex flex-col items-center text-black"><i class="fa-solid fa-book"></i><span class="text-[7px] font-bold">Crear</span></button><button onclick="showTab('vender')" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-store"></i><span class="text-[7px]">Catalogo</span></button><button onclick="showTab('inventario')" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[7px]">Inventario</span></button><button onclick="showTab('finanzas')" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-chart-line"></i><span class="text-[7px]">Finanzas</span></button><button onclick="showTab('clientes')" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-users"></i><span class="text-[7px]">Clientes</span></button></div></div></div>
 <script>
-let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null;
+let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null, clienteDeudaActual=null, abonoMetodoSel='Efectivo';
 
-function getFechaLocal(){
-  let now = new Date();
-  let fecha = now.toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit', year:'numeric'});
-  let hora = now.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true});
-  return fecha + ', ' + hora;
-}
-function getFechaSoloLocal(){
-  let now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-}
+function getFechaLocal(){ let now=new Date(); return now.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+', '+now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); }
+function getFechaSoloLocal(){ let now=new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`; }
 let vistaCal='mes', fechaVista=new Date(), fechaSel=getFechaSoloLocal(), metodoPagoSel='Efectivo';
+
 function setMetodoPago(m){
   metodoPagoSel=m; document.getElementById('metodoPago').value=m;
-  ['efectivo','tarjeta','transferencia'].forEach(x=>{
+  ['efectivo','tarjeta','transferencia','fiado','apartado'].forEach(x=>{
     let b=document.getElementById('mp-'+x); if(!b) return;
-    let es=b.id=='mp-'+m.toLowerCase();
-    b.className= es? 'py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black' : 'py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black';
+    let sel = b.id=='mp-'+m.toLowerCase();
+    if(m=='Fiado' && x=='fiado') b.className='py-3 rounded-xl border-2 font-black text-[12px] bg-orange-500 text-white border-black';
+    else if(m=='Apartado' && x=='apartado') b.className='py-3 rounded-xl border-2 font-black text-[12px] bg-purple-600 text-white border-black';
+    else if(x=='fiado') b.className= 'py-3 rounded-xl border-2 font-bold text-[12px] bg-orange-100 border-orange-400 text-orange-700';
+    else if(x=='apartado') b.className= 'py-3 rounded-xl border-2 font-bold text-[12px] bg-purple-100 border-purple-400 text-purple-700';
+    else b.className= sel? 'py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black' : 'py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black';
   });
-  let pagoInput=document.getElementById('pagoRecibido');
-  if(m=='Efectivo'){ pagoInput.classList.remove('hidden'); } else { pagoInput.classList.add('hidden'); document.getElementById('cambio').innerText='0.00'; }
+  document.getElementById('boxPagoEfectivo').classList.toggle('hidden', m=='Fiado'||m=='Apartado');
+  document.getElementById('boxFiado').classList.toggle('hidden',!(m=='Fiado'||m=='Apartado'));
+  let btn=document.getElementById('btnSoloCobrar');
+  if(m=='Fiado') btn.innerText='📒 GUARDAR COMO FIADO';
+  else if(m=='Apartado') btn.innerText='📦 GUARDAR COMO APARTADO';
+  else btn.innerText='Solo cobrar';
+  let sel=document.getElementById('selCliente');
+  let opt=sel.options[sel.selectedIndex];
+  let nombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador';
+  document.getElementById('fiadoClienteNombre').innerText=nombre;
 }
+
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); }
 setInterval(actualizarHora,1000);
 
@@ -177,7 +198,7 @@ async function hacerRegistro(){let e=document.getElementById('loginEmail').value
 async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e+' • '+(j.rol=='owner'?'Dueño':'Colab'); await cargarDeNube(); showTab('vender');}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); actualizarHora();}
-async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
+async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 
@@ -186,6 +207,7 @@ function getProd(){ return JSON.parse(localStorage.getItem('productosV2_'+negoci
 function getInv(){ return JSON.parse(localStorage.getItem('inventarioMaestro_'+negocioId)||localStorage.getItem('inventarioMaestro')||'[]'); }
 function getCli(){ return JSON.parse(localStorage.getItem('clientesV2_'+negocioId)||localStorage.getItem('clientesV2')||'[]'); }
 function getFacts(){ return JSON.parse(localStorage.getItem('facturas_'+negocioId)||localStorage.getItem('facturas')||'[]'); }
+function getDeudas(){ return JSON.parse(localStorage.getItem('deudas_'+negocioId)||localStorage.getItem('deudas')||'[]'); }
 function getEmp(){ return JSON.parse(localStorage.getItem('empresaConfig_'+negocioId)||localStorage.getItem('empresaConfig')||'{"nombre":"Mi Negocio","logo":"","mostrarLogo":true,"mostrarFondo":true,"opacidad":8}'); }
 function getCategoriasVenta(){ let cats=JSON.parse(localStorage.getItem('categoriasVenta_'+negocioId)||localStorage.getItem('categoriasVenta')||'[]'); if(!cats.length){ cats=[{id:'todas',nombre:'Todas'},{id:'alitas',nombre:'Alitas'},{id:'papas',nombre:'Papas'},{id:'bebidas',nombre:'Bebidas'}]; localStorage.setItem('categoriasVenta_'+negocioId,JSON.stringify(cats)); } return cats; }
 function getLotes(){ return parseInt(localStorage.getItem('lotesMes_'+negocioId)||localStorage.getItem('lotesMes')||'30')||30; }
@@ -193,69 +215,10 @@ function setItem(k,v){ localStorage.setItem(k+'_'+negocioId, typeof v==='string'
 function normalizarUnidad(u){ u=(u||'').toLowerCase().trim(); if(['g','gr'].includes(u)) return 'g'; if(['kg'].includes(u)) return 'kg'; if(['mg'].includes(u)) return 'mg'; if(['l','litro','litros'].includes(u)) return 'L'; if(['ml'].includes(u)) return 'ml'; if(['m','metro'].includes(u)) return 'm'; if(['cm'].includes(u)) return 'cm'; if(['lb','libra'].includes(u)) return 'lb'; if(['oz'].includes(u)) return 'oz'; if(['pza','pieza'].includes(u)) return 'pza'; return u; }
 function factorABase(u){ u=normalizarUnidad(u); let map={mg:0.001,g:1,kg:1000,lb:453.592,oz:28.3495,ml:1,L:1000,m:100,cm:1,pza:1}; return map[u]||1; }
 function convertir(cant, de, a){ de=normalizarUnidad(de); a=normalizarUnidad(a); if(de==a) return cant; return cant * factorABase(de) / factorABase(a); }
-
-// ==== NUEVO: STOCK EN GRAMOS / KG ====
-function formatStock(stock, unidad){
-  stock = parseFloat(stock)||0;
-  let u = unidad||'kg';
-  if(u=='kg'){
-    if(stock>0 && stock<1) return `${stock.toFixed(3)} kg (${Math.round(stock*1000)} g)`;
-    return `${stock} kg`;
-  }
-  if(u=='g'){
-    if(stock>=1000) return `${stock} g (${(stock/1000).toFixed(2)} kg)`;
-    return `${stock} g`;
-  }
-  if(u=='L'){
-    if(stock>0 && stock<1) return `${stock} L (${Math.round(stock*1000)} ml)`;
-    return `${stock} L`;
-  }
-  if(u=='ml'){
-    if(stock>=1000) return `${stock} ml (${(stock/1000).toFixed(2)} L)`;
-    return `${stock} ml`;
-  }
-  return `${stock} ${u}`;
-}
-function parseCantidadTexto(texto, unidadBase){
-  if(!texto) return 0;
-  texto = texto.toString().toLowerCase().trim().replace(',', '.');
-  let num = parseFloat(texto);
-  if(isNaN(num)) return 0;
-  if(texto.includes('kg')) return convertir(num, 'kg', unidadBase);
-  if(texto.includes('mg')) return convertir(num, 'mg', unidadBase);
-  if(texto.includes('ml')) return convertir(num, 'ml', unidadBase);
-  if((texto.includes(' g') || texto.endsWith('g')) &&!texto.includes('kg') &&!texto.includes('mg')){
-    return convertir(num, 'g', unidadBase);
-  }
-  if(texto.includes(' l ') || texto.endsWith(' l') || texto=='l' || (texto.includes('l') &&!texto.includes('ml'))){
-    // si solo puso L y no ml
-    if(texto.includes('l')) return convertir(num, 'L', unidadBase);
-  }
-  // si no dijo unidad, asume base
-  return num;
-}
-function editarStockExacto(id){
-  let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return;
-  let actualTxt = formatStock(it.stock, it.unidad);
-  let entrada = prompt(`Editar ${it.nombre}\\nActual: ${actualTxt}\\n\\nEscribe cuánto te queda:\\nEj: 500 g, 800g, 0.8 kg, 250 ml, 1.5 L`, it.stock+' '+it.unidad);
-  if(entrada===null) return;
-  let nuevo = parseCantidadTexto(entrada, it.unidad);
-  if(nuevo<0) nuevo=0;
-  it.stock = nuevo;
-  setItem('inventarioMaestro',inv); renderInventarioMaster();
-}
-function ajustarStockPrompt(id, tipo){
-  let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return;
-  let accion = tipo>0? 'AGREGAR' : 'QUITAR';
-  let entrada = prompt(`${accion} a ${it.nombre}\\nActual: ${formatStock(it.stock, it.unidad)}\\n\\n¿Cuánto?\\nEj: 500 g, 250 ml, 0.5 kg`, tipo>0?'500 g':'200 g');
-  if(entrada===null) return;
-  let cantidad = parseCantidadTexto(entrada, it.unidad);
-  if(cantidad<=0) return;
-  if(tipo>0) it.stock = (parseFloat(it.stock)||0) + cantidad;
-  else it.stock = (parseFloat(it.stock)||0) - cantidad;
-  if(it.stock<0) it.stock=0;
-  setItem('inventarioMaestro',inv); renderInventarioMaster();
-}
+function formatStock(stock, unidad){ stock=parseFloat(stock)||0; let u=unidad||'kg'; if(u=='kg'){ if(stock>0 && stock<1) return `${stock.toFixed(3)} kg (${Math.round(stock*1000)} g)`; return `${stock} kg`; } if(u=='g'){ if(stock>=1000) return `${stock} g (${(stock/1000).toFixed(2)} kg)`; return `${stock} g`; } if(u=='L'){ if(stock>0 && stock<1) return `${stock} L (${Math.round(stock*1000)} ml)`; return `${stock} L`; } if(u=='ml'){ if(stock>=1000) return `${stock} ml (${(stock/1000).toFixed(2)} L)`; return `${stock} ml`; } return `${stock} ${u}`; }
+function parseCantidadTexto(texto, unidadBase){ if(!texto) return 0; texto=texto.toString().toLowerCase().trim().replace(',', '.'); let num=parseFloat(texto); if(isNaN(num)) return 0; if(texto.includes('kg')) return convertir(num, 'kg', unidadBase); if(texto.includes('mg')) return convertir(num, 'mg', unidadBase); if(texto.includes('ml')) return convertir(num, 'ml', unidadBase); if((texto.includes(' g') || texto.endsWith('g')) &&!texto.includes('kg') &&!texto.includes('mg')) return convertir(num, 'g', unidadBase); if(texto.includes('l') &&!texto.includes('ml')) return convertir(num, 'L', unidadBase); return num; }
+function editarStockExacto(id){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let actualTxt=formatStock(it.stock, it.unidad); let entrada=prompt(`Editar ${it.nombre}\\nActual: ${actualTxt}\\n\\nEscribe cuánto te queda:\\nEj: 500 g, 800g, 0.8 kg`, it.stock+' '+it.unidad); if(entrada===null) return; let nuevo=parseCantidadTexto(entrada, it.unidad); if(nuevo<0) nuevo=0; it.stock=nuevo; setItem('inventarioMaestro',inv); renderInventarioMaster(); }
+function ajustarStockPrompt(id, tipo){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let accion=tipo>0?'AGREGAR':'QUITAR'; let entrada=prompt(`${accion} a ${it.nombre}\\nActual: ${formatStock(it.stock, it.unidad)}\\n\\n¿Cuánto?\\nEj: 500 g, 250 ml`, tipo>0?'500 g':'200 g'); if(entrada===null) return; let cantidad=parseCantidadTexto(entrada, it.unidad); if(cantidad<=0) return; if(tipo>0) it.stock=(parseFloat(it.stock)||0)+cantidad; else it.stock=(parseFloat(it.stock)||0)-cantidad; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); renderInventarioMaster(); }
 
 function addCategoriaVenta(){ let n=document.getElementById('nuevaCatNombre').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); document.getElementById('nuevaCatNombre').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); }
 function addCategoriaVentaDesdeProd(){ let n=document.getElementById('quickCat').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); document.getElementById('quickCat').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=id; }
@@ -267,17 +230,77 @@ function renderProdCategoriaSelect(){ let cats=getCategoriasVenta().filter(c=>c.
 
 function addCliente(){ let nombre=document.getElementById('cliNombre').value.trim(); let tel=document.getElementById('cliTel').value.trim(); if(!nombre) return alert('Nombre'); let cli=getCli(); cli.push({id:Date.now().toString(),nombre,tel}); setItem('clientesV2',cli); document.getElementById('cliNombre').value=''; document.getElementById('cliTel').value=''; renderClientes(); }
 function addClienteRapido(){ let nombre=document.getElementById('quickClienteNombre').value.trim(); let tel=document.getElementById('quickClienteTel').value.trim(); if(!nombre) return alert('Pon nombre'); let cli=getCli(); let nuevo={id:Date.now().toString(),nombre,tel}; cli.push(nuevo); setItem('clientesV2',cli); document.getElementById('quickClienteNombre').value=''; document.getElementById('quickClienteTel').value=''; renderClientes(); document.getElementById('selCliente').value=nuevo.id; actualizarClienteTicket(); }
+
 function renderClientes(){
-  let cli=getCli();
+  let cli=getCli(); let deudas=getDeudas();
+  let totalPorCobrar=0;
+  deudas.forEach(d=>{ if(d.restante>0) totalPorCobrar+=d.restante; });
+  document.getElementById('totalDeudaGlobal').innerText='$'+totalPorCobrar.toFixed(0)+' por cobrar';
   let lista=document.getElementById('listaClientes');
-  if(lista) lista.innerHTML=cli.map(c=>`<div class="bg-gray-50 p-3 rounded-xl border flex justify-between items-center"><div><b class="text-[13px]">${c.nombre}</b><br><span class="text-[11px] text-green-600">📲 ${c.tel||'sin tel'}</span></div><div class="flex gap-1"><button onclick="enviarWhatsAppDirecto('${c.tel}','Hola ${c.nombre}')" class="bg-[#25D366] text-white px-3 py-1 rounded-full text-[11px]">Whats</button><button onclick="let cl=getCli().filter(x=>x.id!='${c.id}'); setItem('clientesV2',cl); renderClientes();" class="text-red-400 px-2">X</button></div></div>`).join('')||'<p class="text-center text-gray-400 text-[11px] py-4">Sin clientes</p>';
+  if(lista) lista.innerHTML=cli.map(c=>{
+    let dCliente=deudas.filter(d=>d.clienteId==c.id && d.restante>0);
+    let totalDebe=dCliente.reduce((s,d)=>s+d.restante,0);
+    let badge=totalDebe>0? `<span class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-black">Debe $${totalDebe.toFixed(0)}</span>` : `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full">Al corriente</span>`;
+    return `<div class="bg-gray-50 p-3 rounded-xl border flex justify-between items-center">
+      <div><b class="text-[13px]">${c.nombre}</b> ${badge}<br><span class="text-[11px] text-green-600">📲 ${c.tel||'sin tel'}</span></div>
+      <div class="flex gap-1">
+        ${totalDebe>0? `<button onclick="abrirDeuda('${c.id}')" class="bg-orange-500 text-white px-3 py-1 rounded-full text-[11px] font-black">Cobrar</button>` : ``}
+        <button onclick="abrirDeuda('${c.id}')" class="bg-black text-white px-2 py-1 rounded-full text-[10px]">Ver</button>
+        <button onclick="if(confirm('Borrar cliente?')){let cl=getCli().filter(x=>x.id!='${c.id}'); setItem('clientesV2',cl); renderClientes();}" class="text-red-400 px-1">X</button>
+      </div>
+    </div>`;
+  }).join('')||'<p class="text-center text-gray-400 text-[11px] py-4">Sin clientes</p>';
   let sel=document.getElementById('selCliente');
   if(sel){
     let actual=sel.value;
-    sel.innerHTML='<option value="">🏪 Mostrador</option>'+cli.map(c=>`<option value="${c.id}" data-tel="${c.tel||''}" data-nombre="${c.nombre}">${c.nombre} - ${c.tel||''}</option>`).join('');
+    sel.innerHTML='<option value="">🏪 Mostrador</option>'+cli.map(c=>{
+      let dCliente=deudas.filter(d=>d.clienteId==c.id && d.restante>0).reduce((s,d)=>s+d.restante,0);
+      return `<option value="${c.id}" data-tel="${c.tel||''}" data-nombre="${c.nombre}">${c.nombre}${dCliente>0?' (Debe $'+dCliente.toFixed(0)+')':''} - ${c.tel||''}</option>`;
+    }).join('');
     if(actual) sel.value=actual;
   }
 }
+
+function abrirDeuda(clienteId){
+  let cli=getCli().find(c=>c.id==clienteId); if(!cli) return;
+  clienteDeudaActual=clienteId;
+  document.getElementById('deudaClienteNombre').innerText=cli.nombre;
+  document.getElementById('deudaClienteTel').innerText=cli.tel||'';
+  let deudas=getDeudas().filter(d=>d.clienteId==clienteId);
+  let total=deudas.filter(d=>d.restante>0).reduce((s,d)=>s+d.restante,0);
+  document.getElementById('deudaTotal').innerText='$'+total.toFixed(0);
+  document.getElementById('deudaLista').innerHTML=deudas.slice().reverse().map(d=>{
+    let estado=d.restante<=0? '<span class="bg-green-100 text-green-700 text-[9px] px-2 py-0.5 rounded-full">Pagado</span>' : `<span class="bg-red-100 text-red-600 text-[9px] px-2 py-0.5 rounded-full">Debe $${d.restante.toFixed(0)}</span>`;
+    return `<div class="bg-white border p-2 rounded-xl"><div class="flex justify-between"><b class="text-[11px]">${d.tipo} - $${d.total.toFixed(0)}</b>${estado}</div><p class="text-[10px] text-gray-500">${d.fechaHora} • ${d.concepto}</p>${d.abonos&&d.abonos.length? `<div class="mt-1 text-[9px]">${d.abonos.map(a=>`• Abono $${a.monto} (${a.metodo}) ${a.fechaHora}`).join('<br>')}</div>`:''}</div>`;
+  }).join('')||'<p class="text-[11px] text-gray-400">Sin deudas</p>';
+  document.getElementById('modalDeuda').classList.remove('hidden');
+}
+function cerrarDeuda(){ document.getElementById('modalDeuda').classList.add('hidden'); clienteDeudaActual=null; }
+function setAbonoMetodo(m){ abonoMetodoSel=m; document.getElementById('abonoMetodo').value=m; ['efectivo','tarjeta','transferencia'].forEach(x=>{ let b=document.getElementById('ab-mp-'+x); if(b) b.className= b.id=='ab-mp-'+m.toLowerCase()? 'py-2 rounded-xl border-2 font-black text-[11px] bg-black text-white':'py-2 rounded-xl border-2 text-[11px] bg-white'; }); }
+function hacerAbono(){
+  if(!clienteDeudaActual) return;
+  let monto=parseFloat(document.getElementById('abonoMonto').value)||0; if(monto<=0) return alert('Monto');
+  let metodo=document.getElementById('abonoMetodo').value||'Efectivo';
+  let deudas=getDeudas();
+  let pendientes=deudas.filter(d=>d.clienteId==clienteDeudaActual && d.restante>0).sort((a,b)=>a.id-b.id);
+  let restanteAbono=monto;
+  pendientes.forEach(d=>{
+    if(restanteAbono<=0) return;
+    let aPagar=Math.min(d.restante, restanteAbono);
+    d.restante-=aPagar;
+    if(!d.abonos) d.abonos=[];
+    d.abonos.push({monto:aPagar, metodo:metodo, fechaHora:getFechaLocal(), fecha:getFechaSoloLocal()});
+    restanteAbono-=aPagar;
+  });
+  // registrar entrada en finanzas
+  let facts=getFacts();
+  facts.push({id:Date.now(),concepto:`Abono de ${getCli().find(c=>c.id==clienteDeudaActual)?.nombre||''} - ${metodo}`,monto:monto-restanteAbono,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:'entrada',vendedor:currentUser, metodoPago:metodo, clienteId:clienteDeudaActual});
+  setItem('deudas',deudas); setItem('facturas',facts);
+  document.getElementById('abonoMonto').value='';
+  renderClientes(); renderCalendario(); abrirDeuda(clienteDeudaActual);
+  alert('✅ Abono guardado');
+}
+
 function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'); if(!sel) return; let opt=sel.options[sel.selectedIndex]; let nombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador'; let el=document.getElementById('cobroClienteNombre'); if(el) el.innerText=nombre; }
 
 function addFijo(){ let n=document.getElementById('fijoNombre').value.trim(), m=parseFloat(document.getElementById('fijoMonto').value); if(!n||!m) return; let f=getFijos(); f.push({id:Date.now().toString(), nombre:n, monto:m}); setItem('gastosFijos',f); document.getElementById('fijoNombre').value=''; document.getElementById('fijoMonto').value=''; renderFijos(); calc(); }
@@ -302,7 +325,7 @@ function generarTicket(data){
   document.getElementById('ticketContenido').innerHTML=html; return html;
 }
 function generarTextoWhatsApp(data){
-  let emp=getEmp(); let pagoTxt=data.metodoPago||'Efectivo'; let iconoPago = pagoTxt=='Efectivo'?'💵':(pagoTxt=='Tarjeta'?'💳':'🏦');
+  let emp=getEmp(); let pagoTxt=data.metodoPago||'Efectivo'; let iconoPago = pagoTxt=='Efectivo'?'💵':(pagoTxt=='Tarjeta'?'💳':(pagoTxt=='Fiado'?'📒':(pagoTxt=='Apartado'?'📦':'🏦')));
   let lineas=[ `*${emp.nombre}*`, `${emp.direccion||''} ${emp.tel||''}`.trim(), `-------------------------`, `Fecha: ${data.fechaStr}`, `Cliente: ${data.cliente}`, `${iconoPago} Pago: ${pagoTxt}`, `Vendedor: ${data.vendedor||currentUser}`, `-------------------------`,...data.items.map(i=>`${i.nombre} x${i.qty} = $${(i.venta*i.qty).toFixed(2)}`), `-------------------------`, `*TOTAL (${pagoTxt}): $${data.total.toFixed(2)}*`, ``, `${emp.mensaje}`, `¡Gracias!` ];
   return lineas.join('\\n');
 }
@@ -390,29 +413,40 @@ function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hid
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
 
 function confirmarCobro(tipo){
-  let facts=getFacts();
-  let fechaStr=getFechaLocal();
-  let fechaSolo=getFechaSoloLocal();
+  let facts=getFacts(); let deudas=getDeudas();
+  let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal();
   let total=parseFloat(document.getElementById('c-total').innerText)||0;
-  let sel=document.getElementById('selCliente');
-  let opt=sel.options[sel.selectedIndex];
+  let sel=document.getElementById('selCliente'); let opt=sel? sel.options[sel.selectedIndex] : null;
   let clienteNombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador';
   let clienteTel=opt? opt.getAttribute('data-tel') : '';
-  let clienteId=sel.value;
-  let metodo=document.getElementById('metodoPago').value||'Efectivo';
-  facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', ')+' | Cliente: '+clienteNombre+' | Pago: '+metodo,monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',clienteId,clienteNombre,clienteTel,metodoPago:metodo});
+  let clienteId=sel? sel.value : '';
+  if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Para fiado/apartado selecciona un cliente'); return; }
+  let metodo=metodoPagoSel;
+  let abonoInicial=parseFloat(document.getElementById('fiadoAbono')?.value)||0;
+
+  if(metodo=='Fiado' || metodo=='Apartado'){
+    let restante = total - abonoInicial;
+    if(restante<0) restante=0;
+    deudas.push({id:Date.now(),clienteId,clienteNombre,clienteTel,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante,abonoInicial,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr,abonos: abonoInicial>0? [{monto:abonoInicial, metodo:'Efectivo', fechaHora:fechaStr, fecha:fechaSolo}]:[]});
+    setItem('deudas',deudas);
+    if(abonoInicial>0){
+      facts.push({id:Date.now(),concepto:`Abono inicial ${metodo} ${clienteNombre}`,monto:abonoInicial,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser, metodoPago:'Efectivo', clienteId});
+    }
+    // si es apartado no descontamos inventario hasta liquidar, si es fiado si
+    if(metodo=='Fiado') descontarInventarioDeVenta(carrito);
+  } else {
+    facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', ')+' | Cliente: '+clienteNombre+' | Pago: '+metodo,monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser,clienteId,clienteNombre,clienteTel,metodoPago:metodo});
+    descontarInventarioDeVenta(carrito);
+  }
   setItem('facturas',facts);
-  descontarInventarioDeVenta(carrito);
   ultimoTicket={fecha:new Date(),fechaStr:fechaStr,items:[...carrito],total,cliente:clienteNombre,clienteTel:clienteTel,vendedor:currentUser, metodoPago:metodo};
   generarTicket(ultimoTicket);
   cerrarCobro();
-  if(tipo=='print'){ imprimirTicket(); }
+  if(tipo=='print') imprimirTicket();
   else if(tipo=='whatsapp'){
-    let tel=clienteTel;
-    if(!tel || tel==''){ tel=prompt('WhatsApp del cliente para enviar ticket:'); }
-    if(tel){ tel=tel.toString().replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; let texto=generarTextoWhatsApp(ultimoTicket); window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
+    let tel=clienteTel; if(!tel){ tel=prompt('WhatsApp del cliente:'); } if(tel){ tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(generarTextoWhatsApp(ultimoTicket))}`,'_blank'); }
   }
-  carrito=[]; renderCarrito(); renderCalendario(); renderClientes();
+  carrito=[]; document.getElementById('fiadoAbono').value=''; renderCarrito(); renderCalendario(); renderClientes();
 }
 
 function openGasto(){ document.getElementById('modalGasto').classList.remove('hidden'); }
@@ -426,6 +460,7 @@ function abrirCierre(){
   let efectivo = facts.filter(f=>(f.metodoPago||'Efectivo')=='Efectivo').reduce((s,f)=>s+f.monto,0);
   let tarjeta = facts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0);
   let transf = facts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0);
+  let deudasDia = getDeudas().filter(d=>d.fecha==fechaStr).reduce((s,d)=>s+d.total,0);
   let salidas = getFacts().filter(f=>f.fecha==fechaStr && f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
   let ganancia = total - salidas;
   document.getElementById('cierreFechaLabel').innerText = fechaStr;
@@ -434,16 +469,15 @@ function abrirCierre(){
   document.getElementById('cierreEfectivo').innerText = '$'+efectivo.toFixed(0);
   document.getElementById('cierreTarjeta').innerText = '$'+tarjeta.toFixed(0);
   document.getElementById('cierreTransf').innerText = '$'+transf.toFixed(0);
+  document.getElementById('cierreFiado').innerText = '$'+getDeudas().filter(d=>d.fecha==fechaStr).reduce((s,d)=>s+d.restante,0).toFixed(0);
   document.getElementById('cierreGanancia').innerText = '$'+ganancia.toFixed(0);
-  let detalle = facts.map(f=>`• ${f.fechaHora||''} | ${f.clienteNombre||'Mostrador'} | ${f.metodoPago||'Efectivo'} | $${f.monto.toFixed(0)} | ${f.concepto}`).join('<br>');
-  if(!detalle) detalle='<span class="text-gray-400">Sin ventas ese día</span>';
-  document.getElementById('cierreDetalle').innerHTML=detalle;
-  ultimoCierre = {fecha:fechaStr, hora:getFechaLocal(), total, efectivo, tarjeta, transf, salidas, ganancia, ventas:facts.length, detalleTxt: facts.map(f=>`${f.fechaHora} - ${f.clienteNombre} - ${f.metodoPago} - $${f.monto}`).join('\\n') };
+  document.getElementById('cierreDetalle').innerHTML = facts.map(f=>`• ${f.fechaHora} | ${f.clienteNombre||''} | ${f.metodoPago} | $${f.monto}`).join('<br>') + `<br><br>📒 Fiado del día: $${deudasDia.toFixed(0)}`;
+  ultimoCierre = {fecha:fechaStr, hora:getFechaLocal(), total, efectivo, tarjeta, transf, fiado: deudasDia, salidas, ganancia, ventas:facts.length };
   document.getElementById('modalCierre').classList.remove('hidden');
 }
 function cerrarCierre(){ document.getElementById('modalCierre').classList.add('hidden'); }
-function imprimirCierre(){ let c=ultimoCierre; if(!c) return; let html=`<div style="font-family:monospace; width:58mm; margin:0 auto;"><h3 style="text-align:center">CIERRE CAJA<br>${c.fecha}<br>${c.hora}</h3><hr><p>Total ventas: $${c.total.toFixed(0)} (${c.ventas})<br>Efectivo: $${c.efectivo.toFixed(0)}<br>Tarjeta: $${c.tarjeta.toFixed(0)}<br>Transfer: $${c.transf.toFixed(0)}<br>Salidas: $${c.salidas.toFixed(0)}<br><b>Ganancia: $${c.ganancia.toFixed(0)}</b></p><hr><p style="font-size:10px">${c.detalleTxt.replace(/\\n/g,'<br>')}</p></div>`; let w=window.open('','','width=300,height=600'); w.document.write('<html><body>'+html+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); w.document.close(); }
-function enviarCierreWhatsApp(){ let c=ultimoCierre; if(!c) return; let emp=getEmp(); let texto=`*CIERRE DE CAJA ${emp.nombre}*\\nFecha: ${c.fecha}\\nHora: ${c.hora}\\n-------------------------\\nVentas: $${c.total} (${c.ventas} ventas)\\n💵 Efectivo: $${c.efectivo}\\n💳 Tarjeta: $${c.tarjeta}\\n🏦 Transfer: $${c.transf}\\nSalidas: $${c.salidas}\\n*Ganancia: $${c.ganancia}*\\n-------------------------\\n${c.detalleTxt}`; let tel=prompt('WhatsApp para enviar reporte (tu número 10 dígitos):', getEmp().tel||''); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
+function imprimirCierre(){ let c=ultimoCierre; if(!c) return; let html=`<div style="font-family:monospace; width:58mm; margin:0 auto;"><h3 style="text-align:center">CIERRE ${c.fecha}<br>${c.hora}</h3><hr><p>Ventas: $${c.total} (${c.ventas})<br>Efectivo $${c.efectivo}<br>Tarjeta $${c.tarjeta}<br>Transf $${c.transf}<br>Fiado $${c.fiado}<br>Salidas $${c.salidas}<br><b>Ganancia $${c.ganancia}</b></p></div>`; let w=window.open('','','width=300,height=600'); w.document.write('<html><body>'+html+'<script>window.onload=function(){window.print();}<\\/script></body></html>'); w.document.close(); }
+function enviarCierreWhatsApp(){ let c=ultimoCierre; if(!c) return; let emp=getEmp(); let texto=`*CIERRE ${emp.nombre}*\\n${c.fecha} ${c.hora}\\nVentas $${c.total} (${c.ventas})\\n💵 $${c.efectivo}\\n💳 $${c.tarjeta}\\n🏦 $${c.transf}\\n📒 Fiado $${c.fiado}\\nSalidas $${c.salidas}\\n*Ganancia $${c.ganancia}*`; let tel=prompt('WhatsApp reporte:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 
 function setVistaCal(v){ vistaCal=v; ['dia','semana','mes','ano'].forEach(x=>{ let b=document.getElementById('vc-'+x); if(b) b.className='flex-1 py-2 rounded-lg font-bold text-[11px] '+(x==v?'bg-white text-black font-black':'bg-transparent text-white/60'); }); renderCalendario(); }
 function moverCal(dir){ if(vistaCal=='mes'||vistaCal=='dia'){ fechaVista.setMonth(fechaVista.getMonth()+dir); } else if(vistaCal=='ano'){ fechaVista.setFullYear(fechaVista.getFullYear()+dir); } else { fechaVista.setDate(fechaVista.getDate()+(dir*7)); } renderCalendario(); }
@@ -470,42 +504,24 @@ function renderCalendario(){
     let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha+'T12:00:00'); return fd.getMonth()==m && fd.getFullYear()==y; });
     let entMes=mesFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let salMes=mesFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
     document.getElementById('fin-balance').innerText='$'+(entMes-salMes).toFixed(0); document.getElementById('fin-entradas').innerText='$'+entMes.toFixed(0); document.getElementById('fin-salidas').innerText='$'+salMes.toFixed(0);
-    let efMes=mesFacts.filter(f=>f.tipo=='entrada' && (f.metodoPago||'Efectivo')=='Efectivo').reduce((s,f)=>s+f.monto,0);
-    let tarMes=mesFacts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0);
-    let trMes=mesFacts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0);
-    let e1=document.getElementById('fin-efectivo'); if(e1) e1.innerText='$'+efMes.toFixed(0);
-    let e2=document.getElementById('fin-tarjeta'); if(e2) e2.innerText='$'+tarMes.toFixed(0);
-    let e3=document.getElementById('fin-transf'); if(e3) e3.innerText='$'+trMes.toFixed(0);
+    document.getElementById('fin-efectivo').innerText='$'+mesFacts.filter(f=>f.metodoPago=='Efectivo').reduce((s,f)=>s+f.monto,0).toFixed(0);
+    document.getElementById('fin-tarjeta').innerText='$'+mesFacts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0).toFixed(0);
+    document.getElementById('fin-transf').innerText='$'+mesFacts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0).toFixed(0);
+    document.getElementById('fin-fiado').innerText='$'+getDeudas().filter(d=>{ let fd=new Date(d.fecha+'T12:00:00'); return fd.getMonth()==m && fd.getFullYear()==y; }).reduce((s,d)=>s+d.restante,0).toFixed(0);
     renderDesgloseDia(fechaSel);
-  } else if(vistaCal=='semana'){
-    grid.classList.add('hidden'); sem.classList.remove('hidden'); ano.classList.add('hidden');
-    let inicio=new Date(fechaVista); inicio.setDate(fechaVista.getDate()-inicio.getDay()); let fin=new Date(inicio); fin.setDate(inicio.getDate()+6);
-    titulo.innerText=`${inicio.toLocaleDateString('es-MX')} - ${fin.toLocaleDateString('es-MX')}`;
-    let html='<div class="space-y-2">'; let maxVal=1; let datos=[];
-    for(let i=0;i<7;i++){ let d=new Date(inicio); d.setDate(inicio.getDate()+i); let fechaStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); let diaFacts=facts.filter(f=>f.fecha==fechaStr); let ent=diaFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=diaFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); datos.push({fechaStr,dia:d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric'}),ent,sal}); if(ent>maxVal) maxVal=ent; }
-    datos.forEach(o=>{ let h=Math.max(8,(o.ent/maxVal)*100); html+=`<div class="flex items-center gap-2"><span class="w-14 text-[10px] font-bold">${o.dia}</span><div class="flex-1 bg-gray-100 rounded-full h-8 relative overflow-hidden"><div class="bg-green-500 h-full rounded-full" style="width:${h}%"></div><span class="absolute inset-0 flex items-center px-2 text-[10px] font-black">$${o.ent.toFixed(0)}</span></div><button onclick="seleccionarDia('${o.fechaStr}')" class="text-[10px] bg-black text-white px-2 py-1 rounded-full">Ver</button></div>`; });
-    html+='</div>'; sem.innerHTML=html;
-  } else if(vistaCal=='ano'){
-    grid.classList.add('hidden'); sem.classList.add('hidden'); ano.classList.remove('hidden');
-    let y=fechaVista.getFullYear(); titulo.innerText=y; let html='';
-    for(let m=0;m<12;m++){ let mesFacts=facts.filter(f=>{ let fd=new Date(f.fecha+'T12:00:00'); return fd.getMonth()==m && fd.getFullYear()==y; }); let ent=mesFacts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=mesFacts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0); let nombre=new Date(y,m,1).toLocaleDateString('es-MX',{month:'short'}); html+=`<button onclick="fechaVista=new Date(${y},${m},1); setVistaCal('mes')" class="bg-gray-50 border-2 p-3 rounded-2xl text-left ${ent>0?'border-green-200 bg-green-50':''}"><p class="font-black text-[12px] uppercase">${nombre}</p><p class="text-[10px] text-green-600 font-bold">$${ent.toFixed(0)}</p></button>`; }
-    ano.innerHTML=html;
   }
 }
 function renderDesgloseDia(fechaStr){
   let facts=getFacts().filter(f=>f.fecha==fechaStr);
-  let fechaLegible=new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('fechaSelLabel').innerText=fechaLegible;
+  document.getElementById('fechaSelLabel').innerText=new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   let ent=facts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); let sal=facts.filter(f=>f.tipo=='salida').reduce((s,f)=>s+f.monto,0);
   document.getElementById('diaEntradas').innerText='$'+ent.toFixed(0); document.getElementById('diaSalidas').innerText='$'+sal.toFixed(0); document.getElementById('diaGanancia').innerText='$'+(ent-sal).toFixed(0);
   document.getElementById('diaNumEntradas').innerText=facts.filter(f=>f.tipo=='entrada').length+' ventas';
-  let ef=facts.filter(f=>f.tipo=='entrada' && (f.metodoPago||'Efectivo')=='Efectivo').reduce((s,f)=>s+f.monto,0);
-  let ta=facts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0);
-  let tr=facts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0);
-  document.getElementById('diaEfectivo').innerText='$'+ef.toFixed(0);
-  document.getElementById('diaTarjeta').innerText='$'+ta.toFixed(0);
-  document.getElementById('diaTransf').innerText='$'+tr.toFixed(0);
-  document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fechaHora||f.fecha} • ${f.metodoPago||'Efectivo'} • 👤 ${f.vendedor||'dueño'} • ${f.clienteNombre||''}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400 text-[12px] py-4">Sin movimientos</p>';
+  document.getElementById('diaEfectivo').innerText='$'+facts.filter(f=>f.metodoPago=='Efectivo').reduce((s,f)=>s+f.monto,0).toFixed(0);
+  document.getElementById('diaTarjeta').innerText='$'+facts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0).toFixed(0);
+  document.getElementById('diaTransf').innerText='$'+facts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0).toFixed(0);
+  document.getElementById('diaFiado').innerText='$'+getDeudas().filter(d=>d.fecha==fechaStr).reduce((s,d)=>s+d.restante,0).toFixed(0);
+  document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fechaHora||f.fecha} • ${f.metodoPago||'Efectivo'} • 👤 ${f.vendedor||'dueño'}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400 text-[12px] py-4">Sin movimientos</p>';
 }
 </script>
 </body></html>
