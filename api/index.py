@@ -18,7 +18,7 @@ def get_user_file(nid):
     safe=nid.replace("@","_at_").replace(".","_")
     return os.path.join(BASE_DATA, f"{safe}.json")
 @app.route('/manifest.json')
-def manifest(): return jsonify({"name":"Mi Negocio 10.5","short_name":"Mi Negocio","start_url":"/","display":"standalone"})
+def manifest(): return jsonify({"name":"Mi Negocio 10.6","short_name":"Mi Negocio","start_url":"/","display":"standalone"})
 @app.route('/logo.png')
 def logo_file():
     if os.path.exists('logo.png'): return send_file('logo.png', mimetype='image/png')
@@ -61,12 +61,12 @@ def api_save():
 def home():
  return """<!DOCTYPE html>
 <html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mi Negocio 10.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Mi Negocio 10.6</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>input,select,textarea{color:#000!important;background:#fff!important}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;height:360px;pointer-events:none;z-index:0;opacity:0.08;object-fit:contain;}#appContent{position:relative;z-index:1;}</style></head>
 <body class="bg-[#FFF8F0] min-h-screen"><div class="max-w-md mx-auto pb-[130px] relative">
 <img id="logoBg" class="logo-watermark hidden"><div id="appContent">
 <div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6">
-<h1 class="font-black text-[24px]">Mi Negocio 10.5</h1><p class="text-[11px] text-gray-500">Inventario + Cierre caja</p>
+<h1 class="font-black text-[24px]">Mi Negocio 10.6</h1><p class="text-[11px] text-gray-500">Stock en g / kg / ml</p>
 <div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6">
 <input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]">
 <input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3">
@@ -74,7 +74,7 @@ def home():
 <button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button>
 <p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
 
-<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.5</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-2"><img id="logoHeader" class="w-9 h-9 rounded-full object-cover border-2 border-black hidden"><div><h1 class="font-black text-[14px]">Mi Negocio 10.6</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
 
 <div id="tab-vender" class="p-3 hidden">
 <div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva</button></div><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div id="listaCatsEdit" class="space-y-2 mb-3"></div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
@@ -108,12 +108,12 @@ def home():
 <div id="tab-clientes" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><div class="flex justify-between"><h2 class="font-black">👥 Clientes</h2></div><div class="grid grid-cols-5 gap-2 mt-3"><input id="cliNombre" placeholder="Nombre" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><input id="cliTel" placeholder="WhatsApp" class="col-span-2 border-2 border-black p-2 rounded-xl text-[12px] text-black"><button onclick="addCliente()" class="bg-[#25D366] text-white rounded-xl font-black">+</button></div></div><div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaClientes" class="space-y-3"></div></div></div>
 
 <div id="tab-inventario" class="p-3 hidden">
-<div class="bg-[#2D3748] rounded-[28px] p-4 text-white mb-3"><h2 class="font-black">📦 Inventario con Stock</h2><p class="text-[10px] opacity-70">Ahora lleva control de cuánto tienes</p></div>
+<div class="bg-[#2D3748] rounded-[28px] p-4 text-white mb-3"><h2 class="font-black">📦 Inventario con Stock</h2><p class="text-[10px] opacity-70">Toca el stock para editar en gramos</p></div>
 <div class="bg-white rounded-[20px] p-4">
 <div class="grid grid-cols-7 gap-1">
 <input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-2 rounded-xl font-bold text-[12px]">
 <input id="inv-precio" type="number" placeholder="$30" class="col-span-1 border-2 border-black p-2 rounded-xl font-black text-[12px]">
-<input id="inv-stock" type="number" placeholder="Stock" class="col-span-2 border-2 border-black p-2 rounded-xl font-black text-[12px] bg-yellow-50">
+<input id="inv-stock" type="text" placeholder="Ej: 500 g" class="col-span-2 border-2 border-black p-2 rounded-xl font-black text-[12px] bg-yellow-50">
 <select id="inv-unidad" class="col-span-1 border-2 border-black p-2 rounded-xl text-[10px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>pza</option><option>m</option><option>cm</option><option>lb</option><option>oz</option></select>
 <button onclick="addInventario()" class="col-span-1 bg-black text-white rounded-xl font-black">+</button>
 </div>
@@ -190,9 +190,72 @@ function getEmp(){ return JSON.parse(localStorage.getItem('empresaConfig_'+negoc
 function getCategoriasVenta(){ let cats=JSON.parse(localStorage.getItem('categoriasVenta_'+negocioId)||localStorage.getItem('categoriasVenta')||'[]'); if(!cats.length){ cats=[{id:'todas',nombre:'Todas'},{id:'alitas',nombre:'Alitas'},{id:'papas',nombre:'Papas'},{id:'bebidas',nombre:'Bebidas'}]; localStorage.setItem('categoriasVenta_'+negocioId,JSON.stringify(cats)); } return cats; }
 function getLotes(){ return parseInt(localStorage.getItem('lotesMes_'+negocioId)||localStorage.getItem('lotesMes')||'30')||30; }
 function setItem(k,v){ localStorage.setItem(k+'_'+negocioId, typeof v==='string'? v: JSON.stringify(v)); localStorage.setItem(k, typeof v==='string'? v: JSON.stringify(v)); guardarEnNube(); }
-function normalizarUnidad(u){ u=(u||'').toLowerCase().trim(); if(['g','gr'].includes(u)) return 'g'; if(['kg'].includes(u)) return 'kg'; if(['mg'].includes(u)) return 'mg'; if(['l','litro'].includes(u)) return 'L'; if(['ml'].includes(u)) return 'ml'; if(['m','metro'].includes(u)) return 'm'; if(['cm'].includes(u)) return 'cm'; if(['lb','libra'].includes(u)) return 'lb'; if(['oz'].includes(u)) return 'oz'; if(['pza','pieza'].includes(u)) return 'pza'; return u; }
+function normalizarUnidad(u){ u=(u||'').toLowerCase().trim(); if(['g','gr'].includes(u)) return 'g'; if(['kg'].includes(u)) return 'kg'; if(['mg'].includes(u)) return 'mg'; if(['l','litro','litros'].includes(u)) return 'L'; if(['ml'].includes(u)) return 'ml'; if(['m','metro'].includes(u)) return 'm'; if(['cm'].includes(u)) return 'cm'; if(['lb','libra'].includes(u)) return 'lb'; if(['oz'].includes(u)) return 'oz'; if(['pza','pieza'].includes(u)) return 'pza'; return u; }
 function factorABase(u){ u=normalizarUnidad(u); let map={mg:0.001,g:1,kg:1000,lb:453.592,oz:28.3495,ml:1,L:1000,m:100,cm:1,pza:1}; return map[u]||1; }
 function convertir(cant, de, a){ de=normalizarUnidad(de); a=normalizarUnidad(a); if(de==a) return cant; return cant * factorABase(de) / factorABase(a); }
+
+// ==== NUEVO: STOCK EN GRAMOS / KG ====
+function formatStock(stock, unidad){
+  stock = parseFloat(stock)||0;
+  let u = unidad||'kg';
+  if(u=='kg'){
+    if(stock>0 && stock<1) return `${stock.toFixed(3)} kg (${Math.round(stock*1000)} g)`;
+    return `${stock} kg`;
+  }
+  if(u=='g'){
+    if(stock>=1000) return `${stock} g (${(stock/1000).toFixed(2)} kg)`;
+    return `${stock} g`;
+  }
+  if(u=='L'){
+    if(stock>0 && stock<1) return `${stock} L (${Math.round(stock*1000)} ml)`;
+    return `${stock} L`;
+  }
+  if(u=='ml'){
+    if(stock>=1000) return `${stock} ml (${(stock/1000).toFixed(2)} L)`;
+    return `${stock} ml`;
+  }
+  return `${stock} ${u}`;
+}
+function parseCantidadTexto(texto, unidadBase){
+  if(!texto) return 0;
+  texto = texto.toString().toLowerCase().trim().replace(',', '.');
+  let num = parseFloat(texto);
+  if(isNaN(num)) return 0;
+  if(texto.includes('kg')) return convertir(num, 'kg', unidadBase);
+  if(texto.includes('mg')) return convertir(num, 'mg', unidadBase);
+  if(texto.includes('ml')) return convertir(num, 'ml', unidadBase);
+  if((texto.includes(' g') || texto.endsWith('g')) &&!texto.includes('kg') &&!texto.includes('mg')){
+    return convertir(num, 'g', unidadBase);
+  }
+  if(texto.includes(' l ') || texto.endsWith(' l') || texto=='l' || (texto.includes('l') &&!texto.includes('ml'))){
+    // si solo puso L y no ml
+    if(texto.includes('l')) return convertir(num, 'L', unidadBase);
+  }
+  // si no dijo unidad, asume base
+  return num;
+}
+function editarStockExacto(id){
+  let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return;
+  let actualTxt = formatStock(it.stock, it.unidad);
+  let entrada = prompt(`Editar ${it.nombre}\\nActual: ${actualTxt}\\n\\nEscribe cuánto te queda:\\nEj: 500 g, 800g, 0.8 kg, 250 ml, 1.5 L`, it.stock+' '+it.unidad);
+  if(entrada===null) return;
+  let nuevo = parseCantidadTexto(entrada, it.unidad);
+  if(nuevo<0) nuevo=0;
+  it.stock = nuevo;
+  setItem('inventarioMaestro',inv); renderInventarioMaster();
+}
+function ajustarStockPrompt(id, tipo){
+  let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return;
+  let accion = tipo>0? 'AGREGAR' : 'QUITAR';
+  let entrada = prompt(`${accion} a ${it.nombre}\\nActual: ${formatStock(it.stock, it.unidad)}\\n\\n¿Cuánto?\\nEj: 500 g, 250 ml, 0.5 kg`, tipo>0?'500 g':'200 g');
+  if(entrada===null) return;
+  let cantidad = parseCantidadTexto(entrada, it.unidad);
+  if(cantidad<=0) return;
+  if(tipo>0) it.stock = (parseFloat(it.stock)||0) + cantidad;
+  else it.stock = (parseFloat(it.stock)||0) - cantidad;
+  if(it.stock<0) it.stock=0;
+  setItem('inventarioMaestro',inv); renderInventarioMaster();
+}
 
 function addCategoriaVenta(){ let n=document.getElementById('nuevaCatNombre').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); document.getElementById('nuevaCatNombre').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); }
 function addCategoriaVentaDesdeProd(){ let n=document.getElementById('quickCat').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); document.getElementById('quickCat').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=id; }
@@ -249,32 +312,53 @@ function enviarWhatsAppDirecto(tel,msg){ if(!tel){ tel=prompt('Numero'); if(!tel
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Alitas',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago: metodoPagoSel}; } if(!ultimoTicket) return; let sel=document.getElementById('selCliente'); let opt=sel? sel.options[sel.selectedIndex] : null; let tel=opt? opt.getAttribute('data-tel') : ''; if(!tel){ let cliId=sel? sel.value : ''; let cli=getCli().find(c=>c.id==cliId); tel=cli? cli.tel : ''; } if(!tel){ tel=prompt('WhatsApp:'); if(!tel) return; } tel=tel.toString().replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(generarTextoWhatsApp(ultimoTicket))}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
-function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stock=parseFloat(document.getElementById('inv-stock').value)||0, u=document.getElementById('inv-unidad').value; if(!n) return alert('Nombre'); let inv=getInv(); let existente=inv.find(x=>x.nombre.toLowerCase()==n.toLowerCase()); if(existente){ existente.precio=p||existente.precio; existente.stock=(existente.stock||0)+stock; existente.unidad=u; } else { inv.push({id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u}); } setItem('inventarioMaestro',inv); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; renderInventarioMaster(); }
+function addInventario(){
+  let n=document.getElementById('inv-nombre').value.trim(),
+  p=parseFloat(document.getElementById('inv-precio').value)||0,
+  stockTxt=document.getElementById('inv-stock').value.trim()||'0',
+  u=document.getElementById('inv-unidad').value;
+  if(!n) return alert('Nombre');
+  let stock = parseCantidadTexto(stockTxt, u);
+  let inv=getInv();
+  inv.push({id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u});
+  setItem('inventarioMaestro',inv);
+  document.getElementById('inv-nombre').value='';
+  document.getElementById('inv-precio').value='';
+  document.getElementById('inv-stock').value='';
+  renderInventarioMaster();
+}
 function renderInventarioMaster(){
   let inv=getInv();
   let el=document.getElementById('listaInvMaster');
   if(!el) return;
   el.innerHTML=inv.map(it=>{
-    let bajo=(it.stock||0)<=2;
-    return `<div class="flex gap-2 items-center ${bajo?'bg-red-50 border-red-300':'bg-gray-50'} p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]"> $${it.precio}/${it.unidad}</span><br><span class="${bajo?'text-red-600 font-black':'text-green-700 font-bold'} text-[11px]">Stock: ${it.stock||0} ${it.unidad} ${bajo?'⚠️ bajo':''}</span></div><div class="flex gap-1"><button onclick="ajustarStock('${it.id}',1)" class="bg-green-500 text-white w-7 h-7 rounded-full font-black">+</button><button onclick="ajustarStock('${it.id}',-1)" class="bg-yellow-500 text-white w-7 h-7 rounded-full font-black">-</button><button onclick="let inv=getInv().filter(x=>x.id!='${it.id}'); setItem('inventarioMaestro',inv); renderInventarioMaster();" class="text-red-400 px-2">X</button></div></div>`;
+    let bajo=(it.stock||0) <= (it.unidad=='kg'||it.unidad=='L'? 0.5 : 200);
+    return `<div class="flex gap-2 items-center ${bajo?'bg-red-50 border-red-300':'bg-gray-50'} p-3 rounded-xl border">
+      <div class="flex-1" onclick="editarStockExacto('${it.id}')">
+        <b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]"> $${it.precio}/${it.unidad}</span><br>
+        <span class="${bajo?'text-red-600 font-black':'text-green-700 font-bold'} text-[11px]">Stock: ${formatStock(it.stock, it.unidad)} ${bajo?'⚠️ bajo':''}</span>
+        <span class="text-[8px] text-gray-400 block">Toca para editar exacto</span>
+      </div>
+      <div class="flex gap-1">
+        <button onclick="ajustarStockPrompt('${it.id}',1)" class="bg-green-500 text-white w-7 h-7 rounded-full font-black">+</button>
+        <button onclick="ajustarStockPrompt('${it.id}',-1)" class="bg-yellow-500 text-white w-7 h-7 rounded-full font-black">-</button>
+        <button onclick="if(confirm('¿Borrar ${it.nombre}?')){let inv=getInv().filter(x=>x.id!='${it.id}'); setItem('inventarioMaestro',inv); renderInventarioMaster();}" class="text-red-400 px-2">X</button>
+      </div>
+    </div>`;
   }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin inventario</p>';
 }
-function ajustarStock(id,delta){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; it.stock=(parseFloat(it.stock)||0)+delta; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); renderInventarioMaster(); }
 
-// NUEVO: DESCONTAR INVENTARIO AL VENDER
 function descontarInventarioDeVenta(itemsVendidos){
   let inv=getInv(); let productos=getProd(); let huboCambio=false;
   itemsVendidos.forEach(vendido=>{
     let prod = productos.find(p=>p.id==vendido.id); if(!prod) return;
     let cantidadVendida = vendido.qty||1;
-    // si el producto tiene receta de bases
     if(prod.receta && prod.receta.length){
       prod.receta.forEach(r=>{
         if(r.baseId){
           let base = productos.find(b=>b.id==r.baseId); if(!base||!base.receta) return;
           base.receta.forEach(ing=>{
             let invItem = inv.find(i=>i.id==ing.invId); if(!invItem) return;
-            // ing.cu es en ing.uu, convertir a unidad del inventario
             let uso = (ing.cu||0) * cantidadVendida;
             try{ let usoEnInv = convertir(uso, ing.uu, invItem.unidad); invItem.stock = (parseFloat(invItem.stock)||0) - usoEnInv; huboCambio=true; }catch(e){}
           });
@@ -291,7 +375,7 @@ function descontarInventarioDeVenta(itemsVendidos){
   if(huboCambio){ setItem('inventarioMaestro',inv); renderInventarioMaster(); }
 }
 
-function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad} (Stock ${it.stock||0})</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="mg">mg</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option><option value="m">m</option><option value="cm">cm</option><option value="lb">lb</option><option value="oz">oz</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
+function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad} (Stock ${formatStock(it.stock,it.unidad)})</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="mg">mg</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option><option value="m">m</option><option value="cm">cm</option><option value="lb">lb</option><option value="oz">oz</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; document.getElementById('c-fijos').innerText=fijos.toFixed(2); let total=tot+fijos; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
 function addBase(d={}){ let bases=getProd(); let opts=bases.map(b=>`<option value="${b.id}" ${d.id==b.id?'selected':''}>${b.nombre} $${b.costo.toFixed(2)}</option>`).join(''); let div=document.createElement('div'); div.className='bg-white border-2 border-black rounded-xl p-3 flex gap-2 items-center'; div.innerHTML=`<select class="b-sel flex-1 border-2 p-2 rounded-lg font-bold text-[12px]" onchange="calc2()">${opts}</select><button onclick="this.parentElement.remove();calc2()" class="text-red-400 font-black px-2">X</button>`; document.getElementById('basesSel').appendChild(div); }
 function calc2(){ let tot=0; document.querySelectorAll('#basesSel > div').forEach(r=>{ let id=r.querySelector('.b-sel').value; let b=getProd().find(x=>x.id==id); if(b) tot+=b.costo; }); document.getElementById('c-ing2').innerText=tot.toFixed(2); let m=parseFloat(document.getElementById('margen2').value)||0; let vm=document.getElementById('ventaManual2').value; document.getElementById('venta2').innerText= vm? parseFloat(vm).toFixed(2) : (tot*(1+m/100)).toFixed(2); }
@@ -335,7 +419,6 @@ function openGasto(){ document.getElementById('modalGasto').classList.remove('hi
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
 function guardarGasto(){ let c=document.getElementById('g-concepto').value.trim(), m=parseFloat(document.getElementById('g-monto').value), t=document.getElementById('g-tipo').value; if(!c||!m) return; let f=getFacts(); f.push({id:Date.now(),concepto:c,monto:m,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:t,vendedor:currentUser, metodoPago:'Efectivo'}); setItem('facturas',f); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; cerrarGasto(); renderCalendario(); }
 
-// CIERRE DE CAJA NUEVO
 function abrirCierre(){
   let fechaStr = fechaSel;
   let facts = getFacts().filter(f=>f.fecha==fechaStr && f.tipo=='entrada');
