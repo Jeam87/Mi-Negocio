@@ -219,8 +219,45 @@ function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
-function guardarGasto(){ let c=document.getElementById('g-concepto').value.trim(), m=parseFloat(document.getElementById('g-monto').value), t=document.getElementById('g-tipo').value, obs=document.getElementById('g-obs').value.trim(), metodo=document.getElementById('g-metodo').value, provId=document.getElementById('g-proveedor').value, invId=document.getElementById('g-inv-id').value, invCantTxt=document.getElementById('g-inv-cant').value.trim(); if(!c||!m) return alert('Concepto y monto'); if(invId && invCantTxt){ let inv=getInv(); let it=inv.find(x=>x.id==invId); if(it){ let cant=parseCantidadTexto(invCantTxt, it.unidad); it.stock=(parseFloat(it.stock)||0)+cant; setItem('inventarioMaestro',inv); obs+=' | Carga '+invCantTxt+' de '+it.nombre; } } let f=getFacts(); f.push({id:Date.now(),concepto:c,monto:m,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:t,observaciones:obs,metodoPago:metodo,proveedorId:provId,vendedor:currentUser}); setItem('facturas',f); cerrarGasto(); renderCalendario(); renderInventarioMaster(); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; document.getElementById('g-obs').value=''; document.getElementById('g-inv-cant').value=''; }
-function exportarExcel(){ let facts=getFacts(); let csv='Fecha,Concepto,Monto,Tipo,Metodo\\n'+facts.map(f=>`"${f.fecha}","${f.concepto}",${f.monto},${f.tipo},${f.metodoPago||''}`).join('\\n'); let blob=new Blob([csv],{type:'text/csv'}); let url=URL.createObjectURL(blob); let a=document.createElement('a'); a.href=url; a.download='finanzas.csv'; a.click(); }
+function descontarStockVenta(carritoActual){
+  try{
+    let inv = getInv();
+    let productos = getProd();
+    carritoActual.forEach(itemCar=>{
+      let prod = productos.find(p=> String(p.id) == String(itemCar.id));
+      if(!prod || !prod.receta) return;
+      let qty = itemCar.qty || 1;
+      prod.receta.forEach(r=>{
+        // Si el producto tiene base (tu 11.5)
+        if(r.baseId){
+          let base = productos.find(b=> String(b.id) == String(r.baseId));
+          if(!base || !base.receta) return;
+          base.receta.forEach(ing=>{
+            let it = inv.find(i=> String(i.id) == String(ing.invId));
+            if(!it) return;
+            let uso = convertir(parseFloat(ing.cu||0), ing.uu||'g', it.unidad) * qty;
+            it.stock = (parseFloat(it.stock)||0) - uso;
+            if(it.stock < 0) it.stock = 0;
+          });
+        }
+        // Si ya tienes inventario directo en producto (por si lo agregaste)
+        if(r.invId){
+          let it = inv.find(i=> String(i.id) == String(r.invId));
+          if(!it) return;
+          let uso = convertir(parseFloat(r.cu||0), r.uu||'g', it.unidad) * qty;
+          it.stock = (parseFloat(it.stock)||0) - uso;
+          if(it.stock < 0) it.stock = 0;
+        }
+      });
+    });
+    setItem('inventarioMaestro', inv);
+    renderInventarioMaster();
+  }catch(e){ console.log("Error descontando", e); }
+}
+
+function confirmarCobro(tipo){ 
+  descontarStockVenta(carrito);
+  let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }function exportarExcel(){ let facts=getFacts(); let csv='Fecha,Concepto,Monto,Tipo,Metodo\\n'+facts.map(f=>`"${f.fecha}","${f.concepto}",${f.monto},${f.tipo},${f.metodoPago||''}`).join('\\n'); let blob=new Blob([csv],{type:'text/csv'}); let url=URL.createObjectURL(blob); let a=document.createElement('a'); a.href=url; a.download='finanzas.csv'; a.click(); }
 function abrirCierre(){ let fechaStr=fechaSel; let facts=getFacts().filter(f=>f.fecha==fechaStr); let total=facts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); document.getElementById('cierreFechaLabel').innerText=fechaStr; document.getElementById('cierreUserLabel').innerText=currentUser; document.getElementById('cierreHoraLabel').innerText=getFechaLocal(); document.getElementById('cierreTotal').innerText='$'+total.toFixed(0); document.getElementById('cierreEfectivo').innerText='$'+facts.filter(f=>f.tipo=='entrada' && (f.metodoPago||'Efectivo')=='Efectivo').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreTarjeta').innerText='$'+facts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreTransf').innerText='$'+facts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreDetalle').innerHTML=facts.map(f=>`• ${f.concepto} $${f.monto}`).join('<br>')||'Sin movimientos'; ultimoCierre={fecha:fechaStr,total}; document.getElementById('modalCierre').classList.remove('hidden'); }
 function cerrarCierre(){ document.getElementById('modalCierre').classList.add('hidden'); }
 function imprimirCierre(){ alert('Cierre'); }
