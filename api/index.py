@@ -197,29 +197,36 @@ function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualiz
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
 function renderInventarioMaster(){
-  let cont=document.getElementById('listaInventario'); if(!cont) return;
-  let q=(document.getElementById('buscInv')?.value||'').toLowerCase();
-  let inv=getInv().filter(i=> i.nombre.toLowerCase().includes(q));
-  cont.innerHTML=inv.map(i=>`
-    <div class="row" style="display:flex;gap:8px;align-items:center;background:#fff;padding:10px;border-radius:12px;margin-bottom:8px;border:1px solid #eee">
-      <div style="flex:1"><b>${i.nombre}</b> <span style="font-size:13px">Stock ${parseFloat(i.stock).toFixed(1)} ${i.unidad} - $${i.costo}/${i.unidad}</span></div>
-      <button onclick="editarInv('${i.id}')" style="background:#111;color:#fff;border-radius:8px;padding:6px 10px">✏️</button>
-      <button onclick="mermaInv('${i.id}')" style="background:#ff7a00;color:#fff;border-radius:20px;padding:6px 10px;border:none">Merma</button>
-      <button onclick="borrarInv('${i.id}')" style="background:none;border:none;color:#ff4444;font-size:18px">X</button>
-    </div>
-  `).join('') || '<p style="text-align:center">Sin resultados</p>';
+  var cont=document.getElementById('listaInventario'); if(!cont) return;
+  var q=(document.getElementById('buscInv')? document.getElementById('buscInv').value : '').toLowerCase();
+  var inv=getInv().filter(function(i){ return i.nombre.toLowerCase().includes(q); });
+  var html='';
+  for(var k=0;k<inv.length;k++){
+    var i=inv[k];
+    html += '<div class="row" style="display:flex;gap:8px;align-items:center;background:#fff;padding:10px;border-radius:12px;margin-bottom:8px;border:1px solid #eee">';
+    html += '<div style="flex:1"><b>'+i.nombre+'</b> <span style="font-size:13px">Stock '+parseFloat(i.stock).toFixed(1)+' '+i.unidad+' - $'+i.costo+'/'+i.unidad+'</span></div>';
+    html += '<button onclick="editarInv(\''+i.id+'\')" style="background:#111;color:#fff;border-radius:8px;padding:6px 10px">Edit</button>';
+    html += '<button onclick="mermaInv(\''+i.id+'\')" style="background:#ff7a00;color:#fff;border-radius:20px;padding:6px 10px;border:none">Merma</button>';
+    html += '<button onclick="borrarInv(\''+i.id+'\')" style="background:none;border:none;color:#ff4444;font-size:18px">X</button>';
+    html += '</div>';
+  }
+  cont.innerHTML = html || '<p style="text-align:center">Sin resultados</p>';
 }
+
 function editarInv(id){
-  let inv=getInv(); let it=inv.find(x=> String(x.id)==String(id)); if(!it) return;
-  let nuevoStock = prompt(`Editar Stock de ${it.nombre} (actual ${it.stock} ${it.unidad}):`, it.stock);
+  var inv=getInv();
+  var it=null;
+  for(var j=0;j<inv.length;j++){ if(String(inv[j].id)==String(id)){ it=inv[j]; break; } }
+  if(!it) return;
+  var nuevoStock = prompt('Editar Stock de '+it.nombre+' (actual '+it.stock+' '+it.unidad+'):', it.stock);
   if(nuevoStock===null) return;
-  let nuevoCosto = prompt(`Editar Costo por ${it.unidad} de ${it.nombre} (actual $${it.costo}):`, it.costo);
+  var nuevoCosto = prompt('Editar Costo por '+it.unidad+' de '+it.nombre+' (actual $'+it.costo+'):', it.costo);
   if(nuevoCosto===null) return;
   it.stock = parseFloat(nuevoStock)||0;
   it.costo = parseFloat(nuevoCosto)||0;
   setItem('inventarioMaestro', inv);
   renderInventarioMaster();
-  alert('Inventario actualizado');
+  alert('Actualizado');
 }
  
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
