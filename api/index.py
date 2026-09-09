@@ -210,10 +210,8 @@ function renderInventarioMaster(){
     html += "<button onclick=\"editarInv('"+i.id+"')\" style=background:#111;color:#fff;border-radius:8px;padding:6px 10px>Edit</button>";
     html += "<button onclick=\"mermaInv('"+i.id+"')\" style=background:#ff7a00;color:#fff;border-radius:20px;padding:6px 10px;border:none>Merma</button>";
     html += "<button onclick=\"borrarInv('"+i.id+"')\" style=background:none;border:none;color:#ff4444;font-size:18px>X</button>";
-    html += "</div>";
-  }
-  cont.innerHTML = html || "<p style=text-align:center>Sin resultados</p>";
-}
+    html += "</div>";}
+  cont.innerHTML = html || "<p style=text-align:center>Sin resultados</p>";}
 
 function editarInv(id){
   var inv=getInv();
@@ -227,8 +225,7 @@ function editarInv(id){
   it.stock = parseFloat(nStock) || 0;
   it.costo = parseFloat(nCosto) || 0;
   setItem("inventarioMaestro", inv);
-  renderInventarioMaster();
-}
+  renderInventarioMaster();}
 
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } if(row.querySelector('.in-sub')) row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; let rend=parseFloat(document.getElementById('rendCant')?.value)||1; let fijosPorUnidad=rend>0? fijos/rend : fijos; document.getElementById('c-fijos').innerText=fijosPorUnidad.toFixed(2); let total=tot+fijosPorUnidad; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
