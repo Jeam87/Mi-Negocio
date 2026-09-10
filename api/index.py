@@ -220,15 +220,26 @@ function actualizarRinde(sel){
  try{ let opt=sel.options[sel.selectedIndex]; let div=sel.parentElement; let label=div.querySelector('.b-rinde-label'); if(opt && opt.dataset.rinde){ label.innerText='Rinde: '+opt.dataset.rinde+(opt.dataset.uni||''); } }catch(e){}
 }
 function calc2(){
- let tot=0;
- document.querySelectorAll('#basesSel > div').forEach(r=>{
-  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
-  let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
-  let b=getProd().find(x=>String(x.id)==String(id));
-  if(b){
-   let rinde=(b.rendimiento && b.rendimiento.cant)?parseFloat(b.rendimiento.cant):1;
-   if(cantUsada>0) tot+=(b.costo/rinde)*cantUsada;
-  }
+ try{
+  let tot=0;
+  document.querySelectorAll('#basesSel > div').forEach(row=>{
+    let sel=row.querySelector('select');
+    if(!sel||!sel.value) return;
+    let id=sel.value;
+    let b=getProd().find(x=>String(x.id)==String(id));
+    if(!b) return;
+    let cant=parseFloat(row.querySelector('.b-cant')?.value)||1;
+    let rinde=parseFloat(b.rendimiento?.cant || b.rinde || 10)||10;
+    let costo=parseFloat(b.costo||0);
+    tot+= (costo/rinde)*cant;
+  });
+  let c1=document.getElementById('c-ing2') || document.getElementById('costoTxt') || document.getElementById('costo');
+  let v1=document.getElementById('venta2') || document.getElementById('ventaTxt') || document.getElementById('venta');
+  if(c1) c1.innerText=tot.toFixed(2);
+  if(c1 && c1.innerText.includes('$')) c1.innerText='$'+tot.toFixed(2);
+  if(v1) v1.innerText=(tot*2).toFixed(2);
+  if(v1 && v1.innerText.includes && !v1.innerText.includes('$')) v1.innerText='$'+(tot*2).toFixed(2);
+}catch(e){ console.log(e); alert('Error calculo: '+e.message); }
  });
  document.getElementById('c-ing2').innerText=tot.toFixed(2);
  let m=parseFloat(document.getElementById('margen2').value)||0;
