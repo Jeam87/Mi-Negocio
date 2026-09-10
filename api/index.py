@@ -196,57 +196,46 @@ function imprimirTicket(){ let contenido=document.getElementById('ticketContenid
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
-function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stockTxt=document.getElementById('inv-stock').value.trim()||'0', u=document.getElementById('inv-unidad').value; if(!n) return; let stock = parseCantidadTexto(stockTxt, u); if(isNaN(stock)) stock=0; let inv=getInv(); inv.push({id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u}); setItem('inventarioMaestro',inv); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; renderInventarioMaster(); renderInventario(); }
-function registrarMerma(id){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let txt=prompt(`Merma de ${it.nombre} Actual: ${it.stock} ${it.unidad} Cuánto se tiró? Ej: 200 g`); if(!txt) return; let cant=parseCantidadTexto(txt, it.unidad); it.stock=(parseFloat(it.stock)||0)-cant; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); let facts=getFacts(); facts.push({id:Date.now(),concepto:`Merma: ${it.nombre}`,monto:0,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:'salida',vendedor:currentUser, observaciones:txt}); setItem('facturas',facts); renderInventarioMaster(); }
-function renderInventarioMaster(){ let inv=getInv(); let el=document.getElementById('listaInvMaster'); let busc=document.getElementById('buscInv')?.value.toLowerCase().trim()||''; let alerta=document.getElementById('alertaStock'); let bajos=inv.filter(i=> (parseFloat(i.stock)||0) <=1); if(bajos.length && alerta){ alerta.classList.remove('hidden'); alerta.innerHTML='⚠️ Stock bajo: '+bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad})`).join(', '); } else if(alerta){ alerta.classList.add('hidden'); } let filtrado=inv; if(busc){ filtrado=inv.filter(it=> (it.nombre||'').toLowerCase().includes(busc)); } if(el){ if(!filtrado.length && busc){ el.innerHTML=`<p class="text-center text-gray-500 text-[12px] py-6">No se encontró "${busc}"</p>`; return; } el.innerHTML=filtrado.map(it=>{ let stockVal= (it.stock!==undefined && it.stock!==null &&!isNaN(parseFloat(it.stock)))? parseFloat(it.stock) : 0; return `<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]">Stock ${stockVal} ${it.unidad||''} - $${it.precio}/${it.unidad||''}</span></div><div class="flex gap-1"><button onclick="editarInv('${it.id}')" class="bg-black text-white px-2 py-1 rounded-full text-[10px]">EDIT</button><button onclick="registrarMerma('${it.id}')" class="bg-orange-500 text-white px-2 py-1 rounded-full text-[10px]">Merma</button><button onclick="if(confirm('Borrar?')){setItem('inventarioMaestro',getInv().filter(x=>x.id!='${it.id}')); renderInventarioMaster(); renderInventario();}" class="text-red-400 px-1">X</button></div></div>`; }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin inventario</p>'; } }
+function renderInventarioMaster(){
+  var cont=document.getElementById("listaInventario");
+  if(!cont) return;
+  var busc=document.getElementById("buscInv");
+  var q= busc? busc.value.toLowerCase() : "";
+  var inv=getInv().filter(function(i){ return i.nombre.toLowerCase().indexOf(q)!== -1; });
+  var html="";
+  for(var k=0;k<inv.length;k++){
+    var i=inv[k];
+    html += "<div class=row style=display:flex;gap:8px;align-items:center;background:#fff;padding:10px;border-radius:12px;margin-bottom:8px;border:1px solid #eee>";
+    html += "<div style=flex:1><b>"+i.nombre+"</b> <span style=font-size:13px> Stock "+i.stock+" "+i.unidad+" - $"+i.costo+"</span></div>";
+    html += "<button onclick=\"editarInv('"+i.id+"')\" style=background:#111;color:#fff;border-radius:8px;padding:6px 10px>Edit</button>";
+    html += "<button onclick=\"mermaInv('"+i.id+"')\" style=background:#ff7a00;color:#fff;border-radius:20px;padding:6px 10px;border:none>Merma</button>";
+    html += "<button onclick=\"borrarInv('"+i.id+"')\" style=background:none;border:none;color:#ff4444;font-size:18px>X</button>";
+    html += "</div>";
+  }
+  cont.innerHTML = html || "<p style=text-align:center>Sin resultados</p>";
+}
 
-function editarInv(id){ let inv=getInv(); let it=inv.find(x=> String(x.id)===String(id)); if(!it) return; let ns=prompt('Nuevo stock de '+it.nombre+' (actual '+it.stock+'):', it.stock); if(ns===null) return; let np=prompt('Nuevo precio/costo de '+it.nombre+' (actual $'+it.precio+'):', it.precio); if(np===null) return; it.stock=parseFloat(ns)||0; it.precio=parseFloat(np)||0; setItem('inventarioMaestro',inv); renderInventarioMaster(); if(typeof renderInventario==='function') renderInventario(); }
+function editarInv(id){
+  var inv=getInv();
+  var it=null;
+  for(var j=0;j<inv.length;j++){ if(String(inv[j].id)===String(id)){ it=inv[j]; break; } }
+  if(!it) return;
+  var nStock = prompt("Nuevo stock de "+it.nombre+" (actual "+it.stock+"):", it.stock);
+  if(nStock===null) return;
+  var nCosto = prompt("Nuevo costo de "+it.nombre+" (actual $"+it.costo+"):", it.costo);
+  if(nCosto===null) return;
+  it.stock = parseFloat(nStock) || 0;
+  it.costo = parseFloat(nCosto) || 0;
+  setItem("inventarioMaestro", inv);
+  renderInventarioMaster();
+}
+
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } if(row.querySelector('.in-sub')) row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; let rend=parseFloat(document.getElementById('rendCant')?.value)||1; let fijosPorUnidad=rend>0? fijos/rend : fijos; document.getElementById('c-fijos').innerText=fijosPorUnidad.toFixed(2); let total=tot+fijosPorUnidad; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
-function addBase(d={}){
- let bases=getProd().filter(p=>p.esBase);
- let opts=bases.map(b=>{
-  let rinde = (b.rendimiento && b.rendimiento.cant) ? b.rendimiento.cant : 1;
-  let uni = (b.rendimiento && b.rendimiento.uni) ? b.rendimiento.uni : 'L';
-  return `<option value="${b.id}" data-rinde="${rinde}" data-uni="${uni}" ${d.id==b.id?'selected':''}>${b.nombre} $${b.costo.toFixed(2)} (rinde ${rinde}${uni})</option>`;
- }).join('');
- let div=document.createElement('div');
- div.className='bg-white border-2 border-black rounded-xl p-3 flex gap-2 items-center';
- div.innerHTML=`<select class="b-sel flex-1 border-2 p-2 rounded-lg font-bold text-[11px]" onchange="actualizarRinde(this);calc2()"><option value="">-- Base --</option>${opts}</select><div class="flex flex-col items-center"><input class="b-cant border-2 border-black rounded-lg p-2 text-[11px] font-black w-[70px] text-center" type="number" step="0.01" placeholder="Usas" value="${d.cant||''}" oninput="calc2()"><span class="b-rinde-label text-[8px] font-bold text-gray-500 mt-1"></span></div><button onclick="this.parentElement.remove();calc2()" class="text-red-400 font-black px-2">X</button>`;
- document.getElementById('basesSel').appendChild(div);
- if(d.id){ div.querySelector('.b-sel').value=d.id; actualizarRinde(div.querySelector('.b-sel')); }
-}
-function actualizarRinde(sel){
- try{ let opt=sel.options[sel.selectedIndex]; let div=sel.parentElement; let label=div.querySelector('.b-rinde-label'); if(opt && opt.dataset.rinde){ label.innerText='Rinde: '+opt.dataset.rinde+(opt.dataset.uni||''); } }catch(e){}
-}
-function calc2(){
- let tot=0;
- document.querySelectorAll('#basesSel > div').forEach(row=>{
-  let id=row.querySelector('.b-sel')?.value;
-  let cantUsada=parseFloat(row.querySelector('.b-cant')?.value)||0;
-  let unitUsada=row.querySelector('.b-unit')?.value||'L';
-  let b=getProd().find(x=>String(x.id)==String(id));
-  if(b){
-   let rinde=parseFloat(b.rendimiento?.cant)||1;
-   let unitRinde=b.rendimiento?.unit||'L';
-   let cantConv = (typeof convertir==='function') ? convertir(cantUsada, unitUsada, unitRinde) : cantUsada;
-   if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
-  }
- });
- document.getElementById('c-ing2').innerText=tot.toFixed(2);
- let m=parseFloat(document.getElementById('margen2')?.value)||0;
- let vm=document.getElementById('ventaManual2')?.value;
- let venta = vm ? parseFloat(vm) : tot*(1+m/100);
- document.getElementById('venta2').innerText=venta.toFixed(2);
-}
- });
- document.getElementById('c-ing2').innerText=tot.toFixed(2);
- let m=parseFloat(document.getElementById('margen2').value)||0;
- let vm=document.getElementById('ventaManual2').value;
- document.getElementById('venta2').innerText=vm?parseFloat(vm).toFixed(2):(tot*(1+m/100)).toFixed(2);
-} 
+function addBase(d={}){ let bases=getProd().filter(p=>p.esBase); let opts=bases.map(b=>`<option value="${b.id}" ${d.id==b.id?'selected':''}>${b.nombre} $${b.costo.toFixed(2)}</option>`).join(''); let div=document.createElement('div'); div.className='bg-white border-2 border-black rounded-xl p-3 flex gap-2 items-center'; div.innerHTML=`<select class="b-sel flex-1 border-2 p-2 rounded-lg font-bold text-[12px]" onchange="calc2()"><option value="">-- Base --</option>${opts}</select><button onclick="this.parentElement.remove();calc2()" class="text-red-400 font-black px-2">X</button>`; document.getElementById('basesSel').appendChild(div); if(d.id) div.querySelector('.b-sel').value=d.id; }
+function calc2(){ let tot=0; document.querySelectorAll('#basesSel > div').forEach(r=>{ let id=r.querySelector('.b-sel').value; let b=getProd().find(x=>x.id==id); if(b) tot+=b.costo; }); document.getElementById('c-ing2').innerText=tot.toFixed(2); let m=parseFloat(document.getElementById('margen2').value)||0; let vm=document.getElementById('ventaManual2').value; document.getElementById('venta2').innerText= vm? parseFloat(vm).toFixed(2) : (tot*(1+m/100)).toFixed(2); }
 function guardarProd(tipo){ let isBase=tipo=='recetario'; let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd'); let nom=nomEl.value.trim(); if(!nom) return alert('Pon nombre'); let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0; let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0; let catId=isBase?'base':(document.getElementById('prodCategoria')?.value||'todas'); let ps=getProd(); let receta=[]; if(isBase){ document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let cu=row.querySelector('.in-cu')?.value; let uu=row.querySelector('.in-uu')?.value; if(invId && cu) receta.push({invId, cu:parseFloat(cu), uu}); }); } else { document.querySelectorAll('#basesSel > div').forEach(row=>{ let id=row.querySelector('.b-sel')?.value; if(id) receta.push({baseId:id}); }); } let margen=parseFloat((isBase?document.getElementById('margen'):document.getElementById('margen2'))?.value)||50; let rendCant=parseFloat(document.getElementById('rendCant')?.value)||1; let rendUni=document.getElementById('rendUni')?.value||'L'; if(editId){ let idx=ps.findIndex(p=>String(p.id)==String(editId)); if(idx>=0){ ps[idx].nombre=nom; ps[idx].costo=costo; ps[idx].venta=venta; ps[idx].categoria=catId; ps[idx].receta=receta; ps[idx].margen=margen; ps[idx].rendimiento={cant:rendCant, uni:rendUni}; if(fotoTemp) ps[idx].foto=fotoTemp; } } else { ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,categoria:catId,receta,margen,rendimiento:{cant:rendCant, uni:rendUni},esBase:isBase}); } setItem('productosV2',ps); alert('✅ Guardado: '+nom); fotoTemp=''; editId=null; renderInventario(); setCrear('menu'); renderVenta(); }
-function editarProd(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; editId=p.id; if(p.esBase){ document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.remove('hidden'); document.getElementById('crear-producto').classList.add('hidden'); document.getElementById('nombre').value=p.nombre; document.getElementById('insumos').innerHTML=''; if(p.rendimiento){ document.getElementById('rendCant').value=p.rendimiento.cant||10; document.getElementById('rendUni').value=p.rendimiento.uni||'L'; } if(p.margen) document.getElementById('margen').value=p.margen; if(p.receta && p.receta.length){ p.receta.forEach(r=> addInsumo({invId:r.invId, cu:r.cu, uu:r.uu})); } else { addInsumo({}); } calc(); } else { document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.add('hidden'); document.getElementById('crear-producto').classList.remove('hidden'); document.getElementById('nombreProd').value=p.nombre; renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=p.categoria||'todas'; if(p.margen) document.getElementById('margen2').value=p.margen; document.getElementById('basesSel').innerHTML=''; if(p.receta && p.receta.length){ p.receta.forEach(r=> addBase({id:r.baseId, cant:r.cant, unit:r.unit})); } else { addBase(); } if(p.foto){ fotoTemp=p.foto; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); } calc2(); } window.scrollTo(0,0); }
+function editarProd(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; editId=p.id; if(p.esBase){ document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.remove('hidden'); document.getElementById('crear-producto').classList.add('hidden'); document.getElementById('nombre').value=p.nombre; document.getElementById('insumos').innerHTML=''; if(p.rendimiento){ document.getElementById('rendCant').value=p.rendimiento.cant||10; document.getElementById('rendUni').value=p.rendimiento.uni||'L'; } if(p.margen) document.getElementById('margen').value=p.margen; if(p.receta && p.receta.length){ p.receta.forEach(r=> addInsumo({invId:r.invId, cu:r.cu, uu:r.uu})); } else { addInsumo({}); } calc(); } else { document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.add('hidden'); document.getElementById('crear-producto').classList.remove('hidden'); document.getElementById('nombreProd').value=p.nombre; renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=p.categoria||'todas'; if(p.margen) document.getElementById('margen2').value=p.margen; document.getElementById('basesSel').innerHTML=''; if(p.receta && p.receta.length){ p.receta.forEach(r=> addBase({id:r.baseId})); } else { addBase(); } if(p.foto){ fotoTemp=p.foto; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); } calc2(); } window.scrollTo(0,0); }
 function borrarProd(id){ if(!confirm('¿Borrar esta receta?')) return; let ps=getProd().filter(x=>String(x.id)!=String(id)); setItem('productosV2',ps); renderInventario(); renderVenta(); }
 function renderInventario(){ let ps=getProd(); let el=document.getElementById('listaInv'); if(!el) return; if(!ps.length){ el.innerHTML='<p class="text-center text-gray-400 py-6 text-[12px]">Sin recetas aún.</p>'; return; } el.innerHTML=ps.map(p=>{ let catNombre=getCategoriasVenta().find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'; if(p.categoria=='base') catNombre='BASE'; let tipoBadge=p.esBase? '<span class="bg-orange-100 text-orange-700 text-[8px] px-2 py-0.5 rounded-full font-black">BASE</span>' : `<span class="bg-blue-100 text-blue-700 text-[8px] px-2 py-0.5 rounded-full font-black">${catNombre}</span>`; return `<div class="bg-white p-3 rounded-2xl flex gap-3 shadow-sm mt-3 border-2 ${p.esBase?'border-orange-100':'border-gray-100'} items-center"><div class="flex-1"><div class="flex gap-1 items-center mb-1">${tipoBadge}</div><b class="text-[13px]">${p.nombre}</b><br><span class="text-[11px] font-bold">Costo $${p.costo.toFixed(2)} → Venta $${p.venta.toFixed(2)}</span></div><div class="flex flex-col gap-1"><button onclick="editarProd('${p.id}')" class="bg-blue-500 text-white w-8 h-8 rounded-full text-[12px]">✏️</button><button onclick="borrarProd('${p.id}')" class="bg-red-100 text-red-500 w-8 h-8 rounded-full font-black">X</button></div></div>`; }).join(''); }
 
