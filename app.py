@@ -216,37 +216,30 @@ function addBase(d={}){
  document.getElementById('basesSel').appendChild(div);
  if(d.id){ div.querySelector('.b-sel').value=d.id; actualizarRinde(div.querySelector('.b-sel')); }
 }
-return `<option value="${b.id}" data-rinde="${b.rendimiento?.cant||''} ${b.rendimiento?.unit||''}" data-costo="${b.costo}">${b.nombre} $${b.costo} (rinde ${b.rendimiento?.cant||''}${b.rendimiento?.unit||''})</option>`;
-}).join('');
-let div=document.createElement('div');
-div.className='bg-white border-2 border-black p-2 flex gap-2 items-center';
-div.innerHTML=`<select class="b-sel flex-1 border p-1" onchange="actualizarRinde(this);calc2()">${opts}</select><input class="b-cant w-20 border p-1" type="number" step="0.01" placeholder="Usas" value="${d.cant||''}" oninput="calc2()"><select class="b-unit border p-1" onchange="calc2()"><option value="L">L</option><option value="ml">ml</option><option value="kg">kg</option><option value="g">g</option><option value="pza">pza</option></select><span class="rinde-info text-xs"></span><button onclick="this.parentElement.remove();calc2()" class="bg-red-500 text-white px-2">X</button>`;
-document.getElementById('basesSel').appendChild(div);
-if(d.id){ div.querySelector('.b-sel').value=d.id; }
-}
 function actualizarRinde(sel){
-try{ let opt=sel.options[sel.selectedIndex]; let info=sel.parentElement.querySelector('.rinde-info'); if(info) info.innerText=opt?.dataset?.rinde?`Rinde: ${opt.dataset.rinde}`:''; }catch(e){}
+ try{ let opt=sel.options[sel.selectedIndex]; let div=sel.parentElement; let label=div.querySelector('.b-rinde-label'); if(opt && opt.dataset.rinde){ label.innerText='Rinde: '+opt.dataset.rinde+(opt.dataset.uni||''); } }catch(e){}
 }
 function calc2(){
-let tot=0;
-document.querySelectorAll('#basesSel > div').forEach(row=>{
-let id=row.querySelector('.b-sel')?.value;
-let cantUsada=parseFloat(row.querySelector('.b-cant')?.value)||0;
-let unitUsada=row.querySelector('.b-unit')?.value||'L';
-let b=getProd().find(x=>String(x.id)==String(id));
-if(b){
-let rinde=parseFloat(b.rendimiento?.cant)||1;
-let unitRinde=b.rendimiento?.unit||'L';
-let cantConv=(typeof convertir==='function')?convertir(cantUsada,unitUsada,unitRinde):cantUsada;
-if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
-}
-});
-document.getElementById('c-ing2').innerText=tot.toFixed(2);
-let m=parseFloat(document.getElementById('margen2')?.value)||0;
-let vm=document.getElementById('ventaManual2')?.value;
-let venta=vm?parseFloat(vm):tot*(1+m/100);
-document.getElementById('venta2').innerText=venta.toFixed(2);
-}
+ let tot=0;
+ document.querySelectorAll('#basesSel > div').forEach(r=>{
+  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
+  let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
+  let b=getProd().find(x=>String(x.id)==String(id));
+  if(b){
+   let rinde=(b.rendimiento && b.rendimiento.cant)?parseFloat(b.rendimiento.cant):1;
+   if(cantUsada>0) tot+=(b.costo/rinde)*cantUsada;
+  }
+ });
+ document.getElementById('c-ing2').innerText=tot.toFixed(2);
+ let m=parseFloat(document.getElementById('margen2').value)||0;
+ let vm=document.getElementById('ventaManual2').value;
+ document.getElementById('venta2').innerText=vm?parseFloat(vm).toFixed(2):(tot*(1+m/100)).toFixed(2);
+} 
+function guardarProd(tipo){ let isBase=tipo=='recetario'; let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd'); let nom=nomEl.value.trim(); if(!nom) return alert('Pon nombre'); let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0; let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0; let catId=isBase?'base':(document.getElementById('prodCategoria')?.value||'todas'); let ps=getProd(); let receta=[]; if(isBase){ document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let cu=row.querySelector('.in-cu')?.value; let uu=row.querySelector('.in-uu')?.value; if(invId && cu) receta.push({invId, cu:parseFloat(cu), uu}); }); } else { document.querySelectorAll('#basesSel > div').forEach(row=>{ let id=row.querySelector('.b-sel')?.value; if(id) receta.push({baseId:id}); }); } let margen=parseFloat((isBase?document.getElementById('margen'):document.getElementById('margen2'))?.value)||50; let rendCant=parseFloat(document.getElementById('rendCant')?.value)||1; let rendUni=document.getElementById('rendUni')?.value||'L'; if(editId){ let idx=ps.findIndex(p=>String(p.id)==String(editId)); if(idx>=0){ ps[idx].nombre=nom; ps[idx].costo=costo; ps[idx].venta=venta; ps[idx].categoria=catId; ps[idx].receta=receta; ps[idx].margen=margen; ps[idx].rendimiento={cant:rendCant, uni:rendUni}; if(fotoTemp) ps[idx].foto=fotoTemp; } } else { ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,categoria:catId,receta,margen,rendimiento:{cant:rendCant, uni:rendUni},esBase:isBase}); } setItem('productosV2',ps); alert('✅ Guardado: '+nom); fotoTemp=''; editId=null; renderInventario(); setCrear('menu'); renderVenta(); }
+function editarProd(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; editId=p.id; if(p.esBase){ document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.remove('hidden'); document.getElementById('crear-producto').classList.add('hidden'); document.getElementById('nombre').value=p.nombre; document.getElementById('insumos').innerHTML=''; if(p.rendimiento){ document.getElementById('rendCant').value=p.rendimiento.cant||10; document.getElementById('rendUni').value=p.rendimiento.uni||'L'; } if(p.margen) document.getElementById('margen').value=p.margen; if(p.receta && p.receta.length){ p.receta.forEach(r=> addInsumo({invId:r.invId, cu:r.cu, uu:r.uu})); } else { addInsumo({}); } calc(); } else { document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.add('hidden'); document.getElementById('crear-producto').classList.remove('hidden'); document.getElementById('nombreProd').value=p.nombre; renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=p.categoria||'todas'; if(p.margen) document.getElementById('margen2').value=p.margen; document.getElementById('basesSel').innerHTML=''; if(p.receta && p.receta.length){ p.receta.forEach(r=> addBase({id:r.baseId})); } else { addBase(); } if(p.foto){ fotoTemp=p.foto; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); } calc2(); } window.scrollTo(0,0); }
+function borrarProd(id){ if(!confirm('¿Borrar esta receta?')) return; let ps=getProd().filter(x=>String(x.id)!=String(id)); setItem('productosV2',ps); renderInventario(); renderVenta(); }
+function renderInventario(){ let ps=getProd(); let el=document.getElementById('listaInv'); if(!el) return; if(!ps.length){ el.innerHTML='<p class="text-center text-gray-400 py-6 text-[12px]">Sin recetas aún.</p>'; return; } el.innerHTML=ps.map(p=>{ let catNombre=getCategoriasVenta().find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'; if(p.categoria=='base') catNombre='BASE'; let tipoBadge=p.esBase? '<span class="bg-orange-100 text-orange-700 text-[8px] px-2 py-0.5 rounded-full font-black">BASE</span>' : `<span class="bg-blue-100 text-blue-700 text-[8px] px-2 py-0.5 rounded-full font-black">${catNombre}</span>`; return `<div class="bg-white p-3 rounded-2xl flex gap-3 shadow-sm mt-3 border-2 ${p.esBase?'border-orange-100':'border-gray-100'} items-center"><div class="flex-1"><div class="flex gap-1 items-center mb-1">${tipoBadge}</div><b class="text-[13px]">${p.nombre}</b><br><span class="text-[11px] font-bold">Costo $${p.costo.toFixed(2)} → Venta $${p.venta.toFixed(2)}</span></div><div class="flex flex-col gap-1"><button onclick="editarProd('${p.id}')" class="bg-blue-500 text-white w-8 h-8 rounded-full text-[12px]">✏️</button><button onclick="borrarProd('${p.id}')" class="bg-red-100 text-red-500 w-8 h-8 rounded-full font-black">X</button></div></div>`; }).join(''); }
+
 function renderVenta(){ let ps=getProd().filter(p=>!p.esBase); let cats=getCategoriasVenta(); if(categoriaFiltro!='todas') ps=ps.filter(p=>p.categoria==categoriaFiltro); let cont=document.getElementById('listaVenta'); if(!cont) return; if(!ps.length){ cont.innerHTML='<p class="col-span-2 text-center text-gray-400 text-[12px] py-10">Sin productos.</p>'; return; } cont.innerHTML=ps.map(p=>`<div class="bg-white rounded-2xl shadow-sm border p-3"><div class="flex justify-between"><div class="text-[8px] bg-black text-white px-2 py-0.5 rounded-full inline-block mb-1">${cats.find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'}</div><button onclick="editarProd('${p.id}')" class="text-[10px] bg-gray-100 px-2 rounded-full">✏️</button></div><b class="text-[13px] block mt-1">${p.nombre}</b><p class="text-[10px] text-gray-500">Costo $${p.costo.toFixed(2)}</p><p class="text-green-600 font-black">$${p.venta.toFixed(2)}</p><button onclick="addCart(${p.id})" class="w-full mt-2 bg-black text-white py-2 rounded-xl text-[11px]">Agregar</button></div>`).join(''); }
 function addCart(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; let ex=carrito.find(x=>String(x.id)==String(id)); if(ex) ex.qty++; else carrito.push({...p,qty:1}); renderCarrito(); }
 function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket').innerHTML='Vacío'; document.getElementById('c-total').innerText='0'; document.getElementById('cobroTotal').innerText='0'; return; } let sub=0,h=''; carrito.forEach((x,idx)=>{ sub+=x.venta*x.qty; h+=`<div class="flex justify-between bg-gray-50 p-2 rounded-xl"><span>${x.nombre} x${x.qty}</span><span>$${(x.venta*x.qty).toFixed(0)} <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-500">X</button></span></div>`; }); let desc=parseFloat(document.getElementById('descPorc').value)||0; let total=sub*(1-desc/100); document.getElementById('ticket').innerHTML=h; document.getElementById('c-total').innerText=total.toFixed(0); document.getElementById('cobroTotal').innerText=total.toFixed(0); }
