@@ -195,10 +195,68 @@ function actualizarVistaTicket(){ generarTicket({fecha:new Date(),fechaStr:getFe
 function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); w.document.close(); }
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
+let editInvId = null;
 
-function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stockTxt=document.getElementById('inv-stock').value.trim()||'0', u=document.getElementById('inv-unidad').value; if(!n) return; let stock = parseCantidadTexto(stockTxt, u); if(isNaN(stock)) stock=0; let inv=getInv(); inv.push({id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u}); setItem('inventarioMaestro',inv); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; renderInventarioMaster(); renderInventario(); }
-function registrarMerma(id){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let txt=prompt(`Merma de ${it.nombre} Actual: ${it.stock} ${it.unidad} Cuánto se tiró? Ej: 200 g`); if(!txt) return; let cant=parseCantidadTexto(txt, it.unidad); it.stock=(parseFloat(it.stock)||0)-cant; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); let facts=getFacts(); facts.push({id:Date.now(),concepto:`Merma: ${it.nombre}`,monto:0,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:'salida',vendedor:currentUser, observaciones:txt}); setItem('facturas',facts); renderInventarioMaster(); }
-function renderInventarioMaster(){ let inv=getInv(); let el=document.getElementById('listaInvMaster'); let busc=document.getElementById('buscInv')?.value.toLowerCase().trim()||''; let alerta=document.getElementById('alertaStock'); let bajos=inv.filter(i=> (parseFloat(i.stock)||0) <=1); if(bajos.length && alerta){ alerta.classList.remove('hidden'); alerta.innerHTML='⚠️ Stock bajo: '+bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad})`).join(', '); } else if(alerta){ alerta.classList.add('hidden'); } let filtrado=inv; if(busc){ filtrado=inv.filter(it=> (it.nombre||'').toLowerCase().includes(busc)); } if(el){ if(!filtrado.length && busc){ el.innerHTML=`<p class="text-center text-gray-500 text-[12px] py-6">No se encontró "${busc}"</p>`; return; } el.innerHTML=filtrado.map(it=>{ let stockVal= (it.stock!==undefined && it.stock!==null &&!isNaN(parseFloat(it.stock)))? parseFloat(it.stock) : 0; return `<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]">Stock ${stockVal} ${it.unidad||''} - $${it.precio}/${it.unidad||''}</span></div><div class="flex gap-1"><button onclick="registrarMerma('${it.id}')" class="bg-orange-500 text-white px-2 py-1 rounded-full text-[10px]">Merma</button><button onclick="if(confirm('Borrar?')){setItem('inventarioMaestro',getInv().filter(x=>x.id!='${it.id}')); renderInventarioMaster(); renderInventario();}" class="text-red-400 px-1">X</button></div></div>`; }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin inventario</p>'; } }
+function addInventario(){
+ let n=document.getElementById('inv-nombre')?.value.trim() || document.getElementById('in-nombre')?.value.trim();
+ if(!n) return alert('Pon nombre');
+ let c=parseFloat(document.getElementById('inv-costo')?.value || document.getElementById('in-costo')?.value)||0;
+ let s=parseFloat(document.getElementById('inv-stock')?.value || document.getElementById('in-stock')?.value)||0;
+ let cant=parseFloat(document.getElementById('inv-cant')?.value || document.getElementById('in-cant')?.value)||1;
+ let unit=document.getElementById('inv-unit')?.value || document.getElementById('in-unit')?.value || 'kg';
+ 
+ let inv=getInv();
+ if(editInvId){
+  let b=inv.find(x=>String(x.id)==String(editInvId));
+  if(b){ b.nombre=n; b.costo=c; b.stock=s; b.rendimiento={cant:cant, unit:unit}; }
+  editInvId=null;
+  document.getElementById('btnAddInventario').innerText='+';
+  document.getElementById('btnAddInventario').classList.remove('bg-yellow-300','text-black');
+  document.getElementById('btnAddInventario').classList.add('bg-black','text-white');
+ }else{
+  inv.push({id:Date.now().toString(), nombre:n, costo:c, stock:s, rendimiento:{cant:cant, unit:unit}});
+ }
+ setInv(inv); renderInventarioMaster();
+}
+
+function editarInventarioMaster(id){
+ let inv=getInv(); let b=inv.find(x=>String(x.id)==String(id)); if(!b) return;
+ editInvId=id;
+ let nEl=document.getElementById('inv-nombre')||document.getElementById('in-nombre');
+ let cEl=document.getElementById('inv-costo')||document.getElementById('in-costo');
+ let sEl=document.getElementById('inv-stock')||document.getElementById('in-stock');
+ if(nEl) nEl.value=b.nombre;
+ if(cEl) cEl.value=b.costo;
+ if(sEl) sEl.value=b.stock||0;
+ if(document.getElementById('inv-cant')) document.getElementById('inv-cant').value=b.rendimiento?.cant||1;
+ document.getElementById('btnAddInventario').innerText='Actualizar';
+ document.getElementById('btnAddInventario').classList.add('bg-yellow-300','text-black');
+ window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function registrarMerma(id){
+ let cant=prompt('¿Cuánta merma? ej: 1'); if(!cant) return;
+ let v=parseFloat(cant)||0;
+ let inv=getInv(); let b=inv.find(x=>String(x.id)==String(id));
+ if(b){ b.stock=Math.max(0,(b.stock||0)-v); setInv(inv); renderInventarioMaster(); }
+}
+
+{
+ let inv=getInv();
+ let q=(document.getElementById('qInventario')?.value||'').toLowerCase();
+ let lista = q ? inv.filter(x=>x.nombre.toLowerCase().includes(q)) : inv;
+ let cont=document.getElementById('contInventario') || document.getElementById('appInventario');
+ let html = lista.map(b=>`
+  <div class="bg-white border-2 border-black rounded-[18px] p-3 flex justify-between items-center mb-2">
+   <div><b>${b.nombre}</b> Stock ${b.stock||0} ${b.rendimiento?.unit||'kg'} - $${b.costo}/${b.rendimiento?.unit||'kg'}</div>
+   <div class="flex gap-2 items-center">
+    <button onclick="editarInventarioMaster('${b.id}')" class="bg-yellow-200 border-2 border-black rounded-full px-2 py-1 text-[12px] font-black">✏️</button>
+    <button onclick="registrarMerma('${b.id}')" class="bg-orange-500 text-white rounded-full px-3 py-1 text-[12px] font-bold border-2 border-black">Merma</button>
+    <button onclick="if(confirm('¿Borrar?')){let inv=getInv().filter(x=>x.id!='${b.id}'); setInv(inv); renderInventarioMaster();}" class="text-red-400 font-black">X</button>
+   </div>
+  </div>`).join('');
+ if(cont) cont.innerHTML=html;
+}
 
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } if(row.querySelector('.in-sub')) row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; let rend=parseFloat(document.getElementById('rendCant')?.value)||1; let fijosPorUnidad=rend>0? fijos/rend : fijos; document.getElementById('c-fijos').innerText=fijosPorUnidad.toFixed(2); let total=tot+fijosPorUnidad; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
