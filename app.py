@@ -196,39 +196,9 @@ function imprimirTicket(){ let contenido=document.getElementById('ticketContenid
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
-function renderInventarioMaster(){
-  var cont=document.getElementById("listaInventario");
-  if(!cont) return;
-  var busc=document.getElementById("buscInv");
-  var q= busc? busc.value.toLowerCase() : "";
-  var inv=getInv().filter(function(i){ return i.nombre.toLowerCase().indexOf(q)!== -1; });
-  var html="";
-  for(var k=0;k<inv.length;k++){
-    var i=inv[k];
-    html += "<div class=row style=display:flex;gap:8px;align-items:center;background:#fff;padding:10px;border-radius:12px;margin-bottom:8px;border:1px solid #eee>";
-    html += "<div style=flex:1><b>"+i.nombre+"</b> <span style=font-size:13px> Stock "+i.stock+" "+i.unidad+" - $"+i.costo+"</span></div>";
-    html += "<button onclick=\"editarInv('"+i.id+"')\" style=background:#111;color:#fff;border-radius:8px;padding:6px 10px>Edit</button>";
-    html += "<button onclick=\"mermaInv('"+i.id+"')\" style=background:#ff7a00;color:#fff;border-radius:20px;padding:6px 10px;border:none>Merma</button>";
-    html += "<button onclick=\"borrarInv('"+i.id+"')\" style=background:none;border:none;color:#ff4444;font-size:18px>X</button>";
-    html += "</div>";
-  }
-  cont.innerHTML = html || "<p style=text-align:center>Sin resultados</p>";
-}
-
-function editarInv(id){
-  var inv=getInv();
-  var it=null;
-  for(var j=0;j<inv.length;j++){ if(String(inv[j].id)===String(id)){ it=inv[j]; break; } }
-  if(!it) return;
-  var nStock = prompt("Nuevo stock de "+it.nombre+" (actual "+it.stock+"):", it.stock);
-  if(nStock===null) return;
-  var nCosto = prompt("Nuevo costo de "+it.nombre+" (actual $"+it.costo+"):", it.costo);
-  if(nCosto===null) return;
-  it.stock = parseFloat(nStock) || 0;
-  it.costo = parseFloat(nCosto) || 0;
-  setItem("inventarioMaestro", inv);
-  renderInventarioMaster();
-}
+function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stockTxt=document.getElementById('inv-stock').value.trim()||'0', u=document.getElementById('inv-unidad').value; if(!n) return; let stock = parseCantidadTexto(stockTxt, u); if(isNaN(stock)) stock=0; let inv=getInv(); inv.push({id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u}); setItem('inventarioMaestro',inv); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; renderInventarioMaster(); renderInventario(); }
+function registrarMerma(id){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let txt=prompt(`Merma de ${it.nombre} Actual: ${it.stock} ${it.unidad} Cuánto se tiró? Ej: 200 g`); if(!txt) return; let cant=parseCantidadTexto(txt, it.unidad); it.stock=(parseFloat(it.stock)||0)-cant; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); let facts=getFacts(); facts.push({id:Date.now(),concepto:`Merma: ${it.nombre}`,monto:0,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:'salida',vendedor:currentUser, observaciones:txt}); setItem('facturas',facts); renderInventarioMaster(); }
+function renderInventarioMaster(){ let inv=getInv(); let el=document.getElementById('listaInvMaster'); let busc=document.getElementById('buscInv')?.value.toLowerCase().trim()||''; let alerta=document.getElementById('alertaStock'); let bajos=inv.filter(i=> (parseFloat(i.stock)||0) <=1); if(bajos.length && alerta){ alerta.classList.remove('hidden'); alerta.innerHTML='⚠️ Stock bajo: '+bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad})`).join(', '); } else if(alerta){ alerta.classList.add('hidden'); } let filtrado=inv; if(busc){ filtrado=inv.filter(it=> (it.nombre||'').toLowerCase().includes(busc)); } if(el){ if(!filtrado.length && busc){ el.innerHTML=`<p class="text-center text-gray-500 text-[12px] py-6">No se encontró "${busc}"</p>`; return; } el.innerHTML=filtrado.map(it=>{ let stockVal= (it.stock!==undefined && it.stock!==null &&!isNaN(parseFloat(it.stock)))? parseFloat(it.stock) : 0; return `<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]">Stock ${stockVal} ${it.unidad||''} - $${it.precio}/${it.unidad||''}</span></div><div class="flex gap-1"><button onclick="registrarMerma('${it.id}')" class="bg-orange-500 text-white px-2 py-1 rounded-full text-[10px]">Merma</button><button onclick="if(confirm('Borrar?')){setItem('inventarioMaestro',getInv().filter(x=>x.id!='${it.id}')); renderInventarioMaster(); renderInventario();}" class="text-red-400 px-1">X</button></div></div>`; }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin inventario</p>'; } }
 
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } if(row.querySelector('.in-sub')) row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; let rend=parseFloat(document.getElementById('rendCant')?.value)||1; let fijosPorUnidad=rend>0? fijos/rend : fijos; document.getElementById('c-fijos').innerText=fijosPorUnidad.toFixed(2); let total=tot+fijosPorUnidad; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
@@ -249,45 +219,8 @@ function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
-function descontarStockVenta(carritoActual){
-  try{
-    let inv = getInv();
-    let productos = getProd();
-    carritoActual.forEach(itemCar=>{
-      let prod = productos.find(p=> String(p.id) == String(itemCar.id));
-      if(!prod || !prod.receta) return;
-      let qty = itemCar.qty || 1;
-      prod.receta.forEach(r=>{
-        // Si el producto tiene base (tu 11.5)
-        if(r.baseId){
-          let base = productos.find(b=> String(b.id) == String(r.baseId));
-          if(!base || !base.receta) return;
-          base.receta.forEach(ing=>{
-            let it = inv.find(i=> String(i.id) == String(ing.invId));
-            if(!it) return;
-            let uso = convertir(parseFloat(ing.cu||0), ing.uu||'g', it.unidad) * qty;
-            it.stock = (parseFloat(it.stock)||0) - uso;
-            if(it.stock < 0) it.stock = 0;
-          });
-        }
-        // Si ya tienes inventario directo en producto (por si lo agregaste)
-        if(r.invId){
-          let it = inv.find(i=> String(i.id) == String(r.invId));
-          if(!it) return;
-          let uso = convertir(parseFloat(r.cu||0), r.uu||'g', it.unidad) * qty;
-          it.stock = (parseFloat(it.stock)||0) - uso;
-          if(it.stock < 0) it.stock = 0;
-        }
-      });
-    });
-    setItem('inventarioMaestro', inv);
-    renderInventarioMaster();
-  }catch(e){ console.log("Error descontando", e); }
-}
-
-function confirmarCobro(tipo){ 
-  descontarStockVenta(carrito);
-  let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }function exportarExcel(){ let facts=getFacts(); let csv='Fecha,Concepto,Monto,Tipo,Metodo\\n'+facts.map(f=>`"${f.fecha}","${f.concepto}",${f.monto},${f.tipo},${f.metodoPago||''}`).join('\\n'); let blob=new Blob([csv],{type:'text/csv'}); let url=URL.createObjectURL(blob); let a=document.createElement('a'); a.href=url; a.download='finanzas.csv'; a.click(); }
+function guardarGasto(){ let c=document.getElementById('g-concepto').value.trim(), m=parseFloat(document.getElementById('g-monto').value), t=document.getElementById('g-tipo').value, obs=document.getElementById('g-obs').value.trim(), metodo=document.getElementById('g-metodo').value, provId=document.getElementById('g-proveedor').value, invId=document.getElementById('g-inv-id').value, invCantTxt=document.getElementById('g-inv-cant').value.trim(); if(!c||!m) return alert('Concepto y monto'); if(invId && invCantTxt){ let inv=getInv(); let it=inv.find(x=>x.id==invId); if(it){ let cant=parseCantidadTexto(invCantTxt, it.unidad); it.stock=(parseFloat(it.stock)||0)+cant; setItem('inventarioMaestro',inv); obs+=' | Carga '+invCantTxt+' de '+it.nombre; } } let f=getFacts(); f.push({id:Date.now(),concepto:c,monto:m,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:t,observaciones:obs,metodoPago:metodo,proveedorId:provId,vendedor:currentUser}); setItem('facturas',f); cerrarGasto(); renderCalendario(); renderInventarioMaster(); document.getElementById('g-concepto').value=''; document.getElementById('g-monto').value=''; document.getElementById('g-obs').value=''; document.getElementById('g-inv-cant').value=''; }
+function exportarExcel(){ let facts=getFacts(); let csv='Fecha,Concepto,Monto,Tipo,Metodo\\n'+facts.map(f=>`"${f.fecha}","${f.concepto}",${f.monto},${f.tipo},${f.metodoPago||''}`).join('\\n'); let blob=new Blob([csv],{type:'text/csv'}); let url=URL.createObjectURL(blob); let a=document.createElement('a'); a.href=url; a.download='finanzas.csv'; a.click(); }
 function abrirCierre(){ let fechaStr=fechaSel; let facts=getFacts().filter(f=>f.fecha==fechaStr); let total=facts.filter(f=>f.tipo=='entrada').reduce((s,f)=>s+f.monto,0); document.getElementById('cierreFechaLabel').innerText=fechaStr; document.getElementById('cierreUserLabel').innerText=currentUser; document.getElementById('cierreHoraLabel').innerText=getFechaLocal(); document.getElementById('cierreTotal').innerText='$'+total.toFixed(0); document.getElementById('cierreEfectivo').innerText='$'+facts.filter(f=>f.tipo=='entrada' && (f.metodoPago||'Efectivo')=='Efectivo').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreTarjeta').innerText='$'+facts.filter(f=>f.metodoPago=='Tarjeta').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreTransf').innerText='$'+facts.filter(f=>f.metodoPago=='Transferencia').reduce((s,f)=>s+f.monto,0).toFixed(0); document.getElementById('cierreDetalle').innerHTML=facts.map(f=>`• ${f.concepto} $${f.monto}`).join('<br>')||'Sin movimientos'; ultimoCierre={fecha:fechaStr,total}; document.getElementById('modalCierre').classList.remove('hidden'); }
 function cerrarCierre(){ document.getElementById('modalCierre').classList.add('hidden'); }
 function imprimirCierre(){ alert('Cierre'); }
