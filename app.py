@@ -221,16 +221,23 @@ function actualizarRinde(sel){
 }
 function calc2(){
  let tot=0;
- document.querySelectorAll('#basesSel > div').forEach(r=>{
-  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
-  let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
-let unitUsada=r.querySelector('.b-unit')?.value||'ml';
-let b=getProd().find(x=>String(x.id)==String(id));
-if(b){
- let rinde=parseFloat(b.rendimiento?.cant)||1;
- let unitRinde=b.rendimiento?.unit||'L';
- let cantConv = (typeof convertir==='function') ? convertir(cantUsada, unitUsada, unitRinde) : cantUsada;
- if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
+ document.querySelectorAll('#basesSel > div').forEach(row=>{
+  let id=row.querySelector('.b-sel')?.value;
+  let cantUsada=parseFloat(row.querySelector('.b-cant')?.value)||0;
+  let unitUsada=row.querySelector('.b-unit')?.value||'L';
+  let b=getProd().find(x=>String(x.id)==String(id));
+  if(b){
+   let rinde=parseFloat(b.rendimiento?.cant)||1;
+   let unitRinde=b.rendimiento?.unit||'L';
+   let cantConv = (typeof convertir==='function') ? convertir(cantUsada, unitUsada, unitRinde) : cantUsada;
+   if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
+  }
+ });
+ document.getElementById('c-ing2').innerText=tot.toFixed(2);
+ let m=parseFloat(document.getElementById('margen2')?.value)||0;
+ let vm=document.getElementById('ventaManual2')?.value;
+ let venta = vm ? parseFloat(vm) : tot*(1+m/100);
+ document.getElementById('venta2').innerText=venta.toFixed(2);
 }
  });
  document.getElementById('c-ing2').innerText=tot.toFixed(2);
