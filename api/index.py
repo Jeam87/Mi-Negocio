@@ -236,27 +236,22 @@ function actualizarRinde(sel){
 try{ let opt=sel.options[sel.selectedIndex]; let info=sel.parentElement.querySelector('.rinde-info'); if(info) info.innerText=opt?.dataset?.rinde||''; }catch(e){}
  calc2();
 }
-function calc2(){
-let tot=0;
-document.querySelectorAll('#basesSel > div').forEach(row=>{
-let id=row.querySelector('.b-sel')?.value;
-let cantUsada=parseCant(row.querySelector('.b-cant')?.value);
-let unitUsada=row.querySelector('.b-unit')?.value||'g';
-let b=getProd().find(x=>String(x.id)==String(id));
-if(b){
-let rinde=parseCant(b.rendimiento?.cant)||1;
-let unitRinde=b.rendimiento?.unit||unitUsada;
-let cantConv=convertir(cantUsada,unitUsada,unitRinde);
-if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
+function convertir(c,de,a){
+ de=(de||'').toLowerCase(); a=(a||'').toLowerCase();
+ if(de==a) return c;
+ let G={kg:1000,g:1,lb:453.592,oz:28.35};
+ let L={l:1000,ml:1,gal:3785};
+ let M={m:100,cm:1};
+ if(G[de]&&G[a]) return c*G[de]/G[a];
+ if(L[de]&&L[a]) return c*L[de]/L[a];
+ if(M[de]&&M[a]) return c*M[de]/M[a];
+ return c;
 }
-});
-document.getElementById('c-ing2').innerText=tot.toFixed(2);
-let m=parseFloat(document.getElementById('margen2')?.value)||0;
-let vm=document.getElementById('ventaManual2')?.value;
-let venta=vm?parseCant(vm):tot*(1+m/100);
-document.getElementById('venta2').innerText=venta.toFixed(2);
-}
-
+function parseCant(v){
+ if(!v) return 0; v=String(v).replace(',','.').trim();
+ if(v.includes('/')){ let p=v.split('/'); return (parseFloat(p[0])||0)/(parseFloat(p[1])||1); }
+ return parseFloat(v)||0;
+} 
 
 function renderVenta(){ let ps=getProd().filter(p=>!p.esBase); let cats=getCategoriasVenta(); if(categoriaFiltro!='todas') ps=ps.filter(p=>p.categoria==categoriaFiltro); let cont=document.getElementById('listaVenta'); if(!cont) return; if(!ps.length){ cont.innerHTML='<p class="col-span-2 text-center text-gray-400 text-[12px] py-10">Sin productos.</p>'; return; } cont.innerHTML=ps.map(p=>`<div class="bg-white rounded-2xl shadow-sm border p-3"><div class="flex justify-between"><div class="text-[8px] bg-black text-white px-2 py-0.5 rounded-full inline-block mb-1">${cats.find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'}</div><button onclick="editarProd('${p.id}')" class="text-[10px] bg-gray-100 px-2 rounded-full">✏️</button></div><b class="text-[13px] block mt-1">${p.nombre}</b><p class="text-[10px] text-gray-500">Costo $${p.costo.toFixed(2)}</p><p class="text-green-600 font-black">$${p.venta.toFixed(2)}</p><button onclick="addCart(${p.id})" class="w-full mt-2 bg-black text-white py-2 rounded-xl text-[11px]">Agregar</button></div>`).join(''); }
 function addCart(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; let ex=carrito.find(x=>String(x.id)==String(id)); if(ex) ex.qty++; else carrito.push({...p,qty:1}); renderCarrito(); }
