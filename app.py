@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, send_file, request
 import os, json
 app = Flask(__name__)
-BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
+BASE_DATA = 'data' if os.path.exists('/tmp') else 'data'
 os.makedirs(BASE_DATA, exist_ok=True)
 USERS_FILE = os.path.join(BASE_DATA, 'users.json')
 def load_users():
