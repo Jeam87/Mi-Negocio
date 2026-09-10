@@ -277,3 +277,7 @@ function renderInventarioMaster(){
 
 function parseCantTxt(v){ v=String(v||'').trim().replace(',','.').toLowerCase(); if(!v) return 0; if(v.includes('/')){ let p=v.split('/'); return (parseFloat(p[0])||0)/(parseFloat(p[1])||1); } return parseFloat(v)||0; }
 function convertirCant(c,de,a){ de=(de||'L').toLowerCase(); a=(a||'L').toLowerCase(); if(de==a) return c; let m={g:1,kg:1000,lb:453.592,oz:28.3495,mg:0.001,ml:1,l:1000,lt:1000,pza:1}; if(m[de]!=null&&m[a]!=null) return c*m[de]/m[a]; return c; }
+
+"""
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000) 
