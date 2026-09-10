@@ -222,7 +222,7 @@ function actualizarRinde(sel){
 function calc2(){
  let tot=0;
  document.querySelectorAll('#basesSel > div').forEach(r=>{
-  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit}); 
+  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
   let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
   let b=getProd().find(x=>String(x.id)==String(id));
   if(b){
