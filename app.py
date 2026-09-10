@@ -224,15 +224,12 @@ function calc2(){
  document.querySelectorAll('#basesSel > div').forEach(r=>{
   let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
   let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
-let unitUsada=r.querySelector('.b-unit')?.value||'ml';
-let b=getProd().find(x=>String(x.id)==String(id));
-if(b){
- let rinde=parseFloat(b.rendimiento?.cant)||1;
- let unitRinde=b.rendimiento?.unit||'L';
- let cantConv = (typeof convertir==='function') ? convertir(cantUsada, unitUsada, unitRinde) : cantUsada;
- if(cantConv>0) tot+=(b.costo/rinde)*cantConv;
-}
-});
+  let b=getProd().find(x=>String(x.id)==String(id));
+  if(b){
+   let rinde=(b.rendimiento && b.rendimiento.cant)?parseFloat(b.rendimiento.cant):1;
+   if(cantUsada>0) tot+=(b.costo/rinde)*cantUsada;
+  }
+ });
  document.getElementById('c-ing2').innerText=tot.toFixed(2);
  let m=parseFloat(document.getElementById('margen2').value)||0;
  let vm=document.getElementById('ventaManual2').value;
