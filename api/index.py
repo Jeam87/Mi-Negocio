@@ -242,7 +242,7 @@ function registrarMerma(id){
  if(b){ b.stock=Math.max(0,(b.stock||0)-v); setInv(inv); renderInventarioMaster(); }
 }
 
-{
+function renderInventarioMaster(){
  let inv=getInv();
  let q=(document.getElementById('qInventario')?.value||'').toLowerCase();
  let lista = q ? inv.filter(x=>x.nombre.toLowerCase().includes(q)) : inv;
