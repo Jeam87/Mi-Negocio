@@ -216,26 +216,6 @@ function addBase(d={}){
  ment.getElementById('basesSel').appendChild(div);
  if(d.id){ div.querySelector('.b-sel').value=d.id; actualizarRinde(div.querySelector('.b-sel')); }
 }
-function convertir(cant, de, a){
- de=(de||'').toLowerCase(); a=(a||'').toLowerCase();
- if(de==a) return cant;
- let toG={kg:1000,g:1,mg:0.001,lb:453.592,libra:453.592,libras:453.592,oz:28.3495,gr:1,g:1,kilo:1000,kilos:1000};
- let toML={l:1000,lt:1000,litro:1000,litros:1000,ml:1,cl:10,gal:3785.41};
- let toM={m:100,metro:100,metros:100,cm:1,mm:0.1};
- if(toG[de]&&toG[a]) return cant*toG[de]/toG[a];
- if(toML[de]&&toML[a]) return cant*toML[de]/toML[a];
- if(toM[de]&&toM[a]) return cant*toM[de]/toM[a];
- return cant;
-}
-function parseCant(v){
- if(!v) return 0; v=String(v).trim().replace(',','.');
- if(v.includes('/')){ let p=v.split('/'); return (parseFloat(p[0])||0)/(parseFloat(p[1])||1); }
- return parseFloat(v)||0;
-}
-function actualizarRinde(sel){
-try{ let opt=sel.options[sel.selectedIndex]; let info=sel.parentElement.querySelector('.rinde-info'); if(info) info.innerText=opt?.dataset?.rinde||''; }catch(e){}
- calc2();
-}
 function convertir(c,de,a){
  de=(de||'').toLowerCase(); a=(a||'').toLowerCase();
  if(de==a) return c;
@@ -248,10 +228,38 @@ function convertir(c,de,a){
  return c;
 }
 function parseCant(v){
- if(!v) return 0; v=String(v).replace(',','.').trim();
- if(v.includes('/')){ let p=v.split('/'); return (parseFloat(p[0])||0)/(parseFloat(p[1])||1); }
+ if(!v) return 0;
+ v=String(v).replace(',','.').trim();
+ if(v.includes('/')){
+  let p=v.split('/');
+  let n=parseFloat(p[0])||0;
+  let d=parseFloat(p[1])||1;
+  return n/d;
+ }
  return parseFloat(v)||0;
 }
+function actualizarRinde(sel){ calc2(); }
+function calc2(){
+ let tot=0;
+ document.querySelectorAll('#basesSel > div').forEach(r=>{
+  let id=r.querySelector('.b-sel')?.value;
+  let c=parseCant(r.querySelector('.b-cant')?.value);
+  let u=r.querySelector('.b-unit')?.value||'g';
+  let b=getProd().find(x=>String(x.id)==String(id));
+  if(b){
+   let ri=parseCant(b.rendimiento?.cant)||1;
+   let ru=b.rendimiento?.unit||u;
+   let cc=convertir(c,u,ru);
+   if(cc>0) tot+=(b.costo/ri)*cc;
+  }
+ });
+ document.getElementById('c-ing2').innerText=tot.toFixed(2);
+ let m=parseFloat(document.getElementById('margen2')?.value)||0;
+ let vm=document.getElementById('ventaManual2')?.value;
+ let v=vm?parseCant(vm):tot*(1+m/100);
+ document.getElementById('venta2').innerText=v.toFixed(2);
+}
+
 function renderVenta(){ let ps=getProd().filter(p=>!p.esBase); let cats=getCategoriasVenta(); if(categoriaFiltro!='todas') ps=ps.filter(p=>p.categoria==categoriaFiltro); let cont=document.getElementById('listaVenta'); if(!cont) return; if(!ps.length){ cont.innerHTML='<p class="col-span-2 text-center text-gray-400 text-[12px] py-10">Sin productos.</p>'; return; } cont.innerHTML=ps.map(p=>`<div class="bg-white rounded-2xl shadow-sm border p-3"><div class="flex justify-between"><div class="text-[8px] bg-black text-white px-2 py-0.5 rounded-full inline-block mb-1">${cats.find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'}</div><button onclick="editarProd('${p.id}')" class="text-[10px] bg-gray-100 px-2 rounded-full">✏️</button></div><b class="text-[13px] block mt-1">${p.nombre}</b><p class="text-[10px] text-gray-500">Costo $${p.costo.toFixed(2)}</p><p class="text-green-600 font-black">$${p.venta.toFixed(2)}</p><button onclick="addCart(${p.id})" class="w-full mt-2 bg-black text-white py-2 rounded-xl text-[11px]">Agregar</button></div>`).join(''); }
 function addCart(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; let ex=carrito.find(x=>String(x.id)==String(id)); if(ex) ex.qty++; else carrito.push({...p,qty:1}); renderCarrito(); }
 function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket').innerHTML='Vacío'; document.getElementById('c-total').innerText='0'; document.getElementById('cobroTotal').innerText='0'; return; } let sub=0,h=''; carrito.forEach((x,idx)=>{ sub+=x.venta*x.qty; h+=`<div class="flex justify-between bg-gray-50 p-2 rounded-xl"><span>${x.nombre} x${x.qty}</span><span>$${(x.venta*x.qty).toFixed(0)} <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-500">X</button></span></div>`; }); let desc=parseFloat(document.getElementById('descPorc').value)||0; let total=sub*(1-desc/100); document.getElementById('ticket').innerHTML=h; document.getElementById('c-total').innerText=total.toFixed(0); document.getElementById('cobroTotal').innerText=total.toFixed(0); }
