@@ -203,32 +203,79 @@ function renderInventarioMaster(){ let inv=getInv(); let el=document.getElementB
 function editarInv(id){ let inv=getInv(); let it=inv.find(x=> String(x.id)===String(id)); if(!it) return; let ns=prompt('Nuevo stock de '+it.nombre+' (actual '+it.stock+'):', it.stock); if(ns===null) return; let np=prompt('Nuevo precio/costo de '+it.nombre+' (actual $'+it.precio+'):', it.precio); if(np===null) return; it.stock=parseFloat(ns)||0; it.precio=parseFloat(np)||0; setItem('inventarioMaestro',inv); renderInventarioMaster(); if(typeof renderInventario==='function') renderInventario(); }
 function addInsumo(d={}){ let inv=getInv(); let opts=inv.map(it=>`<option value="${it.id}" ${d.invId==it.id?'selected':''}>${it.nombre} $${it.precio}/${it.unidad}</option>`).join(''); let div=document.createElement('div'); div.className='bg-[#FFF8F0] p-3 rounded-[16px] border-2 border-orange-100'; div.innerHTML=`<select class="in-n w-full bg-white border-2 border-black p-2 rounded-xl font-bold text-[13px]" onchange="calc()"><option value="">-- Ingrediente --</option>${opts}</select><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" value="${d.cu||''}" placeholder="Uso" class="in-cu col-span-2 border-2 border-black p-3 rounded-xl font-bold text-[13px]" oninput="calc()"><select class="in-uu col-span-3 border-2 border-black p-3 rounded-xl font-bold text-[12px]" onchange="calc()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[12px] mt-1">Costo: $<span class="in-sub">0.00</span></div><button onclick="this.parentElement.remove();calc()" class="w-full mt-2 text-[10px] text-red-400">Quitar</button>`; document.getElementById('insumos').appendChild(div); if(d.uu) div.querySelector('.in-uu').value=d.uu; }
 function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let it=getInv().find(x=>x.id==invId); let cu=parseFloat(row.querySelector('.in-cu').value)||0; let uu=row.querySelector('.in-uu')?.value||'g'; let baseCost=0; if(it && cu){ let cantConvertida=convertir(cu, uu, it.unidad); baseCost=cantConvertida * it.precio; } if(row.querySelector('.in-sub')) row.querySelector('.in-sub').innerText=baseCost.toFixed(2); tot+=baseCost; }); document.getElementById('c-ing').innerText=tot.toFixed(2); let fijos=window._costoFijoPorLote||0; let rend=parseFloat(document.getElementById('rendCant')?.value)||1; let fijosPorUnidad=rend>0? fijos/rend : fijos; document.getElementById('c-fijos').innerText=fijosPorUnidad.toFixed(2); let total=tot+fijosPorUnidad; document.getElementById('costo').innerText=total.toFixed(2); let m=parseFloat(document.getElementById('margen').value)||0; let vm=document.getElementById('ventaManual').value; document.getElementById('venta').innerText= vm? parseFloat(vm).toFixed(2) : (total*(1+m/100)).toFixed(2); }catch(e){} }
-function addBase(d={}){
- let bases=getProd().filter(p=>p.esBase);
- let opts=bases.map(b=>{
-  let rinde = (b.rendimiento && b.rendimiento.cant) ? b.rendimiento.cant : 1;
-  let uni = (b.rendimiento && b.rendimiento.uni) ? b.rendimiento.uni : 'L';
-  return `<option value="${b.id}" data-rinde="${rinde}" data-uni="${uni}" ${d.id==b.id?'selected':''}>${b.nombre} $${b.costo.toFixed(2)} (rinde ${rinde}${uni})</option>`;
- }).join('');
- let div=document.createElement('div');
- div.className='bg-white border-2 border-black rounded-xl p-3 flex gap-2 items-center';
- div.innerHTML=`<select class="b-sel flex-1 border-2 p-2 rounded-lg font-bold text-[11px]" onchange="actualizarRinde(this);calc2()"><option value="">-- Base --</option>${opts}</select><div class="flex flex-col items-center"><input class="b-cant border-2 border-black rounded-lg p-2 text-[11px] font-black w-[70px] text-center" type="number" step="0.01" placeholder="Usas" value="${d.cant||''}" oninput="calc2()"><span class="b-rinde-label text-[8px] font-bold text-gray-500 mt-1"></span></div><button onclick="this.parentElement.remove();calc2()" class="text-red-400 font-black px-2">X</button>`;
- document.getElementById('basesSel').appendChild(div);
- if(d.id){ div.querySelector('.b-sel').value=d.id; actualizarRinde(div.querySelector('.b-sel')); }
+function parseCant(v){
+ if(v==null||v==='') return 0;
+ v=String(v).trim().replace(',','.').toLowerCase();
+ if(v.includes('/')){ let p=v.split('/'); return (parseFloat(p[0])||0)/(parseFloat(p[1])||1); }
+ return parseFloat(v)||0;
 }
-function actualizarRinde(sel){
- try{ let opt=sel.options[sel.selectedIndex]; let div=sel.parentElement; let label=div.querySelector('.b-rinde-label'); if(opt && opt.dataset.rinde){ label.innerText='Rinde: '+opt.dataset.rinde+(opt.dataset.uni||''); } }catch(e){}
+function convertir(cant,de,a){
+ de=(de||'').toLowerCase(); a=(a||'').toLowerCase();
+ if(de==a) return cant;
+ let m={g:1,kg:1000,lb:453.592,oz:28.3495,ml:1,l:1000,lt:1000};
+ if(m[de] && m[a]) return cant * m[de] / m[a];
+ return cant;
 }
 function calc2(){
- let tot=0;
- document.querySelectorAll('#basesSel > div').forEach(r=>{
-  let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let unit=row.querySelector('.b-unit')?.value||'L'; if(id) receta.push({baseId:id, cant:parseFloat(cant)||0, unit:unit});
-  let cantUsada=parseFloat(r.querySelector('.b-cant')?.value)||0;
-  let b=getProd().find(x=>String(x.id)==String(id));
-  if(b){
-   let rinde=(b.rendimiento && b.rendimiento.cant)?parseFloat(b.rendimiento.cant):1;
-   if(cantUsada>0) tot+=(b.costo/rinde)*cantUsada;
+ try{
+  let tot=0;
+  document.querySelectorAll('#basesSel > div').forEach(row=>{
+    let sel=row.querySelector('.b-sel');
+    if(!sel) return;
+    let id=sel.value;
+    if(!id) return;
+
+    // busca la base - funciona si es esBase o tipo base
+    let b=getProd().find(x=>String(x.id)==String(id));
+    if(!b) return;
+
+    // cantidad que usas - busca.b-cant o cualquier input de numero
+    let cantInput=row.querySelector('.b-cant') || row.querySelector('input[type="number"]') || row.querySelectorAll('input')[0];
+    let cantUsada=1;
+    if(cantInput) cantUsada=parseCant? parseCant(cantInput.value) : (parseFloat(cantInput.value)||1);
+    if(cantUsada<=0) cantUsada=0;
+
+    // rendimiento de la base
+    let rindeCant=1;
+    let rindeUni='L';
+    if(b.rendimiento){
+      rindeCant=parseCant? parseCant(b.rendimiento.cant) : parseFloat(b.rendimiento.cant)||1;
+      rindeUni=b.rendimiento.uni || b.rendimiento.unit || 'L';
+    } else if(b.rinde){
+      rindeCant=parseFloat(b.rinde)||1;
+    }
+
+    let costoBase=parseFloat(b.costo)||parseFloat(b.precio)||0;
+
+    // si la base rinde 10L y usas 1L -> costo = 284.28/10*1 = 28.42
+    if(rindeCant>0 && costoBase>0){
+      let unitSel=row.querySelector('.b-unit');
+      let unitUsada=unitSel? unitSel.value : rindeUni; // si no hay selector, usa la misma unidad del rinde
+      let cantConvertida=unitUsada? convertir(cantUsada, unitUsada, rindeUni) : cantUsada;
+      // si convertir no existe, solo usa cantUsada
+      if(isNaN(cantConvertida)) cantConvertida=cantUsada;
+      tot+= (costoBase / rindeCant) * cantConvertida;
+    }
+  });
+
+  let elCosto=document.getElementById('c-ing2');
+  if(elCosto) elCosto.innerText=tot.toFixed(2);
+
+  let margenEl=document.getElementById('margen2');
+  let m=parseFloat(margenEl?.value)||0;
+  let ventaManualEl=document.getElementById('ventaManual2');
+  let vm=ventaManualEl?.value||'';
+  let venta=0;
+  if(vm!==''){
+    venta=parseCant? parseCant(vm) : parseFloat(vm)||0;
+  } else {
+    venta=tot*(1+m/100);
   }
+  let elVenta=document.getElementById('venta2');
+  if(elVenta) elVenta.innerText=venta.toFixed(2);
+
+ }catch(e){ console.log('calc2 error', e); }
+}
  });
  document.getElementById('c-ing2').innerText=tot.toFixed(2);
  let m=parseFloat(document.getElementById('margen2').value)||0;
