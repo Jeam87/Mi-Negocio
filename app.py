@@ -141,11 +141,28 @@ function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago'
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
 async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada',true);}
-async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}
+async function hacerLogin(){
+ let e=document.getElementById('loginEmail').value.trim().toLowerCase();
+ let p=document.getElementById('loginPass').value;
+ if(!e||!p) return msgLogin('Escribe tu correo y contraseña',false);
+ let btn=document.querySelector('#loginScreen button[onclick="hacerLogin()"]');
+ if(btn){btn.disabled=true; btn.innerText='ENTRANDO...';}
+ try{
+  let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
+  let texto=await r.text(); let j={}; try{j=JSON.parse(texto)}catch(err){j={ok:false,msg:'El servidor no respondió correctamente. Vuelve a abrir la app.'};}
+  if(!r.ok || !j.ok) return msgLogin(j.msg||'Correo o contraseña incorrectos',false);
+  currentUser=e; negocioId=j.negocio_id||e;
+  localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId);
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('userLabel').innerText=e;
+  await cargarDeNube(); showTab('inventario');
+ }catch(err){ msgLogin('No se pudo conectar con la app. Revisa que esté abierta correctamente y vuelve a intentar.',false); }
+ finally{ if(btn){btn.disabled=false; btn.innerText='ENTRAR';} }
+}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); renderPresupuestos(); actualizarHora();}
 async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','presupuestos','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
-window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
+window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ let r=await fetch('/api/load?email='+encodeURIComponent(e)); if(r.ok){ document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); } else { localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; } }catch(err){ /* dejamos visible el acceso */ } }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
 function getProd(){ return JSON.parse(localStorage.getItem('productosV2_'+negocioId)||localStorage.getItem('productosV2')||'[]'); }
