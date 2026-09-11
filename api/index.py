@@ -193,7 +193,37 @@ function guardarEmpresa(){ let emp={nombre:document.getElementById('empNombre').
 function generarTicket(data){ let emp=getEmp(); let logoHtml=emp.mostrarLogo && emp.logo? `<div style="text-align:center;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px; max-height:90px; border-radius:12px;"></div>` : ''; let fechaHora = data.fechaStr || getFechaLocal(); let html=`${logoHtml}<div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-top:8px;"><b style="font-size:14px;">${emp.nombre}</b><br><span style="font-size:9px">${emp.direccion||''} ${emp.cp||''} ${emp.tel||''}<br>${emp.rfc||''}</span></div><div style="font-size:10px; margin-top:6px;">Fecha: ${fechaHora}<br>Cliente: ${data.cliente}<br>Pago: ${data.metodoPago||'Efectivo'}<br>Vendedor: ${data.vendedor||currentUser||''}</div><div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}</div><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>$${data.total.toFixed(2)}</span></div><div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px;">${emp.mensaje}</div>`; document.getElementById('ticketContenido').innerHTML=html; return html; }
 function generarTextoWhatsApp(data){ let emp=getEmp(); let lineas=[ `*${emp.nombre}*`, `${emp.direccion||''} ${emp.tel||''}`.trim(), `-------------------------`, `Fecha: ${data.fechaStr}`, `Cliente: ${data.cliente}`, `Pago: ${data.metodoPago||'Efectivo'}`, `-------------------------`,...data.items.map(i=>`${i.nombre} x${i.qty} = $${(i.venta*i.qty).toFixed(2)}`), `-------------------------`, `*TOTAL: $${data.total.toFixed(2)}*`, ``, `${emp.mensaje}` ]; return lineas.join('\\n'); }
 function actualizarVistaTicket(){ generarTicket({fecha:new Date(),fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo Alitas',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}); }
-function imprimirTicket(){ let contenido=document.getElementById('ticketContenido').innerHTML; let w=window.open('','','width=300,height=600'); w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenido+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); w.document.close(); }
+let impresoraDevice = null;async 
+function imprimirTicket(){ 
+  let contenido = document.getElementById('ticketContenido').innerText; // texto plano para bluetooth
+  let contenidoHTML = document.getElementById('ticketContenido').innerHTML; // html para fallback
+
+  try{
+    // Intenta Bluetooth
+    if(!impresoraDevice){
+      impresoraDevice = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [0xFF00, '000018f0-0000-1000-8000-00805f9b34fb']
+      });
+    }
+    const server = await impresoraDevice.gatt.connect();
+    const service = await server.getPrimaryService(0xFF00);
+    const char = await service.getCharacteristic(0xFF02);
+    
+    const encoder = new TextEncoder();
+    let data = "\x1B\x40" + contenido + "\n\n\n" + "\x1D\x56\x00";
+    await char.writeValue(encoder.encode(data));
+    alert("Ticket enviado a impresora Bluetooth");
+    return;
+  }catch(e){
+    console.log("Bluetooth falló, usando impresión normal:", e);
+  }
+
+  // Fallback - tu código original que no se rompe
+  let w=window.open('','','width=300,height=600'); 
+  w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenidoHTML+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); 
+  w.document.close(); 
+}
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
