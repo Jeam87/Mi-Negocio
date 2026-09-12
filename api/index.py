@@ -83,7 +83,8 @@ def home():
 <div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-3"><img id="logoHeader" class="w-20 h-20 rounded-full object-cover border-[4px] border-black hidden shadow-xl" onerror="this.src='/api/logo.png'"><div><h1 class="font-black text-[16px]">Mi Negocio 11.5</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-2 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
 
 <div id="tab-vender" class="p-3 hidden">
-<div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva</button></div><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div id="listaCatsEdit" class="space-y-2 mb-3"></div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
+<div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva</button></div><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div class="font-black text-[11px] mb-2">✏️ Editar nombres de categorías</div><div id="listaCatsEdit" class="space-y-2 mb-3"></div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
+<div class="bg-white rounded-[20px] p-3 shadow-sm mb-3 border-2 border-purple-100"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">📋 Presupuestos guardados</h3><button onclick="renderPresupuestos()" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full font-bold">↻</button></div><div id="listaPresupuestos" class="mt-3 space-y-2"></div></div>
 <div id="alertaStock" class="hidden bg-red-100 border-2 border-red-300 rounded-xl p-2 mb-3 text-[11px] font-bold text-red-700"></div>
 <div id="listaVenta" class="grid grid-cols-2 gap-3"></div>
 <div class="mt-6 bg-white rounded-[28px] p-4 shadow-xl border-2 border-black">
@@ -132,7 +133,7 @@ def home():
 <div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre <span id="cierreFechaLabel"></span> - <span id="cierreUserLabel" class="text-blue-600"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy (tu turno)</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
 <div class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto z-30 overflow-x-auto"><button onclick="showTab('costos')" class="flex flex-col items-center text-black min-w-[50px]"><i class="fa-solid fa-book"></i><span class="text-[7px] font-bold">Crear</span></button><button onclick="showTab('vender')" class="flex flex-col items-center text-gray-400 min-w-[50px]"><i class="fa-solid fa-store"></i><span class="text-[7px]">Catalogo</span></button><button onclick="showTab('inventario')" class="flex flex-col items-center text-gray-400 min-w-[50px]"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[7px]">Invent</span></button><button onclick="showTab('finanzas')" class="flex flex-col items-center text-gray-400 min-w-[50px]"><i class="fa-solid fa-chart-line"></i><span class="text-[7px]">Finanzas</span></button><button onclick="showTab('clientes')" class="flex flex-col items-center text-gray-400 min-w-[50px]"><i class="fa-solid fa-users"></i><span class="text-[7px]">Clientes</span></button><button onclick="showTab('proveedores')" class="flex flex-col items-center text-gray-400 min-w-[50px]"><i class="fa-solid fa-truck"></i><span class="text-[7px]">Prov</span></button></div></div></div>
 <script>
-let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null, clienteDeudaActual=null, gastoTipoSel='salida';
+let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null, clienteDeudaActual=null, gastoTipoSel='salida', presupuestoCobroId=null;
 function getFechaLocal(){ let now=new Date(); return now.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+', '+now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); }
 function getFechaSoloLocal(){ let now=new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`; }
 let vistaCal='mes', fechaVista=new Date(), fechaSel=getFechaSoloLocal(), metodoPagoSel='Efectivo';
@@ -168,8 +169,28 @@ function guardarProvEdit(){ let id=document.getElementById('pe-id').value; let p
 function renderProveedores(){ let provs=getProveedores(); let el=document.getElementById('listaProveedores'); if(!el) return; if(!provs.length){ el.innerHTML='<p class="text-[11px] text-gray-400 text-center py-4">Sin proveedores</p>'; return; } el.innerHTML=provs.map(p=>{ let queBadge=p.que? `<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded-full font-black ml-2">${p.que}</span>`:''; return `<div class="bg-white p-4 rounded-[16px] border-2 border-gray-200 shadow-sm"><div class="flex justify-between items-start"><div class="flex-1"><div class="flex items-center flex-wrap gap-1"><b class="text-[16px]">${p.nombre}</b> ${queBadge}</div><div class="mt-3 space-y-1 text-[13px] text-gray-800"><div>${p.tel? `📱 <b>${p.tel}</b>` : '<span class="text-gray-400">📱 Sin teléfono</span>'}</div><div>${p.direccion? `📍 ${p.direccion}` : '<span class="text-gray-400">📍 Sin dirección</span>'}</div><div>${(p.horario||p.dias)? `🕒 ${p.horario||''} ${p.dias? '• '+p.dias:''}` : '<span class="text-gray-400">🕒 Sin horario</span>'}</div><div class="text-[12px] mt-2">${p.notas? `📝 ${p.notas}` : ''}</div></div></div><div class="flex flex-col gap-2 ml-3"><button onclick="abrirProvEdit('${p.id}')" class="bg-blue-500 text-white w-11 h-11 rounded-full text-[14px] flex items-center justify-center shadow">✏️</button><a href="tel:${(p.tel||'').replace(/\\D/g,'')}" class="bg-green-100 text-green-700 w-11 h-11 rounded-full text-[12px] flex items-center justify-center font-black shadow">📞</a></div></div></div>`; }).join(''); let sel=document.getElementById('g-proveedor'); if(sel){ let actual=sel.value; sel.innerHTML='<option value="">Sin proveedor</option>'+provs.map(pr=>`<option value="${pr.id}">${pr.nombre} ${pr.tel? '- '+pr.tel:''}</option>`).join(''); if(actual) sel.value=actual; } let sel2=document.getElementById('g-inv-id'); if(sel2){ sel2.innerHTML='<option value="">No cargar stock</option>'+getInv().map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join(''); } }
 
 function addCategoriaVenta(){ let n=document.getElementById('nuevaCatNombre').value.trim(); if(!n) return; let cats=getCategoriasVenta(); cats.push({id:n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(),nombre:n}); setItem('categoriasVenta',cats); document.getElementById('nuevaCatNombre').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); }
+function editarCategoriaVenta(id){
+ let cats=getCategoriasVenta();
+ let c=cats.find(x=>String(x.id)==String(id));
+ if(!c) return;
+ let nuevo=prompt('Nuevo nombre para la categoría:',c.nombre||'');
+ if(nuevo===null) return;
+ nuevo=nuevo.trim();
+ if(!nuevo) return alert('El nombre no puede quedar vacío');
+ c.nombre=nuevo;
+ setItem('categoriasVenta',cats);
+ renderCategoriasVenta();
+ renderProdCategoriaSelect();
+ renderVenta();
+}
 function addCategoriaVentaDesdeProd(){ let n=document.getElementById('quickCat').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=id; }
-function renderCategoriasVenta(){ let cats=getCategoriasVenta(); let el=document.getElementById('filtrosCats'); if(el) el.innerHTML=cats.map(c=>`<button onclick="categoriaFiltro='${c.id}'; renderVenta(); renderCategoriasVenta();" class="px-4 py-2 rounded-full font-black text-[11px] whitespace-nowrap border-2 ${categoriaFiltro==c.id?'bg-black text-white':'bg-white'}">${c.nombre}</button>`).join(''); }
+function renderCategoriasVenta(){
+ let cats=getCategoriasVenta();
+ let el=document.getElementById('filtrosCats');
+ if(el) el.innerHTML=cats.map(c=>`<button onclick="categoriaFiltro='${c.id}'; renderVenta(); renderCategoriasVenta();" class="px-4 py-2 rounded-full font-black text-[11px] whitespace-nowrap border-2 ${categoriaFiltro==c.id?'bg-black text-white':'bg-white'}">${c.nombre}</button>`).join('');
+ let edit=document.getElementById('listaCatsEdit');
+ if(edit) edit.innerHTML=cats.map(c=>`<div class="flex items-center gap-2 bg-white border rounded-xl p-2"><span class="flex-1 text-[11px] font-bold">${c.nombre}</span><button onclick="editarCategoriaVenta('${c.id}')" class="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black">✏️ Cambiar nombre</button></div>`).join('');
+}
 function renderProdCategoriaSelect(){ let cats=getCategoriasVenta(); let sel=document.getElementById('prodCategoria'); if(!sel) return; sel.innerHTML=cats.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''); }
 function addCliente(){ let nombre=document.getElementById('cliNombre').value.trim(); let tel=document.getElementById('cliTel').value.trim(); if(!nombre) return; let cli=getCli(); cli.push({id:Date.now().toString(),nombre,tel}); setItem('clientesV2',cli); document.getElementById('cliNombre').value=''; document.getElementById('cliTel').value=''; renderClientes(); }
 function addClienteRapido(){ let nombre=document.getElementById('quickClienteNombre').value.trim(); let tel=document.getElementById('quickClienteTel').value.trim(); if(!nombre) return alert('Nombre'); let cli=getCli(); let nuevo={id:Date.now().toString(),nombre,tel}; cli.push(nuevo); setItem('clientesV2',cli); document.getElementById('quickClienteNombre').value=''; document.getElementById('quickClienteTel').value=''; renderClientes(); document.getElementById('selCliente').value=nuevo.id; }
@@ -181,7 +202,7 @@ function hacerAbono(){ if(!clienteDeudaActual) return; let monto=parseFloat(docu
 
 function addFijo(){ let n=document.getElementById('fijoNombre').value.trim(), m=parseFloat(document.getElementById('fijoMonto').value); if(!n||!m) return; let f=getFijos(); f.push({id:Date.now().toString(), nombre:n, monto:m}); setItem('gastosFijos',f); document.getElementById('fijoNombre').value=''; document.getElementById('fijoMonto').value=''; renderFijos(); calc(); calc2(); }
 function renderFijos(){ let f=getFijos(); let total=f.reduce((s,x)=>s+x.monto,0); document.getElementById('totalFijos').innerText=total.toFixed(0); let lotes=parseInt(localStorage.getItem('lotesMes_'+negocioId)||'30')||30; document.getElementById('lotesMes').value=lotes; window._costoFijoPorLote=lotes>0? total/lotes : 0; document.getElementById('listaFijos').innerHTML=f.map(x=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl border"><div><b class="text-[12px]">${x.nombre}</b><br><span class="text-[10px]">$${x.monto}/mes</span></div><button onclick="if(confirm('Borrar?')){setItem('gastosFijos',getFijos().filter(y=>y.id!='${x.id}')); renderFijos(); calc(); calc2();}" class="text-red-500 font-black">X</button></div>`).join(''); }
-function showTab(t){ ['costos','vender','inventario','finanzas','clientes','config','proveedores'].forEach(x=>{ let el=document.getElementById('tab-'+x); if(el) el.classList.toggle('hidden',x!=t); }); if(t=='costos'){ renderFijos(); renderInventario(); } if(t=='vender'){ renderVenta(); renderCarrito(); renderClientes(); renderInventarioMaster(); } if(t=='inventario') renderInventarioMaster(); if(t=='clientes') renderClientes(); if(t=='finanzas') renderCalendario(); if(t=='config') cargarEmpresa(); if(t=='proveedores') renderProveedores(); actualizarFondo(); }
+function showTab(t){ ['costos','vender','inventario','finanzas','clientes','config','proveedores'].forEach(x=>{ let el=document.getElementById('tab-'+x); if(el) el.classList.toggle('hidden',x!=t); }); if(t=='costos'){ renderFijos(); renderInventario(); } if(t=='vender'){ renderVenta(); renderCarrito(); renderClientes(); renderInventarioMaster(); renderCategoriasVenta(); renderPresupuestos(); } if(t=='inventario') renderInventarioMaster(); if(t=='clientes') renderClientes(); if(t=='finanzas') renderCalendario(); if(t=='config') cargarEmpresa(); if(t=='proveedores') renderProveedores(); actualizarFondo(); }
 function setCrear(v){ document.getElementById('crear-menu').classList.toggle('hidden',v!='menu'); document.getElementById('crear-base').classList.toggle('hidden',v!='base'); document.getElementById('crear-producto').classList.toggle('hidden',v!='producto'); if(v=='menu'){ editId=null; renderInventario(); } if(v=='base' &&!editId){ document.getElementById('insumos').innerHTML=''; document.getElementById('nombre').value=''; document.getElementById('rendCant').value='10'; document.getElementById('margen').value='50'; document.getElementById('ventaManual').value=''; addInsumo({}); calc(); } if(v=='producto' &&!editId){ document.getElementById('basesSel').innerHTML=''; document.getElementById('nombreProd').value=''; renderProdCategoriaSelect(); addBase(); calc2(); } }
 function cancelarEdicion(){ editId=null; fotoTemp=''; setCrear('menu'); }
 function previewFoto(i){ if(i.files&&i.files[0]){ let r=new FileReader(); r.onload=function(e){ fotoTemp=e.target.result; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); }; r.readAsDataURL(i.files[0]); } }
@@ -206,7 +227,7 @@ function guardarPresupuestoWhatsApp(){
  let sel=document.getElementById('selCliente');
  let clienteNombre=sel? (sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text||'Sin nombre'):'Sin nombre';
  let tel=sel?.options[sel.selectedIndex]?.getAttribute('data-tel')||'';
- let presupuesto={id:Date.now(),fechaStr:getFechaLocal(),cliente:clienteNombre,telefono:tel,items:carrito.map(x=>({nombre:x.nombre,qty:x.qty,venta:x.venta})),total};
+ let presupuesto={id:Date.now(),fechaStr:getFechaLocal(),cliente:clienteNombre,telefono:tel,items:carrito.map(x=>({nombre:x.nombre,qty:x.qty,venta:x.venta,id:x.id})),subtotal:sub,descuento:desc,total,status:'pendiente'};
  let presupuestos=JSON.parse(localStorage.getItem('presupuestos_'+negocioId)||'[]');
  presupuestos.push(presupuesto);
  setItem('presupuestos',presupuestos);
@@ -216,6 +237,57 @@ function guardarPresupuestoWhatsApp(){
  if(tel) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank');
  else if(navigator.share) navigator.share({text:texto}).catch(()=>{});
  else alert('✅ Presupuesto guardado. No se envió porque no hay WhatsApp.');
+}
+function getPresupuestos(){
+ return JSON.parse(localStorage.getItem('presupuestos_'+negocioId)||localStorage.getItem('presupuestos')||'[]');
+}
+function renderPresupuestos(){
+ let el=document.getElementById('listaPresupuestos');
+ if(!el) return;
+ let ps=getPresupuestos().slice().reverse();
+ if(!ps.length){ el.innerHTML='<p class="text-center text-gray-400 text-[11px] py-3">No hay presupuestos guardados.</p>'; return; }
+ el.innerHTML=ps.map(p=>{
+   let estado=p.status||'pendiente';
+   let estadoHtml=estado=='pendiente'
+     ? '<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-[9px] font-black">PENDIENTE</span>'
+     : estado=='pagado'
+       ? '<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-[9px] font-black">PAGADO</span>'
+       : '<span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-[9px] font-black">CANCELADO</span>';
+   let botones=estado=='pendiente'
+     ? `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="cobrarPresupuesto('${p.id}')" class="bg-black text-white py-2 rounded-xl text-[10px] font-black">💰 COBRAR</button><button onclick="cancelarPresupuesto('${p.id}')" class="bg-red-100 text-red-600 py-2 rounded-xl text-[10px] font-black">✕ CANCELAR</button></div>`
+     : '';
+   return `<div class="border-2 rounded-xl p-3 bg-gray-50"><div class="flex justify-between items-start gap-2"><div><b class="text-[12px]">${p.cliente||'Sin nombre'}</b><p class="text-[9px] text-gray-500">${p.fechaStr||''}</p></div><div class="text-right">${estadoHtml}<p class="font-black text-[14px] mt-1">$${(p.total||0).toFixed(2)}</p></div></div><p class="text-[10px] mt-2">${(p.items||[]).map(i=>`${i.nombre} x${i.qty}`).join(' • ')}</p>${botones}</div>`;
+ }).join('');
+}
+function cobrarPresupuesto(id){
+ let p=getPresupuestos().find(x=>String(x.id)==String(id));
+ if(!p || (p.status||'pendiente')!='pendiente') return;
+ carrito=(p.items||[]).map(i=>{
+   let prod=getProd().find(x=>String(x.id)==String(i.id));
+   return prod ? {...prod,qty:i.qty} : {...i,qty:i.qty,venta:parseFloat(i.venta)||0};
+ });
+ presupuestoCobroId=p.id;
+ let sel=document.getElementById('selCliente');
+ if(sel){
+   if(p.cliente && p.cliente!='Sin nombre'){
+     let cli=getCli().find(c=>c.nombre==p.cliente && (!p.telefono || c.tel==p.telefono));
+     if(cli) sel.value=cli.id;
+   }
+ }
+ let descEl=document.getElementById('descPorc');
+ if(descEl) descEl.value=p.descuento||0;
+ renderCarrito();
+ alert('Presupuesto cargado. Elige el método de pago y confirma el cobro.');
+ abrirCobro();
+}
+function cancelarPresupuesto(id){
+ let ps=getPresupuestos();
+ let p=ps.find(x=>String(x.id)==String(id));
+ if(!p || (p.status||'pendiente')!='pendiente') return;
+ if(!confirm(`¿Cancelar el presupuesto de ${p.cliente||'Sin nombre'} por $${(p.total||0).toFixed(2)}?`)) return;
+ p.status='cancelado'; p.canceladoEn=getFechaLocal(); p.canceladoPor=currentUser;
+ setItem('presupuestos',ps);
+ renderPresupuestos();
 }
 function imprimirTicket(){ 
   let contenido = document.getElementById('ticketContenido').innerText;
@@ -261,7 +333,13 @@ function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket')
 function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getElementById('cobroHora').innerText=getFechaLocal(); setMetodoPago('Efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); actualizarClienteTicket(); }
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
-function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }
+function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
+ let ps=getPresupuestos();
+ let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
+ if(bp){ bp.status='pagado'; bp.pagadoEn=fechaStr; bp.metodoPago=metodo; bp.facturaId=facts.length?facts[facts.length-1]?.id:null; setItem('presupuestos',ps); }
+ presupuestoCobroId=null;
+}
+ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
