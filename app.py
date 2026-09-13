@@ -255,7 +255,9 @@ function renderPresupuestos(){
        : '<span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-[9px] font-black">CANCELADO</span>';
    let botones=estado=='pendiente'
      ? `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="cobrarPresupuesto('${p.id}')" class="bg-black text-white py-2 rounded-xl text-[10px] font-black">💰 COBRAR</button><button onclick="cancelarPresupuesto('${p.id}')" class="bg-red-100 text-red-600 py-2 rounded-xl text-[10px] font-black">✕ CANCELAR</button></div>`
-     : '';
+     : estado=='cancelado'
+       ? `<button onclick="borrarPresupuestoCancelado('${p.id}')" class="w-full mt-2 bg-red-500 text-white py-2 rounded-xl text-[10px] font-black">❌ BORRAR PRESUPUESTO</button>`
+       : '';
    return `<div class="border-2 rounded-xl p-3 bg-gray-50"><div class="flex justify-between items-start gap-2"><div><b class="text-[12px]">${p.cliente||'Sin nombre'}</b><p class="text-[9px] text-gray-500">${p.fechaStr||''}</p></div><div class="text-right">${estadoHtml}<p class="font-black text-[14px] mt-1">$${(p.total||0).toFixed(2)}</p></div></div><p class="text-[10px] mt-2">${(p.items||[]).map(i=>`${i.nombre} x${i.qty}`).join(' • ')}</p>${botones}</div>`;
  }).join('');
 }
@@ -286,6 +288,15 @@ function cancelarPresupuesto(id){
  if(!p || (p.status||'pendiente')!='pendiente') return;
  if(!confirm(`¿Cancelar el presupuesto de ${p.cliente||'Sin nombre'} por $${(p.total||0).toFixed(2)}?`)) return;
  p.status='cancelado'; p.canceladoEn=getFechaLocal(); p.canceladoPor=currentUser;
+ setItem('presupuestos',ps);
+ renderPresupuestos();
+}
+function borrarPresupuestoCancelado(id){
+ let ps=getPresupuestos();
+ let p=ps.find(x=>String(x.id)==String(id));
+ if(!p || (p.status||'pendiente')!='cancelado') return;
+ if(!confirm(`¿Borrar definitivamente el presupuesto cancelado de ${p.cliente||'Sin nombre'} por $${(p.total||0).toFixed(2)}?`)) return;
+ ps=ps.filter(x=>String(x.id)!=String(id));
  setItem('presupuestos',ps);
  renderPresupuestos();
 }
@@ -359,4 +370,3 @@ function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'
 """
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
- 
