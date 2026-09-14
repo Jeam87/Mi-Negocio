@@ -173,6 +173,7 @@ function editarCategoriaVenta(id){
  let cats=getCategoriasVenta();
  let c=cats.find(x=>String(x.id)==String(id));
  if(!c) return;
+ if(String(c.id)=='todas') return alert('La categoría "Todas" no se puede renombrar.');
  let nuevo=prompt('Nuevo nombre para la categoría:',c.nombre||'');
  if(nuevo===null) return;
  nuevo=nuevo.trim();
@@ -183,11 +184,32 @@ function editarCategoriaVenta(id){
  renderProdCategoriaSelect();
  renderVenta();
 }
+function borrarCategoriaVenta(id){
+ let cats=getCategoriasVenta();
+ let c=cats.find(x=>String(x.id)==String(id));
+ if(!c) return;
+ if(String(c.id)=='todas') return alert('La categoría "Todas" no se puede borrar.');
+ let productos=getProd();
+ let afectados=productos.filter(p=>!p.esBase && String(p.categoria)==String(id));
+ let mensaje=afectados.length
+   ? `¿Borrar la categoría "${c.nombre}"?\n\nHay ${afectados.length} producto(s) dentro de ella. Se moverán a "Todas" para que no se pierdan.`
+   : `¿Borrar la categoría "${c.nombre}"?`;
+ if(!confirm(mensaje)) return;
+ cats=cats.filter(x=>String(x.id)!=String(id));
+ afectados.forEach(p=>p.categoria='todas');
+ setItem('categoriasVenta',cats);
+ if(afectados.length) setItem('productosV2',productos);
+ if(String(categoriaFiltro)==String(id)) categoriaFiltro='todas';
+ renderCategoriasVenta();
+ renderProdCategoriaSelect();
+ renderInventario();
+ renderVenta();
+}
 function addCategoriaVentaDesdeProd(){ let n=document.getElementById('quickCat').value.trim(); if(!n) return; let cats=getCategoriasVenta(); let id=n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(); cats.push({id,nombre:n}); setItem('categoriasVenta',cats); renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=id; }
 function renderCategoriasVenta(){
  let cats=getCategoriasVenta();
  let el=document.getElementById('filtrosCats');
- if(el) el.innerHTML=cats.map(c=>`<div class="flex items-center gap-1 shrink-0"><button onclick="categoriaFiltro='${c.id}'; renderVenta(); renderCategoriasVenta();" class="px-4 py-2 rounded-full font-black text-[11px] whitespace-nowrap border-2 ${categoriaFiltro==c.id?'bg-black text-white':'bg-white'}">${c.nombre}</button><button onclick="editarCategoriaVenta('${c.id}')" title="Cambiar nombre" class="w-8 h-8 rounded-full border-2 bg-white text-blue-600 font-black text-[12px] flex items-center justify-center">✏️</button></div>`).join('');
+ if(el) el.innerHTML=cats.map(c=>`<div class="flex items-center gap-1 shrink-0"><button onclick="categoriaFiltro='${c.id}'; renderVenta(); renderCategoriasVenta();" class="px-4 py-2 rounded-full font-black text-[11px] whitespace-nowrap border-2 ${categoriaFiltro==c.id?'bg-black text-white':'bg-white'}">${c.nombre}</button>${String(c.id)=='todas'?'':`<button onclick="editarCategoriaVenta('${c.id}')" title="Cambiar nombre" class="w-8 h-8 rounded-full border-2 bg-white text-blue-600 font-black text-[12px] flex items-center justify-center">✏️</button><button onclick="borrarCategoriaVenta('${c.id}')" title="Borrar categoría" class="w-8 h-8 rounded-full border-2 bg-white text-red-600 font-black text-[12px] flex items-center justify-center">❌</button>`}</div>`).join('');
 }
 function renderProdCategoriaSelect(){ let cats=getCategoriasVenta(); let sel=document.getElementById('prodCategoria'); if(!sel) return; sel.innerHTML=cats.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''); }
 function addCliente(){ let nombre=document.getElementById('cliNombre').value.trim(); let tel=document.getElementById('cliTel').value.trim(); if(!nombre) return; let cli=getCli(); cli.push({id:Date.now().toString(),nombre,tel}); setItem('clientesV2',cli); document.getElementById('cliNombre').value=''; document.getElementById('cliTel').value=''; renderClientes(); }
