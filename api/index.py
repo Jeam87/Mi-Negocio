@@ -354,8 +354,109 @@ function calc(){ try{ let tot=0; document.querySelectorAll('#insumos > div').for
 function baseSeleccionada(sel){ let b=getProd().find(x=>String(x.id)==String(sel.value)); let row=sel.closest('#basesSel > div'); if(!b||!row) return; let uu=row.querySelector('.b-uu'); if(uu) uu.value=normalizarUnidad(b.rendimiento?.uni||'pza'); let cant=row.querySelector('.b-cant'); if(cant && !cant.value) cant.value=''; }
 function addBase(d={}){ let bases=getProd().filter(p=>p.esBase); let opts=bases.map(b=>`<option value="${b.id}" ${d.id==b.id?'selected':''}>${b.nombre} (rinde ${b.rendimiento?.cant||1} ${b.rendimiento?.uni||''})</option>`).join(''); let div=document.createElement('div'); div.className='bg-white border-2 border-black rounded-xl p-3'; div.innerHTML=`<div class="flex gap-2 items-center"><select class="b-sel flex-1 border-2 p-2 rounded-lg font-bold text-[12px]" onchange="baseSeleccionada(this);calc2()"><option value="">-- Base --</option>${opts}</select><button onclick="this.parentElement.parentElement.remove();calc2()" class="text-red-400 font-black px-2">X</button></div><div class="grid grid-cols-5 gap-2 mt-2"><input type="number" step="0.01" value="${d.cant??''}" placeholder="Cantidad" class="b-cant col-span-2 border-2 border-black p-2 rounded-xl font-bold text-[12px]" oninput="calc2()"><select class="b-uu col-span-3 border-2 border-black p-2 rounded-xl font-bold text-[12px]" onchange="calc2()"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="yd">yardas</option><option value="ft">pies</option><option value="in">pulgadas</option><option value="pza">pza</option></select></div><div class="text-right font-black text-[11px] mt-1">Costo de esta porción: $<span class="b-sub">0.00</span></div>`; document.getElementById('basesSel').appendChild(div); if(d.id) div.querySelector('.b-sel').value=d.id; if(d.uu) div.querySelector('.b-uu').value=d.uu; else if(d.id){ let b=bases.find(x=>String(x.id)==String(d.id)); if(b) div.querySelector('.b-uu').value=normalizarUnidad(b.rendimiento?.uni||'L'); } }
 function calc2(){ let tot=0; document.querySelectorAll('#basesSel > div').forEach(r=>{ let id=r.querySelector('.b-sel')?.value; let b=getProd().find(x=>String(x.id)==String(id)); let cant=parseFloat(r.querySelector('.b-cant')?.value)||0; let uu=r.querySelector('.b-uu')?.value||'L'; let sub=0; if(b && cant){ let rend=b.rendimiento||{}; let rendCant=parseFloat(rend.cant)||1; let rendUni=normalizarUnidad(rend.uni||'L'); let cantRend=convertir(cant,uu,rendUni); sub=(cantRend/rendCant)*(parseFloat(b.costo)||0); } let span=r.querySelector('.b-sub'); if(span) span.innerText=sub.toFixed(2); tot+=sub; }); document.getElementById('c-ing2').innerText=tot.toFixed(2); let m=parseFloat(document.getElementById('margen2').value)||0; let vm=document.getElementById('ventaManual2').value; document.getElementById('venta2').innerText= vm? parseFloat(vm).toFixed(2) : (tot*(1+m/100)).toFixed(2); }
-function guardarProd(tipo){ let isBase=tipo=='recetario'; let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd'); let nom=nomEl.value.trim(); if(!nom) return alert('Pon nombre'); let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0; let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0; let catId=isBase?'base':(document.getElementById('prodCategoria')?.value||'todas'); let ps=getProd(); let receta=[]; if(isBase){ document.querySelectorAll('#insumos > div').forEach(row=>{ let invId=row.querySelector('.in-n')?.value; let cu=row.querySelector('.in-cu')?.value; let uu=row.querySelector('.in-uu')?.value; if(invId && cu) receta.push({invId, cu:parseFloat(cu), uu}); }); } else { document.querySelectorAll('#basesSel > div').forEach(row=>{ let id=row.querySelector('.b-sel')?.value; let cant=row.querySelector('.b-cant')?.value; let uu=row.querySelector('.b-uu')?.value; if(id && cant) receta.push({baseId:id,cant:parseFloat(cant),uu:normalizarUnidad(uu)}); }); } let margen=parseFloat((isBase?document.getElementById('margen'):document.getElementById('margen2'))?.value)||50; let rendCant=parseFloat(document.getElementById('rendCant')?.value)||1; let rendUni=document.getElementById('rendUni')?.value||'L'; if(editId){ let idx=ps.findIndex(p=>String(p.id)==String(editId)); if(idx>=0){ ps[idx].nombre=nom; ps[idx].costo=costo; ps[idx].venta=venta; ps[idx].categoria=catId; ps[idx].receta=receta; ps[idx].margen=margen; ps[idx].rendimiento={cant:rendCant, uni:rendUni}; if(fotoTemp) ps[idx].foto=fotoTemp; } } else { ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,categoria:catId,receta,margen,rendimiento:{cant:rendCant, uni:rendUni},esBase:isBase}); } setItem('productosV2',ps); alert('✅ Guardado: '+nom); fotoTemp=''; editId=null; renderInventario(); setCrear('menu'); renderVenta(); }
-function editarProd(id){ let p=getProd().find(x=>String(x.id)==String(id)); if(!p) return; editId=p.id; if(p.esBase){ document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.remove('hidden'); document.getElementById('crear-producto').classList.add('hidden'); document.getElementById('nombre').value=p.nombre; document.getElementById('insumos').innerHTML=''; if(p.rendimiento){ document.getElementById('rendCant').value=p.rendimiento.cant||10; document.getElementById('rendUni').value=p.rendimiento.uni||'L'; } if(p.margen) document.getElementById('margen').value=p.margen; if(p.receta && p.receta.length){ p.receta.forEach(r=> addInsumo({invId:r.invId, cu:r.cu, uu:r.uu})); } else { addInsumo({}); } calc(); } else { document.getElementById('crear-menu').classList.add('hidden'); document.getElementById('crear-base').classList.add('hidden'); document.getElementById('crear-producto').classList.remove('hidden'); document.getElementById('nombreProd').value=p.nombre; renderProdCategoriaSelect(); document.getElementById('prodCategoria').value=p.categoria||'todas'; if(p.margen) document.getElementById('margen2').value=p.margen; document.getElementById('basesSel').innerHTML=''; if(p.receta && p.receta.length){ p.receta.forEach(r=> { let b=getProd().find(x=>String(x.id)==String(r.baseId)); addBase({baseId:r.baseId,cant:r.cant!==undefined?r.cant:(b?.rendimiento?.cant||1),uu:r.uu||b?.rendimiento?.uni||'pza'}); }); } else { addBase(); } if(p.foto){ fotoTemp=p.foto; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); } calc2(); } window.scrollTo(0,0); }
+function guardarProd(tipo){
+ let isBase=tipo=='recetario';
+ let nomEl=isBase?document.getElementById('nombre'):document.getElementById('nombreProd');
+ let nom=nomEl.value.trim();
+ if(!nom) return alert('Pon nombre');
+ let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0;
+ let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0;
+ let catId=isBase?'base':(document.getElementById('prodCategoria')?.value||'todas');
+ let ps=getProd();
+ let idx=editId?ps.findIndex(p=>String(p.id)==String(editId)):-1;
+ let existente=idx>=0?ps[idx]:null;
+ let receta=[];
+ if(isBase){
+   document.querySelectorAll('#insumos > div').forEach(row=>{
+     let invId=row.querySelector('.in-n')?.value;
+     let cu=row.querySelector('.in-cu')?.value;
+     let uu=row.querySelector('.in-uu')?.value;
+     if(invId && cu && parseFloat(cu)>0) receta.push({invId,cu:parseFloat(cu),uu});
+   });
+   // PROTECCIÓN: al editar una BASE nunca se reemplaza accidentalmente
+   // una receta existente por una receta vacía. Si por alguna razón el
+   // formulario no pudo reconstruir los ingredientes, conservamos los originales.
+   if(isBase && existente && existente.receta && existente.receta.length && !receta.length){
+     receta=existente.receta.map(r=>({
+       invId:r.invId!==undefined?r.invId:(r.inventarioId!==undefined?r.inventarioId:r.id),
+       cu:r.cu!==undefined?r.cu:(r.cantidad!==undefined?r.cantidad:r.uso),
+       uu:r.uu||r.unidad||'g'
+     })).filter(r=>r.invId && r.cu);
+   }
+ } else {
+   document.querySelectorAll('#basesSel > div').forEach(row=>{
+     let id=row.querySelector('.b-sel')?.value;
+     let cant=row.querySelector('.b-cant')?.value;
+     let uu=row.querySelector('.b-uu')?.value;
+     if(id && cant && parseFloat(cant)>0) receta.push({baseId:id,cant:parseFloat(cant),uu:normalizarUnidad(uu)});
+   });
+ }
+ let margen=parseFloat((isBase?document.getElementById('margen'):document.getElementById('margen2'))?.value)||50;
+ let rendCant=parseFloat(document.getElementById('rendCant')?.value)||1;
+ let rendUni=document.getElementById('rendUni')?.value||'L';
+ if(idx>=0){
+   // Conservamos todos los datos que no deben desaparecer al editar.
+   ps[idx].nombre=nom;
+   ps[idx].costo=costo;
+   ps[idx].venta=venta;
+   ps[idx].categoria=catId;
+   ps[idx].receta=receta;
+   ps[idx].margen=margen;
+   ps[idx].rendimiento={cant:rendCant,uni:rendUni};
+   ps[idx].esBase=isBase || ps[idx].esBase===true;
+   if(fotoTemp) ps[idx].foto=fotoTemp;
+ } else {
+   ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,categoria:catId,receta,margen,rendimiento:{cant:rendCant,uni:rendUni},esBase:isBase});
+ }
+ setItem('productosV2',ps);
+ alert('✅ Guardado: '+nom);
+ fotoTemp=''; editId=null; renderInventario(); setCrear('menu'); renderVenta();
+}
+function editarProd(id){
+ let p=getProd().find(x=>String(x.id)==String(id));
+ if(!p) return;
+ editId=p.id;
+ if(p.esBase){
+   document.getElementById('crear-menu').classList.add('hidden');
+   document.getElementById('crear-base').classList.remove('hidden');
+   document.getElementById('crear-producto').classList.add('hidden');
+   document.getElementById('nombre').value=p.nombre||'';
+   document.getElementById('insumos').innerHTML='';
+   document.getElementById('rendCant').value=p.rendimiento?.cant??10;
+   document.getElementById('rendUni').value=p.rendimiento?.uni||'L';
+   document.getElementById('margen').value=p.margen??50;
+   // Cargamos TODOS los ingredientes guardados antes de permitir guardar.
+   let recetaOriginal=Array.isArray(p.receta)?p.receta:[];
+   if(recetaOriginal.length){
+     recetaOriginal.forEach(r=>addInsumo({
+       invId:r.invId!==undefined?r.invId:(r.inventarioId!==undefined?r.inventarioId:r.id),
+       cu:r.cu!==undefined?r.cu:(r.cantidad!==undefined?r.cantidad:r.uso),
+       uu:r.uu||r.unidad||'g'
+     }));
+   } else {
+     addInsumo({});
+   }
+   calc();
+ } else {
+   document.getElementById('crear-menu').classList.add('hidden');
+   document.getElementById('crear-base').classList.add('hidden');
+   document.getElementById('crear-producto').classList.remove('hidden');
+   document.getElementById('nombreProd').value=p.nombre;
+   renderProdCategoriaSelect();
+   document.getElementById('prodCategoria').value=p.categoria||'todas';
+   if(p.margen!==undefined) document.getElementById('margen2').value=p.margen;
+   document.getElementById('basesSel').innerHTML='';
+   if(p.receta && p.receta.length){
+     p.receta.forEach(r=>{
+       let b=getProd().find(x=>String(x.id)==String(r.baseId));
+       addBase({baseId:r.baseId,cant:r.cant!==undefined?r.cant:(b?.rendimiento?.cant||1),uu:r.uu||b?.rendimiento?.uni||'pza'});
+     });
+   } else { addBase(); }
+   if(p.foto){ fotoTemp=p.foto; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); }
+   calc2();
+ }
+ window.scrollTo(0,0);
+}
 function borrarProd(id){ if(!confirm('¿Borrar esta receta?')) return; let ps=getProd().filter(x=>String(x.id)!=String(id)); setItem('productosV2',ps); renderInventario(); renderVenta(); }
 function renderInventario(){ let ps=getProd(); let el=document.getElementById('listaInv'); if(!el) return; if(!ps.length){ el.innerHTML='<p class="text-center text-gray-400 py-6 text-[12px]">Sin recetas aún.</p>'; return; } el.innerHTML=ps.map(p=>{ let catNombre=getCategoriasVenta().find(c=>c.id==p.categoria)?.nombre||p.categoria||'General'; if(p.categoria=='base') catNombre='BASE'; let tipoBadge=p.esBase? '<span class="bg-orange-100 text-orange-700 text-[8px] px-2 py-0.5 rounded-full font-black">BASE</span>' : `<span class="bg-blue-100 text-blue-700 text-[8px] px-2 py-0.5 rounded-full font-black">${catNombre}</span>`; return `<div class="bg-white p-3 rounded-2xl flex gap-3 shadow-sm mt-3 border-2 ${p.esBase?'border-orange-100':'border-gray-100'} items-center"><div class="flex-1"><div class="flex gap-1 items-center mb-1">${tipoBadge}</div><b class="text-[13px]">${p.nombre}</b><br><span class="text-[11px] font-bold">Costo $${p.costo.toFixed(2)} → Venta $${p.venta.toFixed(2)}</span></div><div class="flex flex-col gap-1"><button onclick="editarProd('${p.id}')" class="bg-blue-500 text-white w-8 h-8 rounded-full text-[12px]">✏️</button><button onclick="borrarProd('${p.id}')" class="bg-red-100 text-red-500 w-8 h-8 rounded-full font-black">X</button></div></div>`; }).join(''); }
 
