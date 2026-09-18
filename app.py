@@ -10,52 +10,77 @@ app = Flask(__name__)
 # Preferimos una carpeta persistente "data". Si ya existe información válida
 # en /tmp/data, la conservamos automáticamente para no perder cuentas/datos.
 _env_data = os.getenv('DATA_DIR','').strip()
-_candidates = []
+# Revisamos TODAS las ubicaciones posibles. La versión anterior escogía
+# una sola carpeta y podía dejar fuera la cuenta creada en una actualización.
+DATA_DIRS = []
 if _env_data:
-    _candidates.append(os.path.abspath(_env_data))
-_candidates += [
+    DATA_DIRS.append(os.path.abspath(_env_data))
+DATA_DIRS += [
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'),
     os.path.join(os.getcwd(), 'data'),
     '/data',
     '/tmp/data'
 ]
 
-def _users_count(path):
+# Únicas rutas, sin duplicados.
+DATA_DIRS = list(dict.fromkeys(DATA_DIRS))
+
+def _read_users(path):
     f = os.path.join(path, 'users.json')
     try:
-        with open(f, 'r', encoding='utf-8') as h:
-            d = json.load(h)
-        return len(d) if isinstance(d, dict) else 0
+        if os.path.exists(f):
+            with open(f, 'r', encoding='utf-8') as h:
+                d = json.load(h)
+                return d if isinstance(d, dict) else {}
     except:
-        return -1
+        pass
+    return {}
 
-# Si hay varias copias, usamos la que tenga más cuentas. Esto permite
-# recuperar la cuenta existente tras una actualización sin borrar datos.
-_existing = [p for p in _candidates if _users_count(p) >= 0]
-if _existing:
-    BASE_DATA = max(_existing, key=_users_count)
+# Carpeta principal para cuentas nuevas. Para cuentas existentes, _find_user()
+# puede localizar la copia correcta aunque esté en otra carpeta.
+_existing = [(p, _read_users(p)) for p in DATA_DIRS]
+with_users = [(p, u) for p, u in _existing if u]
+if with_users:
+    BASE_DATA = max(with_users, key=lambda x: len(x[1]))[0]
 else:
-    # Nunca crear de entrada la base de usuarios en /tmp.
-    BASE_DATA = _candidates[0]
+    BASE_DATA = DATA_DIRS[0] if DATA_DIRS else os.path.join(os.getcwd(), 'data')
+
+for _p in DATA_DIRS:
+    try:
+        os.makedirs(_p, exist_ok=True)
+    except:
+        pass
 
 os.makedirs(BASE_DATA, exist_ok=True)
 USERS_FILE = os.path.join(BASE_DATA, 'users.json')
 
 def load_users():
- try:
-  if os.path.exists(USERS_FILE):
-   with open(USERS_FILE,'r',encoding='utf-8') as f:
-    d = json.load(f)
-    return d if isinstance(d, dict) else {}
- except: pass
- return {}
+    # Conserva el comportamiento tradicional para el resto de la app,
+    # pero incorpora todas las cuentas encontradas en las carpetas disponibles.
+    merged = {}
+    for path in DATA_DIRS:
+        merged.update(_read_users(path))
+    return merged
+
+def _find_user(email):
+    email = (email or '').lower().strip()
+    # Primero buscamos en todas las carpetas, no solamente en BASE_DATA.
+    for path in DATA_DIRS:
+        users = _read_users(path)
+        if email in users:
+            return users[email], path, users
+    return None, None, {}
+
 def save_users(u):
- try:
-  with open(USERS_FILE,'w') as f: json.dump(u,f)
- except: pass
-def get_user_file(nid):
- safe=nid.replace("@","_at_").replace(".","_")
- return os.path.join(BASE_DATA, f"{safe}.json")
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(u, f)
+    except:
+        pass
+
+def get_user_file(nid, base_path=None):
+    safe=nid.replace("@","_at_").replace(".","_")
+    return os.path.join(base_path or BASE_DATA, f"{safe}.json")
 
 @app.route('/manifest.json')
 def manifest():
@@ -85,30 +110,56 @@ def api_register():
  users=load_users()
  if email in users: return jsonify({"ok":False,"msg":"Ya existe"}),400
  users[email]={"password":pwd,"negocio_id":email,"rol":"owner"}; save_users(users)
- with open(get_user_file(email),'w') as f: json.dump({},f)
+ with open(get_user_file(email, BASE_DATA),'w',encoding='utf-8') as f: json.dump({},f)
  return jsonify({"ok":True})
 @app.route('/api/login', methods=['POST'])
 def api_login():
  try:
   d=request.get_json(silent=True) or {}
   email=str(d.get('email','')).lower().strip()
-  # La contraseña se conserva exactamente como fue registrada.
-  # Solo eliminamos espacios si el campo llega vacío accidentalmente.
   pwd=d.get('password','')
   if pwd is None: pwd=''
-  users=load_users()
   if not email or not pwd:
    return jsonify({"ok":False,"msg":"Escribe correo y contraseña"}),400
-  if email not in users:
-   return jsonify({"ok":False,"msg":"No se encontró esa cuenta. Si ya tenías una cuenta, vuelve a publicar esta versión para recuperar los datos guardados."}),401
-  rec=users.get(email) or {}
-  if str(rec.get('password','')) != str(pwd):
+
+  rec, data_path, users = _find_user(email)
+  if rec is None:
+   return jsonify({
+    "ok":False,
+    "msg":"No se encontró la cuenta guardada en el servidor. Pulsa REGISTRARME solo si realmente quieres crear una cuenta nueva."
+   }),401
+
+  stored = rec.get('password','') if isinstance(rec,dict) else ''
+  if str(stored) != str(pwd):
    return jsonify({"ok":False,"msg":"Contraseña incorrecta"}),401
+
   negocio_id=rec.get('negocio_id') or email
   rol=rec.get('rol') or 'owner'
-  return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":rol})
+  # Guardamos una referencia a la carpeta correcta para esta sesión.
+  return jsonify({
+   "ok":True,
+   "email":email,
+   "negocio_id":negocio_id,
+   "rol":rol,
+   "data_path":data_path
+  })
  except Exception as e:
   return jsonify({"ok":False,"msg":"No se pudo iniciar sesión","detail":str(e)}),500
+
+@app.route('/api/login-check', methods=['POST'])
+def api_login_check():
+    d=request.get_json(silent=True) or {}
+    email=str(d.get('email','')).lower().strip()
+    rec, data_path, users = _find_user(email)
+    return jsonify({
+        "ok": True,
+        "account_found": bool(rec),
+        "message": "Cuenta encontrada; si la contraseña falla, el problema es la contraseña." if rec
+                   else "No se encontró la cuenta en las carpetas de datos disponibles.",
+        "data_folder_found": bool(data_path)
+    })
+
+
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
  d=request.json; owner=d.get('owner_email','').lower().strip(); owner_pwd=d.get('owner_password',''); colab=d.get('colab_email','').lower().strip(); colab_pwd=d.get('colab_password','') or '1234'
@@ -118,39 +169,46 @@ def api_invite():
  return jsonify({"ok":True})
 @app.route('/api/load', methods=['GET'])
 def api_load():
- email=request.args.get('email','').lower().strip(); users=load_users()
- if email not in users: return jsonify({"ok":False}),404
- data=json.load(open(get_user_file(users[email]['negocio_id']))) if os.path.exists(get_user_file(users[email]['negocio_id'])) else {}
+ email=request.args.get('email','').lower().strip()
+ rec, data_path, users = _find_user(email)
+ if not rec: return jsonify({"ok":False}),404
+ path=get_user_file(rec.get('negocio_id') or email, data_path)
+ try:
+  data=json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
+ except:
+  data={}
  return jsonify({"ok":True,"data":data})
 @app.route('/api/save', methods=['POST'])
 def api_save():
- d=request.json; email=d.get('email','').lower().strip(); data=d.get('data',{})
- users=load_users()
- if email not in users: return jsonify({"ok":False}),404
- with open(get_user_file(users[email]['negocio_id']),'w') as f: json.dump(data,f)
+ d=request.json or {}; email=str(d.get('email','')).lower().strip(); data=d.get('data',{})
+ rec, data_path, users = _find_user(email)
+ if not rec: return jsonify({"ok":False}),404
+ path=get_user_file(rec.get('negocio_id') or email, data_path)
+ with open(path,'w',encoding='utf-8') as f: json.dump(data,f)
  return jsonify({"ok":True})
 
 PLATFORM_FEE_PCT = 0.015
 
 
 def _current_user_record(email):
-    email=(email or '').lower().strip()
-    users=load_users()
-    if email not in users:
-        return None, users
-    return users[email], users
+    rec, data_path, users = _find_user(email)
+    return (rec, users) if rec else (None, users)
 
 def _load_account_data(email):
-    rec,_=_current_user_record(email)
+    rec, data_path, users = _find_user(email)
     if not rec: return None, None
-    path=get_user_file(rec['negocio_id'])
-    data=json.load(open(path)) if os.path.exists(path) else {}
+    path=get_user_file(rec.get('negocio_id') or email, data_path)
+    try:
+        data=json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
+    except:
+        data={}
     return rec,data
 
 def _save_account_data(email,data):
-    rec,_=_current_user_record(email)
+    rec, data_path, users = _find_user(email)
     if not rec: return False
-    with open(get_user_file(rec['negocio_id']),'w') as f: json.dump(data,f)
+    with open(get_user_file(rec.get('negocio_id') or email, data_path),'w',encoding='utf-8') as f:
+        json.dump(data,f)
     return True
 
 def _payment_amount(v):
