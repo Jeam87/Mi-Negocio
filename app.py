@@ -2,13 +2,51 @@ from flask import Flask, jsonify, send_file, request
 import os, json, secrets, urllib.parse, hmac, hashlib
 import requests
 app = Flask(__name__)
-BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
+# Almacenamiento persistente.
+# La versión anterior elegía /tmp/data simplemente porque /tmp existe.
+# En muchos servidores /tmp es temporal, por lo que después de los cambios
+# de pagos podía aparecer la pantalla de login pero no encontrar el usuario.
+#
+# Preferimos una carpeta persistente "data". Si ya existe información válida
+# en /tmp/data, la conservamos automáticamente para no perder cuentas/datos.
+_env_data = os.getenv('DATA_DIR','').strip()
+_candidates = []
+if _env_data:
+    _candidates.append(os.path.abspath(_env_data))
+_candidates += [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'),
+    os.path.join(os.getcwd(), 'data'),
+    '/data',
+    '/tmp/data'
+]
+
+def _users_count(path):
+    f = os.path.join(path, 'users.json')
+    try:
+        with open(f, 'r', encoding='utf-8') as h:
+            d = json.load(h)
+        return len(d) if isinstance(d, dict) else 0
+    except:
+        return -1
+
+# Si hay varias copias, usamos la que tenga más cuentas. Esto permite
+# recuperar la cuenta existente tras una actualización sin borrar datos.
+_existing = [p for p in _candidates if _users_count(p) >= 0]
+if _existing:
+    BASE_DATA = max(_existing, key=_users_count)
+else:
+    # Nunca crear de entrada la base de usuarios en /tmp.
+    BASE_DATA = _candidates[0]
+
 os.makedirs(BASE_DATA, exist_ok=True)
 USERS_FILE = os.path.join(BASE_DATA, 'users.json')
+
 def load_users():
  try:
   if os.path.exists(USERS_FILE):
-   with open(USERS_FILE,'r') as f: return json.load(f)
+   with open(USERS_FILE,'r',encoding='utf-8') as f:
+    d = json.load(f)
+    return d if isinstance(d, dict) else {}
  except: pass
  return {}
 def save_users(u):
@@ -51,10 +89,26 @@ def api_register():
  return jsonify({"ok":True})
 @app.route('/api/login', methods=['POST'])
 def api_login():
- d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
- users=load_users()
- if email not in users or users[email]['password']!=pwd: return jsonify({"ok":False,"msg":"Error"}),401
- return jsonify({"ok":True,"email":email,"negocio_id":users[email]['negocio_id'],"rol":users[email]['rol']})
+ try:
+  d=request.get_json(silent=True) or {}
+  email=str(d.get('email','')).lower().strip()
+  # La contraseña se conserva exactamente como fue registrada.
+  # Solo eliminamos espacios si el campo llega vacío accidentalmente.
+  pwd=d.get('password','')
+  if pwd is None: pwd=''
+  users=load_users()
+  if not email or not pwd:
+   return jsonify({"ok":False,"msg":"Escribe correo y contraseña"}),400
+  if email not in users:
+   return jsonify({"ok":False,"msg":"No se encontró esa cuenta. Si ya tenías una cuenta, vuelve a publicar esta versión para recuperar los datos guardados."}),401
+  rec=users.get(email) or {}
+  if str(rec.get('password','')) != str(pwd):
+   return jsonify({"ok":False,"msg":"Contraseña incorrecta"}),401
+  negocio_id=rec.get('negocio_id') or email
+  rol=rec.get('rol') or 'owner'
+  return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":rol})
+ except Exception as e:
+  return jsonify({"ok":False,"msg":"No se pudo iniciar sesión","detail":str(e)}),500
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
  d=request.json; owner=d.get('owner_email','').lower().strip(); owner_pwd=d.get('owner_password',''); colab=d.get('colab_email','').lower().strip(); colab_pwd=d.get('colab_password','') or '1234'
@@ -331,7 +385,26 @@ function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago'
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
 async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada',true);}
-async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}
+async function hacerLogin(){
+ try{
+  let e=document.getElementById('loginEmail').value.trim().toLowerCase();
+  let p=document.getElementById('loginPass').value;
+  if(!e||!p) return msgLogin('Pon correo y contraseña',false);
+  msgLogin('⏳ Comprobando acceso...',true);
+  let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
+  let j={}; try{j=await r.json();}catch(_){}
+  if(!r.ok || !j.ok) return msgLogin(j.msg||('Error de acceso ('+r.status+')'),false);
+  currentUser=e; negocioId=j.negocio_id||e;
+  localStorage.setItem('session_email',e);
+  localStorage.setItem('session_negocio',negocioId);
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('userLabel').innerText=e;
+  await cargarDeNube();
+  showTab('inventario');
+ }catch(err){
+  msgLogin('No se pudo conectar con el servidor. Intenta nuevamente.',false);
+ }
+}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora(); actualizarEstadoPagos();}
 async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
