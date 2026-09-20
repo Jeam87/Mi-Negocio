@@ -1,119 +1,22 @@
 from flask import Flask, jsonify, send_file, request
-import os, json, secrets, urllib.parse, hmac, hashlib
-import requests
+import os, json
 app = Flask(__name__)
-# Almacenamiento persistente.
-# La versión anterior elegía /tmp/data simplemente porque /tmp existe.
-# En muchos servidores /tmp es temporal, por lo que después de los cambios
-# de pagos podía aparecer la pantalla de login pero no encontrar el usuario.
-#
-# Preferimos una carpeta persistente "data". Si ya existe información válida
-# en /tmp/data, la conservamos automáticamente para no perder cuentas/datos.
-_env_data = os.getenv('DATA_DIR','').strip()
-# Revisamos TODAS las ubicaciones posibles. La versión anterior escogía
-# una sola carpeta y podía dejar fuera la cuenta creada en una actualización.
-DATA_DIRS = []
-if _env_data:
-    DATA_DIRS.append(os.path.abspath(_env_data))
-DATA_DIRS += [
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'),
-    os.path.join(os.getcwd(), 'data'),
-    '/data',
-    '/tmp/data'
-]
-
-# Únicas rutas, sin duplicados.
-DATA_DIRS = list(dict.fromkeys(DATA_DIRS))
-
-def _read_users(path):
-    f = os.path.join(path, 'users.json')
-    try:
-        if os.path.exists(f):
-            with open(f, 'r', encoding='utf-8') as h:
-                d = json.load(h)
-                return d if isinstance(d, dict) else {}
-    except:
-        pass
-    return {}
-
-# Carpeta principal para cuentas nuevas. Para cuentas existentes, _find_user()
-# puede localizar la copia correcta aunque esté en otra carpeta.
-_existing = [(p, _read_users(p)) for p in DATA_DIRS]
-with_users = [(p, u) for p, u in _existing if u]
-if with_users:
-    BASE_DATA = max(with_users, key=lambda x: len(x[1]))[0]
-else:
-    BASE_DATA = DATA_DIRS[0] if DATA_DIRS else os.path.join(os.getcwd(), 'data')
-
-for _p in DATA_DIRS:
-    try:
-        os.makedirs(_p, exist_ok=True)
-    except:
-        pass
-
+BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
 os.makedirs(BASE_DATA, exist_ok=True)
 USERS_FILE = os.path.join(BASE_DATA, 'users.json')
-
 def load_users():
-    # Conserva el comportamiento tradicional para el resto de la app,
-    # pero incorpora todas las cuentas encontradas en las carpetas disponibles.
-    merged = {}
-    for path in DATA_DIRS:
-        merged.update(_read_users(path))
-    return merged
-
-def _find_user(email):
-    email = (email or '').lower().strip()
-    # Primero buscamos en todas las carpetas, no solamente en BASE_DATA.
-    for path in DATA_DIRS:
-        users = _read_users(path)
-        if email in users:
-            return users[email], path, users
-    return None, None, {}
-
-def _recover_user_from_existing_data(email, password):
-    """Reconstruye users.json si los datos del negocio siguen existiendo."""
-    email=(email or '').lower().strip()
-    if not email or not password:
-        return None, None
-    safe=email.replace('@','_at_').replace('.','_')
-    filename=f"{safe}.json"
-    for path in DATA_DIRS:
-        candidate=os.path.join(path, filename)
-        if not os.path.exists(candidate):
-            continue
-        # El archivo de datos es la prueba de que la cuenta existía.
-        try:
-            with open(candidate,'r',encoding='utf-8') as h:
-                existing=json.load(h)
-            if not isinstance(existing,dict):
-                continue
-        except Exception:
-            continue
-        users=_read_users(path)
-        if email in users:
-            return users[email], path
-        rec={"password":password,"negocio_id":email,"rol":"owner"}
-        users[email]=rec
-        try:
-            os.makedirs(path,exist_ok=True)
-            with open(os.path.join(path,'users.json'),'w',encoding='utf-8') as h:
-                json.dump(users,h)
-            return rec, path
-        except Exception:
-            return None, None
-    return None, None
-
+ try:
+  if os.path.exists(USERS_FILE):
+   with open(USERS_FILE,'r') as f: return json.load(f)
+ except: pass
+ return {}
 def save_users(u):
-    try:
-        with open(USERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(u, f)
-    except:
-        pass
-
-def get_user_file(nid, base_path=None):
-    safe=nid.replace("@","_at_").replace(".","_")
-    return os.path.join(base_path or BASE_DATA, f"{safe}.json")
+ try:
+  with open(USERS_FILE,'w') as f: json.dump(u,f)
+ except: pass
+def get_user_file(nid):
+ safe=nid.replace("@","_at_").replace(".","_")
+ return os.path.join(BASE_DATA, f"{safe}.json")
 
 @app.route('/manifest.json')
 def manifest():
@@ -143,60 +46,14 @@ def api_register():
  users=load_users()
  if email in users: return jsonify({"ok":False,"msg":"Ya existe"}),400
  users[email]={"password":pwd,"negocio_id":email,"rol":"owner"}; save_users(users)
- with open(get_user_file(email, BASE_DATA),'w',encoding='utf-8') as f: json.dump({},f)
+ with open(get_user_file(email),'w') as f: json.dump({},f)
  return jsonify({"ok":True})
 @app.route('/api/login', methods=['POST'])
 def api_login():
- try:
-  d=request.get_json(silent=True) or {}
-  email=str(d.get('email','')).lower().strip()
-  pwd=d.get('password','')
-  if pwd is None: pwd=''
-  if not email or not pwd:
-   return jsonify({"ok":False,"msg":"Escribe correo y contraseña"}),400
-
-  rec, data_path, users = _find_user(email)
-  if rec is None:
-   # Si users.json se perdió pero el archivo del negocio sigue ahí,
-   # reconstruimos solamente el acceso y conservamos todos los datos.
-   rec, data_path = _recover_user_from_existing_data(email, pwd)
-   if rec is None:
-    return jsonify({
-     "ok":False,
-     "msg":"No se encontró la cuenta ni los datos guardados de ese correo. Revisa que sea el mismo correo con el que registraste el negocio."
-    }),401
-
-  stored = rec.get('password','') if isinstance(rec,dict) else ''
-  if str(stored) != str(pwd):
-   return jsonify({"ok":False,"msg":"Contraseña incorrecta"}),401
-
-  negocio_id=rec.get('negocio_id') or email
-  rol=rec.get('rol') or 'owner'
-  # Guardamos una referencia a la carpeta correcta para esta sesión.
-  return jsonify({
-   "ok":True,
-   "email":email,
-   "negocio_id":negocio_id,
-   "rol":rol,
-   "data_path":data_path
-  })
- except Exception as e:
-  return jsonify({"ok":False,"msg":"No se pudo iniciar sesión","detail":str(e)}),500
-
-@app.route('/api/login-check', methods=['POST'])
-def api_login_check():
-    d=request.get_json(silent=True) or {}
-    email=str(d.get('email','')).lower().strip()
-    rec, data_path, users = _find_user(email)
-    return jsonify({
-        "ok": True,
-        "account_found": bool(rec),
-        "message": "Cuenta encontrada; si la contraseña falla, el problema es la contraseña." if rec
-                   else "No se encontró la cuenta en las carpetas de datos disponibles.",
-        "data_folder_found": bool(data_path)
-    })
-
-
+ d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
+ users=load_users()
+ if email not in users or users[email]['password']!=pwd: return jsonify({"ok":False,"msg":"Error"}),401
+ return jsonify({"ok":True,"email":email,"negocio_id":users[email]['negocio_id'],"rol":users[email]['rol']})
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
  d=request.json; owner=d.get('owner_email','').lower().strip(); owner_pwd=d.get('owner_password',''); colab=d.get('colab_email','').lower().strip(); colab_pwd=d.get('colab_password','') or '1234'
@@ -206,219 +63,23 @@ def api_invite():
  return jsonify({"ok":True})
 @app.route('/api/load', methods=['GET'])
 def api_load():
- email=request.args.get('email','').lower().strip()
- rec, data_path, users = _find_user(email)
- if not rec: return jsonify({"ok":False}),404
- path=get_user_file(rec.get('negocio_id') or email, data_path)
- try:
-  data=json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
- except:
-  data={}
+ email=request.args.get('email','').lower().strip(); users=load_users()
+ if email not in users: return jsonify({"ok":False}),404
+ data=json.load(open(get_user_file(users[email]['negocio_id']))) if os.path.exists(get_user_file(users[email]['negocio_id'])) else {}
  return jsonify({"ok":True,"data":data})
 @app.route('/api/save', methods=['POST'])
 def api_save():
- d=request.json or {}; email=str(d.get('email','')).lower().strip(); data=d.get('data',{})
- rec, data_path, users = _find_user(email)
- if not rec: return jsonify({"ok":False}),404
- path=get_user_file(rec.get('negocio_id') or email, data_path)
- with open(path,'w',encoding='utf-8') as f: json.dump(data,f)
+ d=request.json; email=d.get('email','').lower().strip(); data=d.get('data',{})
+ users=load_users()
+ if email not in users: return jsonify({"ok":False}),404
+ with open(get_user_file(users[email]['negocio_id']),'w') as f: json.dump(data,f)
  return jsonify({"ok":True})
-
-PLATFORM_FEE_PCT = 0.015
-
-
-def _current_user_record(email):
-    rec, data_path, users = _find_user(email)
-    return (rec, users) if rec else (None, users)
-
-def _load_account_data(email):
-    rec, data_path, users = _find_user(email)
-    if not rec: return None, None
-    path=get_user_file(rec.get('negocio_id') or email, data_path)
-    try:
-        data=json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
-    except:
-        data={}
-    return rec,data
-
-def _save_account_data(email,data):
-    rec, data_path, users = _find_user(email)
-    if not rec: return False
-    with open(get_user_file(rec.get('negocio_id') or email, data_path),'w',encoding='utf-8') as f:
-        json.dump(data,f)
-    return True
-
-def _payment_amount(v):
-    try: return round(float(v),2)
-    except: return 0.0
-
-def _fee(v):
-    return round(_payment_amount(v)*PLATFORM_FEE_PCT,2)
-
-@app.route('/api/payments/config', methods=['GET'])
-def payments_config():
-    email=request.args.get('email','').lower().strip()
-    rec,data=_load_account_data(email)
-    if not rec: return jsonify({'ok':False,'msg':'Usuario no encontrado'}),404
-    cfg=(data or {}).get('paymentConfig') or {}
-    return jsonify({'ok':True,'stripeConnected':bool(cfg.get('stripe_account_id')),'mercadoPagoConnected':bool(cfg.get('mp_access_token')),'platformFeePct':PLATFORM_FEE_PCT*100})
-
-@app.route('/api/payments/stripe/onboard', methods=['POST'])
-def stripe_onboard():
-    d=request.json or {}; email=d.get('email','').lower().strip()
-    secret=os.getenv('STRIPE_PLATFORM_SECRET_KEY','').strip()
-    client_id=os.getenv('STRIPE_CONNECT_CLIENT_ID','').strip()
-    base=d.get('base_url','').rstrip('/')
-    if not secret: return jsonify({'ok':False,'msg':'Falta STRIPE_PLATFORM_SECRET_KEY en el servidor'}),400
-    if not base: return jsonify({'ok':False,'msg':'Falta base_url'}),400
-    rec,data=_load_account_data(email)
-    if not rec: return jsonify({'ok':False,'msg':'Usuario no encontrado'}),404
-    cfg=(data.get('paymentConfig') or {})
-    acct=cfg.get('stripe_account_id')
-    try:
-        if not acct:
-            r=requests.post('https://api.stripe.com/v1/accounts',auth=(secret,''),data={'type':'express','country':'MX','capabilities[card_payments][requested]':'true','capabilities[transfers][requested]':'true'},timeout=25)
-            if r.status_code>=400: return jsonify({'ok':False,'msg':'Stripe no pudo crear la cuenta','detail':r.text}),502
-            acct=r.json()['id']; cfg['stripe_account_id']=acct
-            data['paymentConfig']=cfg; _save_account_data(email,data)
-        r=requests.post('https://api.stripe.com/v1/account_links',auth=(secret,''),data={'account':acct,'refresh_url':base+'/','return_url':base+'/','type':'account_onboarding'},timeout=25)
-        if r.status_code>=400: return jsonify({'ok':False,'msg':'Stripe no pudo crear el enlace de conexión','detail':r.text}),502
-        return jsonify({'ok':True,'url':r.json().get('url'),'account_id':acct})
-    except Exception as e:
-        return jsonify({'ok':False,'msg':'Error conectando con Stripe','detail':str(e)}),502
-
-@app.route('/api/payments/stripe/checkout', methods=['POST'])
-def stripe_checkout():
-    d=request.json or {}; email=d.get('email','').lower().strip(); amount=_payment_amount(d.get('amount')); budget_id=str(d.get('budget_id',''))
-    secret=os.getenv('STRIPE_PLATFORM_SECRET_KEY','').strip(); base=d.get('base_url','').rstrip('/')
-    if not secret: return jsonify({'ok':False,'msg':'Stripe no está configurado en el servidor'}),400
-    rec,data=_load_account_data(email)
-    if not rec: return jsonify({'ok':False,'msg':'Usuario no encontrado'}),404
-    acct=(data.get('paymentConfig') or {}).get('stripe_account_id')
-    if not acct: return jsonify({'ok':False,'msg':'Primero conecta Stripe en Configuración'}),400
-    if amount<=0: return jsonify({'ok':False,'msg':'Monto inválido'}),400
-    fee=_fee(amount)
-    try:
-        payload=[('mode','payment'),('success_url',(base or '')+'/?pago=stripe_ok&budget='+urllib.parse.quote(budget_id)),('cancel_url',(base or '')+'/?pago=stripe_cancel&budget='+urllib.parse.quote(budget_id)),('line_items[0][price_data][currency]','mxn'),('line_items[0][price_data][product_data][name]',str(d.get('description') or 'Presupuesto')),('line_items[0][price_data][unit_amount]',str(int(round(amount*100)))),('line_items[0][quantity]','1'),('metadata[budget_id]',budget_id),('metadata[platform_fee]',f'{fee:.2f}'),('payment_intent_data[application_fee_amount]',str(int(round(fee*100)))),('payment_intent_data[transfer_data][destination]',acct)]
-        r=requests.post('https://api.stripe.com/v1/checkout/sessions',auth=(secret,''),data=payload,timeout=25)
-        if r.status_code>=400: return jsonify({'ok':False,'msg':'Stripe rechazó el pago','detail':r.text}),502
-        j=r.json(); return jsonify({'ok':True,'url':j.get('url'),'id':j.get('id'),'platform_fee':fee})
-    except Exception as e: return jsonify({'ok':False,'msg':'Error creando pago Stripe','detail':str(e)}),502
-
-@app.route('/api/payments/mp/connect', methods=['GET'])
-def mp_connect():
-    email=request.args.get('email','').lower().strip(); base=request.args.get('base_url','').rstrip('/')
-    app_id=os.getenv('MP_APP_ID','').strip()
-    if not app_id: return jsonify({'ok':False,'msg':'Falta MP_APP_ID en el servidor'}),400
-    if not base: return jsonify({'ok':False,'msg':'Falta base_url'}),400
-    rec,data=_load_account_data(email)
-    if not rec: return jsonify({'ok':False,'msg':'Usuario no encontrado'}),404
-    state=secrets.token_urlsafe(24)
-    cfg=data.get('paymentConfig') or {}; cfg['mp_oauth_state']=state; data['paymentConfig']=cfg; _save_account_data(email,data)
-    redirect=base+'/api/payments/mp/callback'
-    url='https://auth.mercadopago.com.mx/authorization?'+urllib.parse.urlencode({'client_id':app_id,'response_type':'code','platform_id':'mp','redirect_uri':redirect,'state':state,'email':email})
-    return jsonify({'ok':True,'url':url})
-
-@app.route('/api/payments/mp/callback', methods=['GET'])
-def mp_callback():
-    code=request.args.get('code',''); state=request.args.get('state','')
-    app_id=os.getenv('MP_APP_ID','').strip(); secret=os.getenv('MP_CLIENT_SECRET','').strip(); redirect=os.getenv('MP_REDIRECT_URI','').strip()
-    if not code or not state or not app_id or not secret or not redirect: return 'No fue posible completar la conexión con Mercado Pago.',400
-    users=load_users(); target=None; data=None
-    for email,rec in users.items():
-        path=get_user_file(rec['negocio_id'])
-        try: d=json.load(open(path)) if os.path.exists(path) else {}
-        except: d={}
-        if (d.get('paymentConfig') or {}).get('mp_oauth_state')==state:
-            target=email; data=d; break
-    if not target: return 'Estado OAuth inválido o expirado.',400
-    try:
-        r=requests.post('https://api.mercadopago.com/oauth/token',data={'client_id':app_id,'client_secret':secret,'grant_type':'authorization_code','code':code,'redirect_uri':redirect,'state':state},timeout=25)
-        if r.status_code>=400: return 'Mercado Pago rechazó la autorización: '+r.text,502
-        j=r.json(); cfg=data.get('paymentConfig') or {}; cfg.update({'mp_access_token':j.get('access_token'),'mp_refresh_token':j.get('refresh_token'),'mp_public_key':j.get('public_key'),'mp_user_id':j.get('user_id'),'mp_oauth_state':''}); data['paymentConfig']=cfg; _save_account_data(target,data)
-        return '<script>window.close();document.body.innerHTML="<h2>Mercado Pago conectado. Puedes cerrar esta ventana.</h2>";</script>'
-    except Exception as e: return 'Error conectando con Mercado Pago: '+str(e),502
-
-@app.route('/api/payments/mp/checkout', methods=['POST'])
-def mp_checkout():
-    d=request.json or {}; email=d.get('email','').lower().strip(); amount=_payment_amount(d.get('amount')); budget_id=str(d.get('budget_id','')); base=d.get('base_url','').rstrip('/')
-    rec,data=_load_account_data(email)
-    if not rec: return jsonify({'ok':False,'msg':'Usuario no encontrado'}),404
-    token=(data.get('paymentConfig') or {}).get('mp_access_token')
-    if not token: return jsonify({'ok':False,'msg':'Primero conecta Mercado Pago en Configuración'}),400
-    if amount<=0: return jsonify({'ok':False,'msg':'Monto inválido'}),400
-    fee=_fee(amount)
-    try:
-        pref={'items':[{'title':str(d.get('description') or 'Presupuesto'),'quantity':1,'unit_price':amount,'currency_id':'MXN'}],'marketplace_fee':fee,'external_reference':budget_id,'back_urls':{'success':(base or '')+'/?pago=mp_ok&budget='+urllib.parse.quote(budget_id),'failure':(base or '')+'/?pago=mp_fail&budget='+urllib.parse.quote(budget_id),'pending':(base or '')+'/?pago=mp_pending&budget='+urllib.parse.quote(budget_id)},'auto_return':'approved','notification_url':(base or '')+'/api/payments/mp/webhook'}
-        r=requests.post('https://api.mercadopago.com/checkout/preferences',headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},json=pref,timeout=25)
-        if r.status_code>=400: return jsonify({'ok':False,'msg':'Mercado Pago rechazó el presupuesto','detail':r.text}),502
-        j=r.json(); return jsonify({'ok':True,'url':j.get('init_point'),'id':j.get('id'),'platform_fee':fee})
-    except Exception as e: return jsonify({'ok':False,'msg':'Error creando pago Mercado Pago','detail':str(e)}),502
-
-
-def _mark_budget_paid_globally(budget_id, provider, transaction_id, amount=None):
-    if not budget_id: return False
-    users=load_users(); changed=False
-    for email,rec in users.items():
-        path=get_user_file(rec['negocio_id'])
-        if not os.path.exists(path): continue
-        try: data=json.load(open(path))
-        except: continue
-        ps=data.get('presupuestos') or []
-        for bp in ps:
-            if str(bp.get('id'))==str(budget_id) and bp.get('status','pendiente')=='pendiente':
-                bp['status']='pagado'; bp['pagadoEn']=getattr(__import__('datetime'),'datetime').now().isoformat(timespec='seconds'); bp['metodoPago']='Stripe' if provider=='stripe' else 'Mercado Pago'; bp['paymentProvider']=provider; bp['transactionId']=str(transaction_id or '');
-                if amount is not None: bp['paidAmount']=amount
-                data['presupuestos']=ps
-                with open(path,'w') as f: json.dump(data,f)
-                changed=True
-                break
-    return changed
-
-@app.route('/api/payments/stripe/webhook', methods=['POST'])
-def stripe_webhook():
-    secret=os.getenv('STRIPE_WEBHOOK_SECRET','').strip(); sig=request.headers.get('Stripe-Signature','')
-    raw=request.get_data()
-    if secret:
-        try:
-            parts={x.split('=',1)[0]:x.split('=',1)[1] for x in sig.split(',') if '=' in x}; ts=parts.get('t',''); v1=parts.get('v1','')
-            signed=ts+'.'+raw.decode('utf-8'); expected=hmac.new(secret.encode(),signed.encode(),hashlib.sha256).hexdigest()
-            if not ts or not v1 or not hmac.compare_digest(expected,v1): return jsonify({'ok':False}),400
-        except Exception: return jsonify({'ok':False}),400
-    try:
-        event=request.get_json(force=True)
-        if event.get('type')=='checkout.session.completed':
-            obj=event.get('data',{}).get('object',{}); md=obj.get('metadata') or {}; _mark_budget_paid_globally(md.get('budget_id'),'stripe',obj.get('payment_intent'),(obj.get('amount_total') or 0)/100)
-        return jsonify({'received':True})
-    except Exception as e: return jsonify({'ok':False,'detail':str(e)}),400
-
-@app.route('/api/payments/mp/webhook', methods=['POST','GET'])
-def mp_webhook():
-    payment_id=request.args.get('data.id') or request.args.get('id')
-    if request.method=='POST':
-        d=request.get_json(silent=True) or {}; payment_id=payment_id or str((d.get('data') or {}).get('id') or '')
-    if not payment_id: return jsonify({'ok':True})
-    users=load_users()
-    for email,rec in users.items():
-        path=get_user_file(rec['negocio_id'])
-        if not os.path.exists(path): continue
-        try: data=json.load(open(path)); cfg=data.get('paymentConfig') or {}; token=cfg.get('mp_access_token')
-        except: continue
-        if not token: continue
-        try:
-            r=requests.get('https://api.mercadopago.com/v1/payments/'+urllib.parse.quote(str(payment_id)),headers={'Authorization':'Bearer '+token},timeout=20)
-            if r.status_code>=400: continue
-            j=r.json(); ext=j.get('external_reference')
-            if ext and j.get('status')=='approved': _mark_budget_paid_globally(ext,'mp',payment_id,j.get('transaction_amount')); return jsonify({'ok':True})
-        except: pass
-    return jsonify({'ok':True})
-
 @app.route('/')
 @app.route('/api')
 @app.route('/api/')
 def home():
  return """<!DOCTYPE html><html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi Negocio 11.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>input,select,textarea{color:#000!important;background:#fff!important}button,.button-like{transition:transform .08s ease,filter .08s ease}button:active,.button-like:active{transform:scale(.96);filter:brightness(.82)}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:650px;height:650px;pointer-events:none;z-index:0;opacity:0.18;object-fit:contain;}#appContent{position:relative;z-index:1;}#splashInicio{position:fixed;inset:0;background:white;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}#splashInicio img{width:85vw;max-width:380px;height:auto;animation:pop 0.8s ease}@keyframes pop{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}</style></head><body class="bg-[#FFF8F0] min-h-screen"><div id="splashInicio"><img src="/logo.png" onerror="this.src='/api/logo.png'"><p style="margin-top:20px;font-weight:900;font-size:22px">Mi Negocio 11.5</p><p style="font-size:12px;color:#888">Cargando...</p></div><script>setTimeout(()=>{let s=document.getElementById('splashInicio'); if(s) s.style.display='none'},1800)</script><div class="max-w-md mx-auto pb-[140px] relative"><img id="logoBg" class="logo-watermark hidden"><div id="appContent">
-<div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6"><h1 class="font-black text-[24px]">Mi Negocio 11.5</h1><p class="text-[11px] text-gray-500">Logo grande + proveedores completos</p><div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6"><input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]"><input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3"><button onclick="hacerLogin()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">ENTRAR</button><button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button><button onclick="recuperarAcceso()" class="w-full mt-2 bg-yellow-100 border-2 border-yellow-500 py-3 rounded-2xl font-bold text-[12px]">🔑 RECUPERAR MI ACCESO</button><p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
+<div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6"><h1 class="font-black text-[24px]">Mi Negocio 11.5</h1><p class="text-[11px] text-gray-500">Logo grande + proveedores completos</p><div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6"><input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]"><input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3"><button onclick="hacerLogin()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">ENTRAR</button><button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button><p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
 <div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-3"><img id="logoHeader" class="w-20 h-20 rounded-full object-cover border-[4px] border-black hidden shadow-xl" onerror="this.src='/api/logo.png'"><div><h1 class="font-black text-[16px]">Mi Negocio 11.5</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-2 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
 
 <div id="tab-vender" class="p-3 hidden">
@@ -444,7 +105,7 @@ def home():
 <div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-[20px] p-4"><p class="font-black text-[13px]">📸 Logo - se verá grande arriba</p><input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]"><div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-28 h-28 object-contain rounded-xl border-2 border-black bg-white"><button onclick="quitarLogo()" class="text-[10px] bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold">X</button></div><div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarLogo" checked> Logo en ticket</label><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarFondo" checked> Fondo grande app</label></div><div class="mt-3"><p class="text-[11px] font-bold">Tamaño y opacidad fondo</p><input type="range" id="empOpacidad" min="2" max="30" value="18" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"><span id="opacidadVal" class="text-[10px]">18%</span></div></div>
 <div class="mt-4 bg-gray-50 border-2 rounded-[20px] p-4"><p class="font-black text-[12px]">🏪 Datos del negocio</p><input id="empNombre" placeholder="Mi s receta" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="C.P." class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="¡Gracias por tu compra! 😊" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea></div>
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-2"><input id="colabEmail" type="email" placeholder="colab@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
-<div class="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-4"><p class="font-black text-[13px]">💳 Pagos en línea</p><p class="text-[10px] text-gray-600 mt-1">Comisión de la plataforma: 1.5% por pago. Las comisiones del procesador son adicionales y dependen del proveedor.</p><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="conectarStripe()" class="bg-[#635BFF] text-white py-3 rounded-xl font-black text-[11px]">🔗 Conectar Stripe</button><button onclick="conectarMercadoPago()" class="bg-[#009EE3] text-white py-3 rounded-xl font-black text-[11px]">🔗 Conectar Mercado Pago</button></div><p id="estadoPagos" class="text-[10px] mt-2 font-bold"></p></div><button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button>
+<button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button>
 <div id="ticketVista" class="mt-6 border-2 border-dashed border-black p-3 rounded-xl bg-yellow-50"><p class="text-[11px] font-black text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-4 rounded-xl text-[12px] font-mono shadow-sm border"></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div>
 </div></div>
 
@@ -480,44 +141,9 @@ function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago'
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
 async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada',true);}
-async function hacerLogin(){
- try{
-  let e=document.getElementById('loginEmail').value.trim().toLowerCase();
-  let p=document.getElementById('loginPass').value;
-  if(!e||!p) return msgLogin('Pon correo y contraseña',false);
-  msgLogin('⏳ Comprobando acceso...',true);
-  let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
-  let j={}; try{j=await r.json();}catch(_){}
-  if(!r.ok || !j.ok) return msgLogin(j.msg||('Error de acceso ('+r.status+')'),false);
-  currentUser=e; negocioId=j.negocio_id||e;
-  localStorage.setItem('session_email',e);
-  localStorage.setItem('session_negocio',negocioId);
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('userLabel').innerText=e;
-  await cargarDeNube();
-  showTab('inventario');
- }catch(err){
-  msgLogin('No se pudo conectar con el servidor. Intenta nuevamente.',false);
- }
-}
-async function recuperarAcceso(){
- try{
-  let e=document.getElementById('loginEmail').value.trim().toLowerCase();
-  let p=document.getElementById('loginPass').value;
-  if(!e||!p) return msgLogin('Escribe tu correo y contraseña para recuperar el acceso.',false);
-  msgLogin('⏳ Reparando el acceso y buscando tus datos...',true);
-  let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
-  let j={}; try{j=await r.json();}catch(_){}
-  if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudieron recuperar los datos.',false);
-  currentUser=e; negocioId=j.negocio_id||e;
-  localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId);
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('userLabel').innerText=e;
-  await cargarDeNube(); showTab('inventario');
- }catch(err){ msgLogin('No se pudo recuperar el acceso. Intenta nuevamente.',false); }
-}
+async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora(); actualizarEstadoPagos();}
+async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
 async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
@@ -632,23 +258,6 @@ function guardarPresupuestoWhatsApp(){
  else if(navigator.share) navigator.share({text:texto}).catch(()=>{});
  else alert('✅ Presupuesto guardado. No se envió porque no hay WhatsApp.');
 }
-async function actualizarEstadoPagos(){
- try{let r=await fetch('/api/payments/config?email='+encodeURIComponent(currentUser));let j=await r.json();let el=document.getElementById('estadoPagos');if(el) el.innerText=j.ok?`Stripe: ${j.stripeConnected?'✅ conectado':'❌ no conectado'} · Mercado Pago: ${j.mercadoPagoConnected?'✅ conectado':'❌ no conectado'} · Plataforma: ${j.platformFeePct}%`:'';}catch(e){}
-}
-async function conectarStripe(){
- let base=location.origin; let r=await fetch('/api/payments/stripe/onboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,base_url:base})}); let j=await r.json(); if(!j.ok) return alert(j.msg+(j.detail?'\n'+j.detail:'')); window.open(j.url,'_blank'); setTimeout(actualizarEstadoPagos,1500);
-}
-async function conectarMercadoPago(){
- let r=await fetch('/api/payments/mp/connect?email='+encodeURIComponent(currentUser)+'&base_url='+encodeURIComponent(location.origin)); let j=await r.json(); if(!j.ok) return alert(j.msg); window.open(j.url,'_blank');
-}
-async function crearPagoEnLinea(id,provider){
- let p=getPresupuestos().find(x=>String(x.id)==String(id)); if(!p || p.status!='pendiente') return;
- let endpoint=provider=='stripe'?'/api/payments/stripe/checkout':'/api/payments/mp/checkout';
- let r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,amount:p.total,budget_id:p.id,description:'Presupuesto '+(p.cliente||'Sin nombre'),base_url:location.origin})}); let j=await r.json(); if(!j.ok) return alert(j.msg+(j.detail?'\n'+j.detail:''));
- p.paymentProvider=provider; p.paymentLink=j.url; p.platformFee=j.platform_fee; p.paymentCreatedAt=getFechaLocal(); let ps=getPresupuestos(); let ix=ps.findIndex(x=>String(x.id)==String(id)); if(ix>=0) ps[ix]=p; setItem('presupuestos',ps); renderPresupuestos();
- let tel=(p.telefono||'').replace(/\D/g,''); if(tel.length==10) tel='52'+tel; let texto=`${generarTextoPresupuesto(p)}\n\n💳 Paga en línea: ${j.url}`; if(tel) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); else if(navigator.share) navigator.share({text:texto}).catch(()=>{}); else window.open(j.url,'_blank');
-}
-
 function getPresupuestos(){
  return JSON.parse(localStorage.getItem('presupuestos_'+negocioId)||localStorage.getItem('presupuestos')||'[]');
 }
@@ -665,7 +274,7 @@ function renderPresupuestos(){
        ? '<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-[9px] font-black">PAGADO</span>'
        : '<span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-[9px] font-black">CANCELADO</span>';
    let botones=estado=='pendiente'
-     ? `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="cobrarPresupuesto('${p.id}')" class="bg-black text-white py-2 rounded-xl text-[10px] font-black">💰 COBRAR</button><button onclick="cancelarPresupuesto('${p.id}')" class="bg-red-100 text-red-600 py-2 rounded-xl text-[10px] font-black">✕ CANCELAR</button></div><div class="grid grid-cols-2 gap-2 mt-2"><button onclick="crearPagoEnLinea('${p.id}','stripe')" class="bg-[#635BFF] text-white py-2 rounded-xl text-[10px] font-black">💳 Stripe</button><button onclick="crearPagoEnLinea('${p.id}','mp')" class="bg-[#009EE3] text-white py-2 rounded-xl text-[10px] font-black">💳 Mercado Pago</button></div>`
+     ? `<div class="grid grid-cols-2 gap-2 mt-2"><button onclick="cobrarPresupuesto('${p.id}')" class="bg-black text-white py-2 rounded-xl text-[10px] font-black">💰 COBRAR</button><button onclick="cancelarPresupuesto('${p.id}')" class="bg-red-100 text-red-600 py-2 rounded-xl text-[10px] font-black">✕ CANCELAR</button></div>`
      : estado=='cancelado'
        ? `<button onclick="borrarPresupuestoCancelado('${p.id}')" class="w-full mt-2 bg-red-500 text-white py-2 rounded-xl text-[10px] font-black">❌ BORRAR PRESUPUESTO</button>`
        : '';
