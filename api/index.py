@@ -469,21 +469,26 @@ function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hid
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
 function confirmarCobro(tipo){
   if(tipo === 'Tarjeta'){
-    let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.qty||p.cant||1), 0);
+    let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
     let comision = (total * 0.015).toFixed(2);
-    alert('Vas a cobrar $'+total+' con Tarjeta\nTu ganancia del 1.5% es: $'+comision+'\n\nAhora te mando a Stripe (modo prueba)');
-    
-    // MODO PRUEBA - por ahora solo abre Stripe
-    let urlPrueba = 'https://checkout.stripe.com/c/pay/cs_test_b1f6d4a5e6f7g8h9';
-    window.open(urlPrueba, '_blank');
+    alert('Vas a cobrar $'+total+' con Tarjeta - Tu ganancia 1.5% es: $'+comision);
+    window.open('https://checkout.stripe.com/pay/cs_test_a1b2c3d4', '_blank');
     return;
   }
   let facts=getFacts();
   let ps=getPresupuestos();
   let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
-  if(bp){ bp.status='pagado'; bp.pagadoEn=fechaStr; presupuestoCobroId=null;
+  if(bp){ 
+    bp.status='pagado'; 
+    bp.pagadoEn=new Date().toLocaleDateString(); 
+    presupuestoCobroId=null; 
   }
-ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }
+  ultimoTicket={fechaStr:new Date().toLocaleDateString(),items:[...carrito],total:carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1),0)};
+  carrito=[];
+  renderCarrito();
+  cerrarCobro();
+  alert('Cobro '+tipo+' guardado');
+}
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
