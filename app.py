@@ -468,7 +468,6 @@ function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getE
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
 function confirmarCobro(tipo){
-function confirmarCobro(tipo){
   if(tipo === 'Tarjeta'){
     let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
     let comision = (total * 0.015).toFixed(2);
