@@ -472,7 +472,7 @@ function confirmarCobro(tipo){
     let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
     let comision = (total * 0.015).toFixed(2);
     alert('Total: $'+total+' - Tu ganancia 1.5% = $'+comision);
-    window.location.href = 'https://buy.stripe.com/test_00g3fT8d9g9g1234567';
+    windows.open( 'https://buy.stripe.com/tes_14k4gDg1g1g1g1g1g1', '_blank');
     return;
   }
   let facts=getFacts();
