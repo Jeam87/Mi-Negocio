@@ -472,7 +472,9 @@ function confirmarCobro(tipo){
     let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
     let comision = (total * 0.015).toFixed(2);
     alert('Vas a cobrar $'+total+' con Tarjeta - Tu ganancia 1.5% es: $'+comision);
-    window.open('https://checkout.stripe.com/pay/cs_test_a1b2c3d4', '_blank');
+    alert('Vas a cobrar $'+total+' con Tarjeta\nTu comisión 1.5% = $'+comision+'\n\nTe voy a mandar al pago de Stripe (PRUEBA)');
+    let linkStripePrueba = 'https://buy.stripe.com/test_14k4gDg1g1g1g1g1g1'; // luego lo cambiamos por el tuyo
+    window.location.href = linkStripePrueba;
     return;
   }
   let facts=getFacts();
