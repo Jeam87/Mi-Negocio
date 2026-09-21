@@ -468,29 +468,25 @@ function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getE
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
 function confirmarCobro(tipo){
+function confirmarCobro(tipo){
   if(tipo === 'Tarjeta'){
     let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
     let comision = (total * 0.015).toFixed(2);
-    alert('Vas a cobrar $'+total+' con Tarjeta - Tu ganancia 1.5% es: $'+comision);
-    alert('Vas a cobrar $'+total+' con Tarjeta\nTu comisión 1.5% = $'+comision+'\n\nTe voy a mandar al pago de Stripe (PRUEBA)');
-    let linkStripePrueba = 'https://buy.stripe.com/test_14k4gDg1g1g1g1g1g1'; // luego lo cambiamos por el tuyo
-    window.location.href = linkStripePrueba;
+    alert('Total a cobrar: $'+total+'\nTu comisión 1.5% = $'+comision+'\n\nTe mando a Stripe en modo prueba');
+    window.location.href = 'https://buy.stripe.com/test_00g3fT8d9g9g1234567';
     return;
   }
   let facts=getFacts();
   let ps=getPresupuestos();
   let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
-  if(bp){ 
-    bp.status='pagado'; 
-    bp.pagadoEn=new Date().toLocaleDateString(); 
-    presupuestoCobroId=null; 
-  }
+  if(bp){ bp.status='pagado'; bp.pagadoEn=new Date().toLocaleDateString(); presupuestoCobroId=null; }
   ultimoTicket={fechaStr:new Date().toLocaleDateString(),items:[...carrito],total:carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1),0)};
   carrito=[];
   renderCarrito();
   cerrarCobro();
   alert('Cobro '+tipo+' guardado');
 }
+
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
