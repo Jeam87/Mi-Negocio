@@ -467,22 +467,13 @@ function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket')
 function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getElementById('cobroHora').innerText=getFechaLocal(); setMetodoPago('Efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); actualizarClienteTicket(); }
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
-function confirmarCobro(tipo){
-  if(tipo === 'Tarjeta'){
-    let total = carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1), 0);
-    let comision = (total * 0.015).toFixed(2);
-    alert('Total: $'+total+' - Tu ganancia 1.5% = $'+comision);
-    windows.open( 'https://buy.stripe.com/tes_14k4gDg1g1g1g1g1g1', '_blank');
-    return;
-  }
-  let facts=getFacts();
-  let ps=getPresupuestos();
-  let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
-  if(bp){ bp.status='pagado'; bp.pagadoEn=new Date().toLocaleDateString(); presupuestoCobroId=null; }
-  ultimoTicket={fechaStr:new Date().toLocaleDateString(),items:[...carrito],total:carrito.reduce((s,p)=> s + (p.precio||0)*(p.cant||p.qty||1),0)};
-  carrito=[]; renderCarrito(); cerrarCobro();
-  alert('Cobro '+tipo+' guardado');
+function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
+ let ps=getPresupuestos();
+ let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
+ if(bp){ bp.status='pagado'; bp.pagadoEn=fechaStr; bp.metodoPago=metodo; bp.facturaId=facts.length?facts[facts.length-1]?.id:null; setItem('presupuestos',ps); }
+ presupuestoCobroId=null;
 }
+ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser, metodoPago:metodo}; generarTicket(ultimoTicket); cerrarCobro(); carrito=[]; document.getElementById('descPorc').value=0; document.getElementById('descMotivo').value=''; renderCarrito(); renderCalendario(); renderClientes(); if(tipo=='print') imprimirTicket(); if(tipo=='whatsapp') enviarWhatsAppTicket(false); }
 function setGastoTipo(t){ gastoTipoSel=t; document.getElementById('g-tipo').value=t; document.getElementById('g-btn-salida').className= t=='salida'? 'border-2 border-black p-3 rounded-xl font-black bg-red-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-btn-entrada').className= t=='entrada'? 'border-2 border-black p-3 rounded-xl font-black bg-green-500 text-white':'border-2 border-black p-3 rounded-xl font-bold bg-white'; document.getElementById('g-box-salida').classList.toggle('hidden', t!='salida'); }
 function openGasto(){ renderProveedores(); document.getElementById('modalGasto').classList.remove('hidden'); }
 function cerrarGasto(){ document.getElementById('modalGasto').classList.add('hidden'); }
