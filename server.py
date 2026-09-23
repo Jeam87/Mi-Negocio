@@ -44,18 +44,16 @@ def create_product():
     account_id = data['accountId']
 
     try:
-        # Create the product on the connected account
         product = stripe.Product.create(
             name=product_name,
             description=product_description,
             stripe_account=account_id
         )
 
-        # Create a price for the product on the connected account
         price = stripe.Price.create(
             product=product.id,
             unit_amount=product_price,
-            currency='usd',
+            currency='mxn', # Cambiado a MXN para México
             stripe_account=account_id
         )
 
@@ -76,22 +74,22 @@ def create_connect_account():
         account = stripe_client.v2.core.accounts.create({
             "display_name": data.get("email"),
             "contact_email": data.get("email"),
-            # Set to "full" for the Stripe Dashboard or "express" for the Express Dashboard
-            "dashboard": "full",
+            "dashboard": "express", # Express = tu modelo de 1.5%
             "defaults": {
                 "responsibilities": {
-                    "fees_collector": "stripe",
+                    "fees_collector": "stripe", # Ellas pagan la comisión de Stripe
                     "losses_collector": "stripe",
                 }
             },
             "identity": {
-                "country": "US",
-                "entity_type": "company",
+                "country": "MX", # México
+                "entity_type": "individual", # Autónomo
             },
             "configuration": {
                 "merchant": {
                     "capabilities": {
                         "card_payments": {"requested": True},
+                        "oxxo_payments": {"requested": True},
                     }
                 },
             },
@@ -112,10 +110,9 @@ def create_account_link():
             "use_case": {
                 "type": "account_onboarding",
                 "account_onboarding": {
-                    "configurations": ["merchant"
-],
-                    "refresh_url": "https://example.com",
-                    "return_url": f"https://example.com?accountId={account_id}",
+                    "configurations": ["merchant"],
+                    "refresh_url": f"{os.getenv('DOMAIN')}",
+                    "return_url": f"{os.getenv('DOMAIN')}?accountId={account_id}",
                 },
             },
         })
@@ -201,13 +198,15 @@ def create_checkout_session():
     account_id = data['accountId']
     price_id = data['priceId']
 
-    # Get the price's type from Stripe
+    # Obtener el precio para calcular tu 1.5% automático
     price = stripe.Price.retrieve(
         price_id,
         stripe_account=account_id
     )
-    price_type = price.type
-    mode = 'subscription' if price_type == 'recurring' else 'payment'
+    
+    # Calculo de tu comisión
+    amount = price.unit_amount
+    fee_amount = int(amount * 0.015) # 1.5%
 
     checkout_session = stripe.checkout.Session.create(
       line_items=[
@@ -216,32 +215,23 @@ def create_checkout_session():
           'quantity': 1
         }
       ],
-      mode=mode,
+      mode='payment',
       payment_intent_data={
-          'application_fee_amount': 150, # AQUI TU 1.5% - si el producto es de $100 pesos
+          "application_fee_amount": fee_amount, # TU GANANCIA VA AQUÍ
       },
       success_url=f"{os.getenv('DOMAIN')}/done?session_id={{CHECKOUT_SESSION_ID}}",
       cancel_url=f"{os.getenv('DOMAIN')}",
       stripe_account=account_id
-        )
+    )
 
     response = make_response(redirect(checkout_session.url, code=303))
-
     return response
-
-
 
 @app.route('/api/webhook', methods=['POST'])
 def webhook_received():
-    # Replace this endpoint secret with your endpoint's unique secret
-    # If you are testing with the CLI, find the secret by running 'stripe listen'
-    # If you are using an endpoint defined with the API or dashboard, look in your webhook settings
-    # at https://dashboard.stripe.com/webhooks
     endpoint_secret = ''
     request_data = json.loads(request.data)
 
-    # Only verify the event if you have an endpoint secret defined.
-    # Otherwise use the basic event deserialized with JSON.parse
     if endpoint_secret:
         sig_header = request.headers.get('stripe-signature')
         try:
@@ -254,33 +244,22 @@ def webhook_received():
     else:
         event = request_data
 
-    # Handle the event
     match event['type']:
         case 'checkout.session.completed':
             session = event['data']['object']
             status = session['status']
             app.logger.info(f'Checkout Session status is {status}.')
-            # Then define and call a method to handle the checkout session completed.
-            # handle_checkout_session_completed(session);
         case 'checkout.session.async_payment_failed':
             session = event['data']['object']
             status = session['status']
             app.logger.info(f'Checkout Session status is {status}.')
-            # Then define and call a method to handle the checkout session failed.
-            # handle_checkout_session_failed(session);
         case _:
-            # Unexpected event type
             app.logger.info(f'Unhandled event type {event["type"]}')
 
-    # Return a 200 response to acknowledge receipt of the event
     return jsonify({'status': 'success'})
 
 @app.route('/api/thin-webhook', methods=['POST'])
 def thin_webhook():
-    # Replace this endpoint secret with your endpoint's unique secret
-    # If you are testing with the CLI, find the secret by running 'stripe listen'
-    # If you are using an endpoint defined with the API or dashboard, look in your webhook settings
-    # at https://dashboard.stripe.com/webhooks
     thin_endpoint_secret = ''
     payload = request.data
     sig_header = request.headers.get('Stripe-Signature')
@@ -301,6 +280,5 @@ def thin_webhook():
 
     return jsonify({'status': 'success'})
 
-
 if __name__ == '__main__':
-    app.run(port=4242, host="::1", debug=True)
+    app.run(port=4242, host="::1", debug=True) 
