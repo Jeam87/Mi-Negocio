@@ -18,24 +18,31 @@ def get_user_file(nid):
  safe=nid.replace("@","_at_").replace(".","_")
  return os.path.join(BASE_DATA, f"{safe}.json")
 
-@app.route('/api/registro', methods=['POST'])
-def registro():
-    d = request.get_json()
-    users = load_users()
-    email = d.get('email','').lower().strip()
-    if not email: return {"ok": False}
-    users[email] = {"pass": d.get('pass')}
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    d=request.get_json(silent=True) or {}
+    email=(d.get('email','') or '').lower().strip()
+    pwd=d.get('password') or d.get('pass') or ''
+    if not email or not pwd:
+        return jsonify({"ok":False,"msg":"Falta correo o pass"}),400
+    users=load_users()
+    if email in users:
+        return jsonify({"ok":False,"msg":"Ya existe"}),400
+    users[email]={"password":pwd,"negocio_id":email,"rol":"owner"}
     save_users(users)
-    return {"ok": True}
+    try:
+        with open(get_user_file(email),'w') as f: json.dump({},f)
+    except: pass
+    return jsonify({"ok":True})
 
 @app.route('/api/recuperar', methods=['POST'])
 def recuperar():
-    d = request.get_json()
-    email = d.get('email','').lower().strip()
-    users = load_users()
-    u = users.get(email)
-    if not u: return {"ok": False, "msg": "No existe"}
-    return {"ok": True, "pass": u['pass']}
+    d=request.get_json(silent=True) or {}
+    email=(d.get('email','') or '').lower().strip()
+    users=load_users()
+    u=users.get(email)
+    if not u: return jsonify({"ok": False, "msg": "No existe"}),404
+    return jsonify({"ok": True, "pass": u.get('password')})
 
 @app.route('/api/crear-link-cobro', methods=['POST'])
 def crear_link_cobro():
