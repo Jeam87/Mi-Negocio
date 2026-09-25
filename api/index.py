@@ -18,6 +18,34 @@ def get_user_file(nid):
  safe=nid.replace("@","_at_").replace(".","_")
  return os.path.join(BASE_DATA, f"{safe}.json")
 
+@app.route('/api/registro', methods=['POST'])
+def registro():
+    d = request.get_json()
+    users = load_users()
+    email = d.get('email','').lower().strip()
+    if not email: return {"ok": False}
+    users[email] = {"pass": d.get('pass')}
+    save_users(users)
+    return {"ok": True}
+
+@app.route('/api/recuperar', methods=['POST'])
+def recuperar():
+    d = request.get_json()
+    email = d.get('email','').lower().strip()
+    users = load_users()
+    u = users.get(email)
+    if not u: return {"ok": False, "msg": "No existe"}
+    return {"ok": True, "pass": u['pass']}
+
+@app.route('/api/crear-link-cobro', methods=['POST'])
+def crear_link_cobro():
+    import stripe, os
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    data = request.get_json()
+    monto = int(float(data.get('monto',0))*100)
+    link = stripe.PaymentLink.create(line_items=[{"price_data":{"currency":"mxn","product_data":{"name":data.get('concepto','Botes Jacona')},"unit_amount":monto},"quantity":1}])
+    return {"url": link.url}
+ 
 @app.route('/manifest.json')
 def manifest():
  return jsonify({"name":"Mi Negocio 11.5","short_name":"Mi Negocio","start_url":"/","display":"standalone","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png"},{"src":"/api/logo.png","sizes":"512x512","type":"image/png"}]})
