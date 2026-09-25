@@ -44,8 +44,8 @@ def crear_link_cobro():
     data = request.get_json()
     monto = int(float(data.get('monto',0))*100)
     link = stripe.PaymentLink.create(line_items=[{"price_data":{"currency":"mxn","product_data":{"name":data.get('concepto','Botes Jacona')},"unit_amount":monto},"quantity":1}])
-    return {"url": link.url}
- 
+    return jsonify({"url": link.url})
+
 @app.route('/manifest.json')
 def manifest():
  return jsonify({"name":"Mi Negocio 11.5","short_name":"Mi Negocio","start_url":"/","display":"standalone","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png"},{"src":"/api/logo.png","sizes":"512x512","type":"image/png"}]})
