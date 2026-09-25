@@ -18,31 +18,24 @@ def get_user_file(nid):
  safe=nid.replace("@","_at_").replace(".","_")
  return os.path.join(BASE_DATA, f"{safe}.json")
 
-@app.route('/api/register', methods=['POST'])
-def api_register():
-    d=request.get_json(silent=True) or {}
-    email=(d.get('email','') or '').lower().strip()
-    pwd=d.get('password') or d.get('pass') or ''
-    if not email or not pwd:
-        return jsonify({"ok":False,"msg":"Falta correo o pass"}),400
-    users=load_users()
-    if email in users:
-        return jsonify({"ok":False,"msg":"Ya existe"}),400
-    users[email]={"password":pwd,"negocio_id":email,"rol":"owner"}
+@app.route('/api/registro', methods=['POST'])
+def registro():
+    d = request.get_json()
+    users = load_users()
+    email = d.get('email','').lower().strip()
+    if not email: return {"ok": False}
+    users[email] = {"pass": d.get('pass')}
     save_users(users)
-    try:
-        with open(get_user_file(email),'w') as f: json.dump({},f)
-    except: pass
-    return jsonify({"ok":True})
+    return {"ok": True}
 
 @app.route('/api/recuperar', methods=['POST'])
 def recuperar():
-    d=request.get_json(silent=True) or {}
-    email=(d.get('email','') or '').lower().strip()
-    users=load_users()
-    u=users.get(email)
-    if not u: return jsonify({"ok": False, "msg": "No existe"}),404
-    return jsonify({"ok": True, "pass": u.get('password')})
+    d = request.get_json()
+    email = d.get('email','').lower().strip()
+    users = load_users()
+    u = users.get(email)
+    if not u: return {"ok": False, "msg": "No existe"}
+    return {"ok": True, "pass": u['pass']}
 
 @app.route('/api/crear-link-cobro', methods=['POST'])
 def crear_link_cobro():
@@ -141,10 +134,7 @@ def home():
 <div class="mt-4 bg-gray-50 border-2 rounded-[20px] p-4"><p class="font-black text-[12px]">🏪 Datos del negocio</p><input id="empNombre" placeholder="Mi s receta" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold"><input id="empDireccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="empCP" placeholder="C.P." class="border-2 border-black p-3 rounded-xl text-[13px]"><input id="empTel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[13px]"></div><input id="empRFC" placeholder="RFC" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[13px]"><textarea id="empMensaje" placeholder="¡Gracias por tu compra! 😊" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="2"></textarea></div>
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-2"><input id="colabEmail" type="email" placeholder="colab@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
 <button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button>
-<div id="ticketVista" class="mt-6 border-2 border-dashed border-black p-3 rounded-xl bg-yellow-50"><p class="text-[11px] font-black text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-4 rounded-xl text-[12px] font-mono shadow-sm border"></div><div class="grid grid-cols-2 gap-2 mt-3">
-<button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button>
-<button onclick="generarLinkCobro()" style="width:100%;background:#635bff;color:white;padding:14px;border-radius:12px;margin-top:10px;font-weight:bold;border:none">💳 Cobrar con Tarjeta</button>
-<button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div>
+<div id="ticketVista" class="mt-6 border-2 border-dashed border-black p-3 rounded-xl bg-yellow-50"><p class="text-[11px] font-black text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-4 rounded-xl text-[12px] font-mono shadow-sm border"></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div>
 </div></div>
 
 <div id="tab-clientes" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[28px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">👥 Clientes</h2><span class="text-[10px] bg-red-500 px-2 py-1 rounded-full font-black" id="totalDeudaGlobal">$0 por cobrar</span></div><div id="topDeudores" class="mt-3 bg-white/10 rounded-xl p-2 text-[11px]"></div><button onclick="abrirClienteNuevo()" class="w-full mt-3 bg-white text-black py-3 rounded-xl font-black text-[12px]">➕ NUEVO CLIENTE</button></div><div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaClientes" class="space-y-3"></div></div></div>
@@ -376,28 +366,7 @@ function imprimirTicket(){
     w.document.close();
   }
 }
-function generarLinkCobro(){
-  let monto = prompt("¿Cuánto vas a cobrar? Ej: 800");
-  if(!monto) return;
-  let concepto = prompt("¿Concepto? Ej: 2 Botes") || "Botes Jacona";
-  fetch('/api/crear-link-cobro',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({monto: monto, concepto: concepto})
-  }).then(r=>r.json()).then(d=>{
-    if(d.url){
-      let msg = `Aquí tu link de pago por $${monto} - ${concepto}: ${d.url}`;
-      if(confirm(msg + "\n\n¿Mandarlo por WhatsApp?")){
-        window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-      }
-    } else {
-      alert('Error: revisa tu llave STRIPE_SECRET_KEY en Vercel');
-    }
-  });
-}
-
-function enviarWhatsAppTicket(esPrueba){
-
+function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
 function sincronizarProveedorInventario(invItem, proveedorNuevoId, proveedorAnteriorId){ let provs=getProveedores(); provs.forEach(p=>{ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; p.inventarioIds=p.inventarioIds.filter(x=>String(x)!=String(invItem.id)); }); if(proveedorNuevoId){ let p=provs.find(x=>String(x.id)==String(proveedorNuevoId)); if(p){ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; if(!p.inventarioIds.some(x=>String(x)==String(invItem.id))) p.inventarioIds.push(invItem.id); } } setItem('proveedores',provs); renderProveedores(); }
