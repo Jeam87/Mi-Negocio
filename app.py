@@ -366,7 +366,28 @@ function imprimirTicket(){
     w.document.close();
   }
 }
-function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
+function generarLinkCobro(){
+  let monto = prompt("¿Cuánto vas a cobrar? Ej: 800");
+  if(!monto) return;
+  let concepto = prompt("¿Concepto? Ej: 2 Botes") || "Botes Jacona";
+  fetch('/api/crear-link-cobro',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({monto: monto, concepto: concepto})
+  }).then(r=>r.json()).then(d=>{
+    if(d.url){
+      let msg = `Aquí tu link de pago por $${monto} - ${concepto}: ${d.url}`;
+      if(confirm(msg + "\n\n¿Mandarlo por WhatsApp?")){
+        window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+      }
+    } else {
+      alert('Error: revisa tu llave STRIPE_SECRET_KEY en Vercel');
+    }
+  });
+}
+
+function enviarWhatsAppTicket(esPrueba){
+
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
 
 function sincronizarProveedorInventario(invItem, proveedorNuevoId, proveedorAnteriorId){ let provs=getProveedores(); provs.forEach(p=>{ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; p.inventarioIds=p.inventarioIds.filter(x=>String(x)!=String(invItem.id)); }); if(proveedorNuevoId){ let p=provs.find(x=>String(x.id)==String(proveedorNuevoId)); if(p){ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; if(!p.inventarioIds.some(x=>String(x)==String(invItem.id))) p.inventarioIds.push(invItem.id); } } setItem('proveedores',provs); renderProveedores(); }
