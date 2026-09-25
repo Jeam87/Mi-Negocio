@@ -366,7 +366,6 @@ function imprimirTicket(){
     w.document.close();
   }
 }
-
 function generarLinkCobro(){
   let monto = prompt("¿Cuánto vas a cobrar? Ej: 800");
   if(!monto) return;
