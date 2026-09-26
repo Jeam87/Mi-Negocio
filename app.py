@@ -495,6 +495,7 @@ window.open('https://wa.me/?text='+encodeURIComponent('Aquí está tu link de pa
   b.innerText='✅ Link Generado';
  }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
 }
+function crearLinkCobroStripe_duplicado_para_que_no_falle(){}
 function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
  let ps=getPresupuestos();
  let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
