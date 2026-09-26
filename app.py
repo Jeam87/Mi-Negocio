@@ -479,6 +479,21 @@ function renderCarrito(){ if(!carrito.length){ document.getElementById('ticket')
 function abrirCobro(){ if(!carrito.length) return alert('Vacío'); document.getElementById('cobroHora').innerText=getFechaLocal(); setMetodoPago('Efectivo'); document.getElementById('modalCobro').classList.remove('hidden'); actualizarClienteTicket(); }
 function cerrarCobro(){ document.getElementById('modalCobro').classList.add('hidden'); }
 function calcCambio(){ let tot=parseFloat(document.getElementById('c-total').innerText)||0; let rec=parseFloat(document.getElementById('pagoRecibido').value)||0; document.getElementById('cambio').innerText=(rec-tot>0?rec-tot:0).toFixed(2); }
+async function crearLinkCobroStripe(){
+ let total=parseFloat(document.getElementById('c-total')?.innerText)||0;
+ if(!total) return alert('Carrito vacio');
+ let sel=document.getElementById('selCliente');
+ let nom=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||'Mostrador':'Mostrador';
+ let b=document.getElementById('btnStripeLink');
+ b.innerText='⏳ Generando link...';
+ try{
+  let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom})});
+  let j=await r.json(); if(!j.ok) throw j;
+  prompt('COPIA ESTE LINK AMARILLO Y MANDASELO AL CLIENTE POR WHATS:', j.url);
+  b.innerText='✅ Link Generado';
+ }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
+}
+function crearLinkCobroStripe_duplicado_para_que_no_falle(){}
 function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
  let ps=getPresupuestos();
  let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
