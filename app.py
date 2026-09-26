@@ -487,10 +487,11 @@ async function crearLinkCobroStripe(){
  let b=document.getElementById('btnStripeLink');
  b.innerText='⏳ Generando link...';
  try{
-  let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom})});
   let j=await r.json(); if(!j.ok) throw j;
-  prompt('COPIA ESTE LINK AMARILLO Y MANDASELO AL CLIENTE POR WHATS:', j.url);
-  b.innerText='✅ Link Generado';
+try{ await navigator.clipboard.writeText(j.url); }catch(e){}
+alert('✅ Link copiado: '+j.url);
+window.open('https://wa.me/?text='+encodeURIComponent('Aqui esta tu link de pago: '+j.url),'_blank');
+b.innerText='✅ Link Generado';
  }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
 }
 function crearLinkCobroStripe_duplicado_para_que_no_falle(){}
