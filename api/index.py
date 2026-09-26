@@ -18,34 +18,6 @@ def get_user_file(nid):
  safe=nid.replace("@","_at_").replace(".","_")
  return os.path.join(BASE_DATA, f"{safe}.json")
 
-@app.route('/api/registro', methods=['POST'])
-def registro():
-    d = request.get_json()
-    users = load_users()
-    email = d.get('email','').lower().strip()
-    if not email: return {"ok": False}
-    users[email] = {"pass": d.get('pass')}
-    save_users(users)
-    return {"ok": True}
-
-@app.route('/api/recuperar', methods=['POST'])
-def recuperar():
-    d = request.get_json()
-    email = d.get('email','').lower().strip()
-    users = load_users()
-    u = users.get(email)
-    if not u: return {"ok": False, "msg": "No existe"}
-    return {"ok": True, "pass": u['pass']}
-
-@app.route('/api/crear-link-cobro', methods=['POST'])
-def crear_link_cobro():
-    import stripe, os
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-    data = request.get_json()
-    monto = int(float(data.get('monto',0))*100)
-    link = stripe.PaymentLink.create(line_items=[{"price_data":{"currency":"mxn","product_data":{"name":data.get('concepto','Botes Jacona')},"unit_amount":monto},"quantity":1}])
-    return jsonify({"url": link.url})
-
 @app.route('/manifest.json')
 def manifest():
  return jsonify({"name":"Mi Negocio 11.5","short_name":"Mi Negocio","start_url":"/","display":"standalone","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png"},{"src":"/api/logo.png","sizes":"512x512","type":"image/png"}]})
@@ -147,7 +119,8 @@ def home():
 <div id="tab-inventario" class="p-3 hidden">
 <div class="bg-[#2D3748] rounded-[28px] p-4 text-white mb-3"><h2 class="font-black">📦 Inventario</h2></div>
 <div class="bg-white rounded-[20px] p-4">
-<div class="grid
+<div class="grid grid-cols-7 gap-1"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-2 rounded-xl font-bold text-[12px]"><input id="inv-precio" type="number" placeholder="$30" class="col-span-1 border-2 border-black p-2 rounded-xl font-black text-[12px]"><input id="inv-stock" type="text" placeholder="500 g" class="col-span-2 border-2 border-black p-2 rounded-xl font-black text-[12px] bg-yellow-50"><select id="inv-unidad" class="col-span-1 border-2 border-black p-2 rounded-xl text-[10px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>m</option><option>cm</option><option>mm</option><option>yd</option><option>ft</option><option>in</option><option>pza</option></select><button onclick="addInventario()" class="col-span-1 bg-black text-white rounded-xl font-black">+</button></div><div class="mt-2"><label class="text-[10px] font-black">🏭 Proveedor donde se compra</label><select id="inv-proveedor" class="w-full border-2 border-black p-2 rounded-xl mt-1 text-[11px] font-bold"><option value="">Sin proveedor</option></select></div>
+<div class="mt-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-2"><div class="flex items-center gap-2"><span class="text-[14px]">🔍</span><input id="buscInv" placeholder="Buscar producto..." class="flex-1 bg-transparent border-none outline-none font-bold text-[13px] p-2" oninput="renderInventarioMaster()"><button onclick="document.getElementById('buscInv').value=''; renderInventarioMaster();" class="bg-white border-2 border-black px-3 py-1 rounded-full text-[10px] font-black">X</button></div></div>
 <div id="listaInvMaster" class="mt-4"></div></div></div>
 
 <div id="tab-finanzas" class="p-3 hidden"><div class="bg-[#2D3748] rounded-[24px] p-4 text-white"><div class="flex justify-between items-center"><h2 class="font-black">📅 Finanzas</h2><div class="flex gap-2"><button onclick="openGasto()" class="bg-[#4FD1C5] text-black px-3 h-10 rounded-xl font-black text-[11px]">+ MOV</button><button onclick="abrirCierre()" class="bg-yellow-400 text-black px-3 h-10 rounded-xl font-black text-[11px]">📦 CIERRE</button></div></div><div id="topProductos" class="mt-3 bg-white/10 rounded-xl p-2 text-[11px]"></div><div class="grid grid-cols-3 gap-2 mt-3"><div class="bg-white/10 rounded-xl p-2 text-center"><p class="text-[9px] opacity-60">BALANCE</p><p class="font-black text-[14px]" id="fin-balance">$0</p></div><div class="bg-green-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">ENTRADAS</p><p class="font-black text-[14px] text-green-300" id="fin-entradas">$0</p></div><div class="bg-red-500/20 rounded-xl p-2 text-center"><p class="text-[9px]">SALIDAS</p><p class="font-black text-[14px] text-red-300" id="fin-salidas">$0</p></div></div><div class="mt-3 grid grid-cols-4 gap-2"><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💵 EFEC</p><p class="font-black text-[12px] text-green-300" id="fin-efectivo">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">💳 TARJ</p><p class="font-black text-[12px] text-blue-300" id="fin-tarjeta">$0</p></div><div class="bg-white/10 rounded-xl p-2 text-center border border-white/20"><p class="text-[8px]">🏦 TRANS</p><p class="font-black text-[12px] text-yellow-300" id="fin-transf">$0</p></div><div class="bg-red-500/20 rounded-xl p-2 text-center border border-red-300"><p class="text-[8px]">📒 FIADO</p><p class="font-black text-[12px] text-red-300" id="fin-fiado">$0</p></div></div><div class="flex gap-2 mt-3"><button onclick="exportarExcel()" class="flex-1 bg-white text-black py-2 rounded-xl font-black text-[11px]">📊 Exportar Excel</button></div></div><div class="mt-3 bg-white rounded-[24px] p-4 shadow-sm"><div class="flex justify-between items-center"><button onclick="moverCal(-1)" class="w-9 h-9 bg-gray-100 rounded-full font-black"><</button><h3 id="calTitulo" class="font-black text-[14px]"></h3><button onclick="moverCal(1)" class="w-9 h-9 bg-gray-100 rounded-full font-black">></button></div><div id="calGrid" class="mt-4"></div></div><div id="desgloseDia" class="mt-3 bg-white rounded-[24px] p-4 shadow-sm border-2 border-black"><h3 class="font-black text-[13px]">Desglose <span id="fechaSelLabel"></span></h3><div id="flu-lista" class="mt-4 space-y-2"></div></div></div>
@@ -270,7 +243,7 @@ function guardarPresupuestoWhatsApp(){
  if(!carrito.length) return alert('Agrega productos al presupuesto');
  let sub=carrito.reduce((s,x)=>s+x.venta*x.qty,0);
  let desc=parseFloat(document.getElementById('descPorc').value)||0;
- let
+ let total=sub*(1-desc/100);
  let sel=document.getElementById('selCliente');
  let clienteNombre=sel? (sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text||'Sin nombre'):'Sin nombre';
  let tel=sel?.options[sel.selectedIndex]?.getAttribute('data-whatsapp')||sel?.options[sel.selectedIndex]?.getAttribute('data-tel')||'';
