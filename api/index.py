@@ -40,6 +40,18 @@ def logo_file():
   except: pass
  return "",204
 
+@app.route('/api/crear-link-cobro', methods=['POST'])
+def crear_link_cobro():
+    try:
+        import stripe
+        stripe.api_key = os.environ.get("STRIPE_SECRET_KEY","").strip()
+        d=request.get_json(silent=True) or {}
+        monto=int(float(d.get('monto',0))*100)
+        link=stripe.PaymentLink.create(line_items=[{"price_data":{"currency":"mxn","product_data":{"name":d.get('concepto','Cobro')},"unit_amount":monto},"quantity":1}])
+        return jsonify({"ok":True,"url":link.url})
+    except Exception as e:
+        return jsonify({"ok":False,"msg":str(e)}),500
+
 @app.route('/api/register', methods=['POST'])
 def api_register():
  d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
