@@ -485,14 +485,19 @@ async function crearLinkCobroStripe(){
  let sel=document.getElementById('selCliente');
  let nom=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||'Mostrador':'Mostrador';
  let b=document.getElementById('btnStripeLink');
+ if(!b) return;
  b.innerText='⏳ Generando link...';
  try{
+  let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom})});
   let j=await r.json(); if(!j.ok) throw j;
-try{ await navigator.clipboard.writeText(j.url); }catch(e){}
-alert('✅ Link copiado: '+j.url);
-window.open('https://wa.me/?text='+encodeURIComponent('Aqui esta tu link de pago: '+j.url),'_blank');
-b.innerText='✅ Link Generado';
- }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
+  try{ await navigator.clipboard.writeText(j.url); }catch(e){}
+  alert('✅ Link copiado: '+j.url);
+  window.open('https://wa.me/?text='+encodeURIComponent('Aqui esta tu link de pago: '+j.url),'_blank');
+  b.innerText='✅ Link Generado';
+ }catch(e){
+  alert('Error: '+(e.msg||e.message||'No se pudo'));
+  b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE';
+ }
 }
 function crearLinkCobroStripe_duplicado_para_que_no_falle(){}
 function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
