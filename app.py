@@ -489,9 +489,7 @@ async function crearLinkCobroStripe(){
  try{
   let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom})});
   let j=await r.json(); if(!j.ok) throw j;
-  navigator.clipboard.writeText(j.url);
-alert('✅ Link copiado: '+j.url+'\n\nYa pegalo en WhatsApp');
-window.open('https://wa.me/?text='+encodeURIComponent('Aquí está tu link de pago: '+j.url), '_blank');
+  prompt('COPIA ESTE LINK AMARILLO Y MANDASELO AL CLIENTE POR WHATS:', j.url);
   b.innerText='✅ Link Generado';
  }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
 }
