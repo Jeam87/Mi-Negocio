@@ -128,7 +128,7 @@ def home():
 <div class="mt-3 bg-white rounded-[20px] p-4"><div id="listaProveedores" class="space-y-3"></div></div>
 </div>
 
-<div id="tab-inventario" class="p-3 hidden">
+<div id="tab-inventario" class="p-3 hidden">hola 
 <div class="bg-[#2D3748] rounded-[28px] p-4 text-white mb-3"><h2 class="font-black">📦 Inventario</h2></div>
 <div class="bg-white rounded-[20px] p-4">
 <div class="grid grid-cols-7 gap-1"><input id="inv-nombre" placeholder="Papas" class="col-span-2 border-2 border-black p-2 rounded-xl font-bold text-[12px]"><input id="inv-precio" type="number" placeholder="$30" class="col-span-1 border-2 border-black p-2 rounded-xl font-black text-[12px]"><input id="inv-stock" type="text" placeholder="500 g" class="col-span-2 border-2 border-black p-2 rounded-xl font-black text-[12px] bg-yellow-50"><select id="inv-unidad" class="col-span-1 border-2 border-black p-2 rounded-xl text-[10px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>m</option><option>cm</option><option>mm</option><option>yd</option><option>ft</option><option>in</option><option>pza</option></select><button onclick="addInventario()" class="col-span-1 bg-black text-white rounded-xl font-black">+</button></div><div class="mt-2"><label class="text-[10px] font-black">🏭 Proveedor donde se compra</label><select id="inv-proveedor" class="w-full border-2 border-black p-2 rounded-xl mt-1 text-[11px] font-bold"><option value="">Sin proveedor</option></select></div>
@@ -495,6 +495,7 @@ window.open('https://wa.me/?text='+encodeURIComponent('Aquí está tu link de pa
   b.innerText='✅ Link Generado';
  }catch(e){ alert('Error: '+(e.msg||e.message)); b.innerText='💳 COBRAR CON TARJETA - ENVIAR LINK STRIPE'; }
 }
+function crearLinkCobroStripe_duplicado_para_que_no_falle(){}
 function confirmarCobro(tipo){ let facts=getFacts(); let deudas=getDeudas(); let fechaStr=getFechaLocal(); let fechaSolo=getFechaSoloLocal(); let total=parseFloat(document.getElementById('c-total').innerText)||0; let sel=document.getElementById('selCliente'); let clienteNombre=sel? sel.options[sel.selectedIndex]?.getAttribute('data-nombre')||sel.options[sel.selectedIndex]?.text : 'Mostrador'; let clienteId=sel? sel.value : ''; if((metodoPagoSel=='Fiado'||metodoPagoSel=='Apartado') &&!clienteId){ alert('Selecciona cliente'); return; } let metodo=metodoPagoSel; if(metodo=='Fiado' || metodo=='Apartado'){ deudas.push({id:Date.now(),clienteId,clienteNombre,concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),total,restante:total,tipo:metodo,fecha:fechaSolo,fechaHora:fechaStr}); setItem('deudas',deudas); } else { facts.push({id:Date.now(),concepto:'Venta: '+carrito.map(c=>c.nombre+' x'+c.qty).join(', '),monto:total,fecha:fechaSolo,fechaHora:fechaStr,tipo:'entrada',vendedor:currentUser||'dueño',metodoPago:metodo,clienteNombre}); setItem('facturas',facts); } if(presupuestoCobroId){
  let ps=getPresupuestos();
  let bp=ps.find(x=>String(x.id)==String(presupuestoCobroId));
