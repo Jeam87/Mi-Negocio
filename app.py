@@ -155,22 +155,11 @@ def crear_link_cobro():
             return jsonify({'ok':False,'msg':'Conecta primero tu cuenta de Stripe en Configuración.'}),400
         monto=int(round(float(d.get('monto',0))*100))
         if monto<=0: return jsonify({'ok':False,'msg':'Monto inválido.'}),400
-comision = int(round(monto * 0.015)) # 1.5%
-if comision < 50:
-    comision = 50
-
-session = stripe.checkout.Session.create(
-    line_items=[{"price_data":{"currency":"mxn","product_data":{"name":d.get('concepto','Cobro')},"unit_amount":monto},"quantity":1}],
-    mode="payment",
-    payment_intent_data={
-        "application_fee_amount": comision
-    },
-    success_url = d.get('success_url', 'https://momentosmagicos.com.mx/success'),
-    cancel_url = d.get('cancel_url', 'https://momentosmagicos.com.mx/cancel'),
-    stripe_account=acct
-)
-return jsonify({"ok":True,"url":session.url}) 
- 
+        link=stripe.PaymentLink.create(
+            line_items=[{"price_data":{"currency":"mxn","product_data":{"name":d.get('concepto','Cobro')},"unit_amount":monto},"quantity":1}],
+            stripe_account=acct
+        )
+        return jsonify({"ok":True,"url":link.url})
     except Exception as e:
         return jsonify({"ok":False,"msg":str(e)}),500
 
