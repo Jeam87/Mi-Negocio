@@ -153,7 +153,8 @@ def crear_link_cobro():
         acct=owner.get('stripe_account_id') if owner else ''
         if not acct:
             return jsonify({'ok':False,'msg':'Conecta primero tu cuenta de Stripe en Configuración.'}),400
-     monto=int(round(float(d.get('monto',0))*100))
+    
+ monto=int(round(float(d.get('monto',0))*100))
     if monto<=0: return jsonify({'ok':False,'msg':'Monto inválido.'}),400
 
     comision = int(round(monto * 0.015))
