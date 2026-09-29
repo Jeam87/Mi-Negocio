@@ -6,12 +6,20 @@ export async function POST(req) {
   
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
-    line_items: [{ price_data: { currency: 'mxn', product_data: { name: concepto }, unit_amount: monto * 100 }, quantity: 1 }],
+    line_items: [{ 
+      price_data: { 
+        currency: 'mxn', 
+        product_data: { name: concepto }, 
+        unit_amount: Math.round(monto * 100) 
+      }, 
+      quantity: 1 
+    }],
     payment_intent_data: {
-      application_fee_amount: Math.round(monto * 100 * 0.015), // tu 1.5%
+      application_fee_amount: Math.max(50, Math.round(monto * 100 * 0.015)), // tu 1.5% mínimo $0.50
       transfer_data: { destination: cuenta_conectada_id }
     },
-    success_url: 'https://mi-negocio-mauve.vercel.app/exito',
+    success_url: 'https://mi-negocio-mauve.vercel.app/exito?session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: 'https://mi-negocio-mauve.vercel.app/cancelar',
   })
   return Response.json({ url: session.url })
 }
