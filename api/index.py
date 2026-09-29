@@ -746,7 +746,5 @@ setInterval(guardarNubeAuto, 15000);
 window.addEventListener('beforeunload', guardarNubeAuto);
 """
     return Response(js, mimetype='application/javascript')
-"""
-    return Response(js, mimetype='application/javascript')
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
