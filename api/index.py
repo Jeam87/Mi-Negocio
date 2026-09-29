@@ -727,11 +727,25 @@ async function guardarNubeAuto(){
       headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
       body: JSON.stringify({email:SUPA_EMAIL, datos:all})
     });
-    console.log("Auto guardado ok");
   }catch(e){}
 }
+async function cargarNubeAuto(){
+  if(localStorage.length > 2) return;
+  try{
+    let r = await fetch(SUPA_URL+"/rest/v1/respaldo?email=eq."+SUPA_EMAIL+"&select=datos",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY}});
+    let j = await r.json();
+    if(j[0] && j[0].datos){
+      Object.entries(j[0].datos).forEach(([k,v])=>{ try{localStorage.setItem(k, typeof v==='string'?v:JSON.stringify(v))}catch(e){} });
+      console.log("Datos cargados de la nube");
+      location.reload();
+    }
+  }catch(e){}
+}
+cargarNubeAuto();
 setInterval(guardarNubeAuto, 15000);
 window.addEventListener('beforeunload', guardarNubeAuto);
+"""
+    return Response(js, mimetype='application/javascript')
 """
     return Response(js, mimetype='application/javascript')
 if __name__ == '__main__':
