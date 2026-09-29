@@ -1,20 +1,13 @@
 from flask import Flask, jsonify, send_file, request, redirect
 import os, json, secrets, urllib.parse, urllib.request
 from datetime import datetime
+from supabase import create_client
+
 app = Flask(__name__)
+supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+
 BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
 os.makedirs(BASE_DATA, exist_ok=True)
-USERS_FILE = os.path.join(BASE_DATA, 'users.json')
-def load_users():
- try:
-  if os.path.exists(USERS_FILE):
-   with open(USERS_FILE,'r') as f: return json.load(f)
- except: pass
- return {}
-def save_users(u):
- try:
-  with open(USERS_FILE,'w') as f: json.dump(u,f)
- except: pass
 def get_user_file(nid):
  safe=nid.replace("@","_at_").replace(".","_")
  return os.path.join(BASE_DATA, f"{safe}.json")
@@ -41,28 +34,39 @@ def logo_file():
   except: pass
  return "",204
 
-def _stripe_owner(users, email):
-    email=(email or '').lower().strip()
-    if email in users:
-        nid=users[email].get('negocio_id')
-        if users[email].get('rol')=='owner':
-            return email, users[email]
-        for em,u in users.items():
-            if u.get('rol')=='owner' and u.get('negocio_id')==nid:
-                return em,u
-    return None,None
+def _stripe_file(negocio_id):
+    safe=str(negocio_id or '').replace('@','_at_').replace('.','_').replace('/','_')
+    return os.path.join(BASE_DATA, f"{safe}_stripe.json")
 
-def _stripe_connect_url(email):
+def _stripe_data(negocio_id):
+    if not negocio_id:
+        return {}
+    try:
+        ruta=_stripe_file(negocio_id)
+        if os.path.exists(ruta):
+            with open(ruta,'r') as f: return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_stripe_data(negocio_id, data):
+    if not negocio_id:
+        return
+    try:
+        with open(_stripe_file(negocio_id),'w') as f: json.dump(data,f)
+    except Exception:
+        pass
+
+def _stripe_connect_url(negocio_id):
     client_id=os.environ.get('STRIPE_CONNECT_CLIENT_ID','').strip()
     if not client_id:
         return None, 'Falta configurar STRIPE_CONNECT_CLIENT_ID en el servidor.'
+    if not negocio_id:
+        return None, 'Falta negocio_id.'
     state=secrets.token_urlsafe(32)
-    users=load_users()
-    owner_email,owner=_stripe_owner(users,email)
-    if not owner_email:
-        return None, 'No se encontró el negocio.'
-    owner['stripe_oauth_state']=state
-    save_users(users)
+    stripe_data=_stripe_data(negocio_id)
+    stripe_data['stripe_oauth_state']=state
+    _save_stripe_data(negocio_id,stripe_data)
     redirect_uri=os.environ.get('STRIPE_CONNECT_REDIRECT_URI','').strip() or (request.url_root.rstrip('/')+'/api/stripe/callback')
     params={
         'response_type':'code',
@@ -77,7 +81,7 @@ def _stripe_connect_url(email):
 def stripe_connect():
     try:
         d=request.get_json(silent=True) or {}
-        url,msg=_stripe_connect_url(d.get('email'))
+        url,msg=_stripe_connect_url(d.get('negocio_id'))
         if not url: return jsonify({'ok':False,'msg':msg}),400
         return jsonify({'ok':True,'url':url})
     except Exception as e:
@@ -92,12 +96,25 @@ def stripe_callback():
             return redirect('/?stripe=cancelled')
         if not code or not state:
             return redirect('/?stripe=error')
-        users=load_users()
-        owner_email=None; owner=None
-        for em,u in users.items():
-            if u.get('stripe_oauth_state')==state:
-                owner_email,owner=em,u; break
-        if not owner:
+        # El state se busca en los archivos temporales de los negocios conocidos.
+        # No se consulta users.json ni se usa load_users().
+        negocio_id=None; stripe_data={}
+        try:
+            for nombre in os.listdir(BASE_DATA):
+                if not nombre.endswith('_stripe.json'):
+                    continue
+                ruta=os.path.join(BASE_DATA,nombre)
+                try:
+                    with open(ruta,'r') as f: datos=json.load(f)
+                    if datos.get('stripe_oauth_state')==state:
+                        negocio_id=nombre[:-12]
+                        stripe_data=datos
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        if not negocio_id:
             return redirect('/?stripe=invalid_state')
         secret=os.environ.get('STRIPE_SECRET_KEY','').strip()
         client_id=os.environ.get('STRIPE_CONNECT_CLIENT_ID','').strip()
@@ -109,36 +126,39 @@ def stripe_callback():
         acct=tok.get('stripe_user_id')
         if not acct:
             return redirect('/?stripe=error')
-        owner['stripe_account_id']=acct
-        owner['stripe_connected']=True
-        owner['stripe_connected_at']=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        owner.pop('stripe_oauth_state',None)
-        save_users(users)
+        stripe_data['stripe_account_id']=acct
+        stripe_data['stripe_connected']=True
+        stripe_data['stripe_connected_at']=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        stripe_data.pop('stripe_oauth_state',None)
+        _save_stripe_data(negocio_id,stripe_data)
         return redirect('/?stripe=connected')
     except Exception:
         return redirect('/?stripe=error')
 
 @app.route('/api/stripe/status', methods=['POST'])
 def stripe_status():
-    users=load_users(); d=request.get_json(silent=True) or {}
-    _,owner=_stripe_owner(users,d.get('email'))
-    connected=bool(owner and owner.get('stripe_account_id'))
-    return jsonify({'ok':True,'connected':connected,'account_id':(owner.get('stripe_account_id') if connected else '')})
+    d=request.get_json(silent=True) or {}
+    negocio_id=str(d.get('negocio_id') or '').strip()
+    stripe_data=_stripe_data(negocio_id)
+    connected=bool(stripe_data.get('stripe_account_id'))
+    return jsonify({'ok':True,'connected':connected,'account_id':(stripe_data.get('stripe_account_id') if connected else '')})
 
 @app.route('/api/stripe/disconnect', methods=['POST'])
 def stripe_disconnect():
     try:
-        users=load_users(); d=request.get_json(silent=True) or {}
-        owner_email,owner=_stripe_owner(users,d.get('email'))
-        if not owner: return jsonify({'ok':False,'msg':'No se encontró el negocio.'}),400
-        acct=owner.get('stripe_account_id')
+        d=request.get_json(silent=True) or {}
+        negocio_id=str(d.get('negocio_id') or '').strip()
+        if not negocio_id: return jsonify({'ok':False,'msg':'Falta negocio_id.'}),400
+        stripe_data=_stripe_data(negocio_id)
+        if not stripe_data: return jsonify({'ok':False,'msg':'No se encontró el negocio.'}),400
+        acct=stripe_data.get('stripe_account_id')
         secret=os.environ.get('STRIPE_SECRET_KEY','').strip(); client_id=os.environ.get('STRIPE_CONNECT_CLIENT_ID','').strip()
         if acct and secret and client_id:
             import stripe
             stripe.api_key=secret
             try: stripe.OAuth.deauthorize(client_id=client_id, stripe_user_id=acct)
             except Exception: pass
-        owner.pop('stripe_account_id',None); owner.pop('stripe_connected',None); owner.pop('stripe_connected_at',None); save_users(users)
+        stripe_data.pop('stripe_account_id',None); stripe_data.pop('stripe_connected',None); stripe_data.pop('stripe_connected_at',None); _save_stripe_data(negocio_id,stripe_data)
         return jsonify({'ok':True})
     except Exception as e:
         return jsonify({'ok':False,'msg':str(e)}),500
@@ -149,14 +169,13 @@ def crear_link_cobro():
         import stripe
         stripe.api_key = os.environ.get("STRIPE_SECRET_KEY","").strip()
         d=request.get_json(silent=True) or {}
-        users=load_users(); _,owner=_stripe_owner(users,d.get('email'))
-        acct=owner.get('stripe_account_id') if owner else ''
+        negocio_id=str(d.get('negocio_id') or '').strip()
+        stripe_data=_stripe_data(negocio_id)
+        acct=stripe_data.get('stripe_account_id') if stripe_data else ''
         if not acct:
             return jsonify({'ok':False,'msg':'Conecta primero tu cuenta de Stripe en Configuración.'}),400
         monto=int(round(float(d.get('monto',0))*100))
         if monto<=0: return jsonify({'ok':False,'msg':'Monto inválido.'}),400
-        # Comisión de la plataforma: 1.5% del importe bruto del cobro.
-        # Stripe la retiene mediante Connect y la transfiere a la cuenta de la plataforma.
         application_fee_amount = int(round(monto * 0.015))
         link=stripe.PaymentLink.create(
             line_items=[{"price_data":{"currency":"mxn","product_data":{"name":d.get('concepto','Cobro')},"unit_amount":monto},"quantity":1}],
@@ -173,39 +192,43 @@ def crear_link_cobro():
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
- d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
- users=load_users()
- if email in users: return jsonify({"ok":False,"msg":"Ya existe"}),400
- users[email]={"password":pwd,"negocio_id":email,"rol":"owner"}; save_users(users)
- with open(get_user_file(email),'w') as f: json.dump({},f)
- return jsonify({"ok":True})
+    d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
+    try:
+        res = supabase.auth.sign_up({"email": email, "password": pwd})
+        if not res.user: raise Exception("no user")
+        try: supabase.table("negocios").insert({"id": str(res.user.id), "owner_email": email}).execute()
+        except: pass
+        return jsonify({"ok":True,"email":email,"negocio_id":str(res.user.id),"rol":"owner"})
+    except Exception as e:
+        return jsonify({"ok":False,"msg": str(e)}), 400
+
 @app.route('/api/login', methods=['POST'])
 def api_login():
- d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
- users=load_users()
- if email not in users or users[email]['password']!=pwd: return jsonify({"ok":False,"msg":"Error"}),401
- return jsonify({"ok":True,"email":email,"negocio_id":users[email]['negocio_id'],"rol":users[email]['rol']})
+    d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
+    try:
+        res = supabase.auth.sign_in_with_password({"email": email, "password": pwd})
+        if not res.user: return jsonify({"ok":False,"msg":"Error"}),401
+        return jsonify({"ok":True,"email":email,"negocio_id":str(res.user.id),"rol":"owner"})
+    except:
+        return jsonify({"ok":False,"msg":"Error"}),401
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
- d=request.json; owner=d.get('owner_email','').lower().strip(); owner_pwd=d.get('owner_password',''); colab=d.get('colab_email','').lower().strip(); colab_pwd=d.get('colab_password','') or '1234'
- users=load_users()
- if owner not in users or users[owner]['password']!=owner_pwd: return jsonify({"ok":False,"msg":"No autorizado"}),403
- users[colab]={"password":colab_pwd,"negocio_id":users[owner]['negocio_id'],"rol":"colab"}; save_users(users)
- return jsonify({"ok":True})
+ return jsonify({"ok":False,"msg":"No implementado"}),501
 @app.route('/api/load', methods=['GET'])
 def api_load():
- email=request.args.get('email','').lower().strip(); users=load_users()
- if email not in users: return jsonify({"ok":False}),404
- data=json.load(open(get_user_file(users[email]['negocio_id']))) if os.path.exists(get_user_file(users[email]['negocio_id'])) else {}
+ negocio_id=request.args.get('negocio_id','').strip()
+ if not negocio_id: return jsonify({"ok":False}),400
+ ruta=get_user_file(negocio_id)
+ data=json.load(open(ruta)) if os.path.exists(ruta) else {}
  return jsonify({"ok":True,"data":data})
 @app.route('/api/save', methods=['POST'])
 def api_save():
- d=request.json; email=d.get('email','').lower().strip(); data=d.get('data',{})
- users=load_users()
- if email not in users: return jsonify({"ok":False}),404
- with open(get_user_file(users[email]['negocio_id']),'w') as f: json.dump(data,f)
+ d=request.json or {}; negocio_id=str(d.get('negocio_id') or '').strip(); data=d.get('data',{})
+ if not negocio_id: return jsonify({"ok":False}),400
+ with open(get_user_file(negocio_id),'w') as f: json.dump(data,f)
  return jsonify({"ok":True})
 @app.route('/')
+
 @app.route('/api')
 @app.route('/api/')
 def home():
@@ -290,8 +313,8 @@ function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerTe
 async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada',true);}
 async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?email='+encodeURIComponent(currentUser)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
-async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser,data})});}
+async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
+async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,data})});}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
@@ -379,17 +402,17 @@ function actualizarFondo(){ let emp=getEmp(); let logo=logoTemp||emp.logo||''; l
 async function cargarEstadoStripe(){
  let el=document.getElementById('stripeEstado'), btn=document.getElementById('btnDesconectarStripe'), con=document.getElementById('btnConectarStripe');
  if(!el) return;
- try{ let r=await fetch('/api/stripe/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser})}); let j=await r.json();
+ try{ let r=await fetch('/api/stripe/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json();
    if(j.connected){ el.innerHTML='✅ Stripe conectado'+(j.account_id?' <span class="text-gray-500">('+j.account_id+')</span>':''); if(btn) btn.classList.remove('hidden'); if(con) con.innerText='🔄 VOLVER A CONECTAR STRIPE'; }
    else { el.innerText='⚪ Stripe no está conectado'; if(btn) btn.classList.add('hidden'); if(con) con.innerText='🔗 CONECTAR CON STRIPE'; }
  }catch(e){ el.innerText='⚠️ No se pudo revisar la conexión'; }
 }
 async function conectarStripe(){
- try{ let r=await fetch('/api/stripe/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo iniciar la conexión'); window.location.href=j.url; }catch(e){ alert('No se pudo conectar con Stripe.'); }
+ try{ let r=await fetch('/api/stripe/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo iniciar la conexión'); window.location.href=j.url; }catch(e){ alert('No se pudo conectar con Stripe.'); }
 }
 async function desconectarStripe(){
  if(!confirm('¿Desconectar la cuenta Stripe de este negocio?')) return;
- try{ let r=await fetch('/api/stripe/disconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentUser})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo desconectar'); await cargarEstadoStripe(); alert('Stripe quedó desconectado.'); }catch(e){ alert('No se pudo desconectar Stripe.'); }
+ try{ let r=await fetch('/api/stripe/disconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo desconectar'); await cargarEstadoStripe(); alert('Stripe quedó desconectado.'); }catch(e){ alert('No se pudo desconectar Stripe.'); }
 }
 function revisarRetornoStripe(){
  let p=new URLSearchParams(location.search), s=p.get('stripe');
@@ -645,7 +668,7 @@ async function crearLinkCobroStripe(){
  if(!b) return;
  b.innerText='⏳ Generando link...';
  try{
-  let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom,email:currentUser})});
+  let r=await fetch('/api/crear-link-cobro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto:total,concepto:nom,negocio_id:negocioId})});
   let j=await r.json(); if(!j.ok) throw j;
   try{ await navigator.clipboard.writeText(j.url); }catch(e){}
   alert('✅ Link copiado: '+j.url);
