@@ -710,5 +710,26 @@ function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'
 revisarRetornoStripe();
 </script></body></html>
 """
+ @app.route('/api/migrar', methods=['POST', 'OPTIONS'])
+def migrar():
+    from flask import request, jsonify
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    try:
+        data = request.get_json()
+        import os
+        from supabase import create_client
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY")
+        sup = create_client(url, key)
+        # Guarda todo en una tabla que vamos a crear como respaldo
+        sup.table("respaldo").insert({
+            "email": data.get('email'),
+            "datos": data.get('datos'),
+            "fecha": "now()"
+        }).execute()
+        return jsonify({"OK": True, "msg": "Guardado"})
+    except Exception as e:
+        return jsonify({"OK": False, "error": str(e)})
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
