@@ -1,23 +1,24 @@
-<!DOCTYPE html><html><body style="font-family:sans-serif;padding:20px">
-<h2>Pasar datos a la nube</h2>
-<button id="btn" style="background:green;color:white;padding:20px;width:100%;font-size:18px">PULSA AQUI PARA SUBIR TODO A SUPABASE</button>
-<p id="log"></p>
+<!DOCTYPE html><html><body>
+<h3>Pasar datos a la nube - V2</h3>
+<button id="b" style="background:green;color:white;padding:15px;width:100%">PULSA AQUI PARA SUBIR TODO A SUPABASE</button>
+<div id="log"></div>
 <script>
-document.getElementById('btn').onclick = async () => {
-  let todo={};
-  for(let i=0;i<localStorage.length;i++){
-    let k=localStorage.key(i);
-    todo[k]=localStorage.getItem(k);
-  }
-  document.getElementById('log').innerText = "Subiendo "+JSON.stringify(todo).length+" caracteres...";
-  let r = await fetch('/api/migrar', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({datos: todo, email: localStorage.getItem('email') || 'esaul_1987@hotmail.com'})
+const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+const SUPABASE_KEY = "TU_ANON_KEY";
+document.getElementById('b').onclick = async () => {
+  let all = {};
+  for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i); all[k]=localStorage.getItem(k); }
+  let txt = JSON.stringify(all);
+  document.getElementById('log').innerText = "Tienes "+txt.length+" caracteres. Subiendo directo...";
+  const res = await fetch(SUPABASE_URL+"/rest/v1/respaldo", {
+    method:"POST",
+    headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},
+    body: JSON.stringify({email:"esaul_1987@hotmail.com", datos: all})
   });
-  let res = await r.json();
-  document.getElementById('log').innerText = "Respuesta: "+JSON.stringify(res);
-  alert("¡Listo! Ya se subió");
+  let j = await res.text();
+  document.getElementById('log').innerText = "Respuesta: "+j;
+  if(res.ok) alert("OK LISTO!");
+  else alert("Error: "+j);
 }
 </script>
 </body></html>
