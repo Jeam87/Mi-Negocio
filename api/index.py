@@ -1,38 +1,35 @@
-from flask import Flask, jsonify, send_file, request, redirect
-import os, json, secrets, urllib.parse, urllib.request
-from datetime import datetime
+from flask import Flask, jsonify, request, send_file
+import os
 from supabase import create_client
 
 app = Flask(__name__)
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
-os.makedirs(BASE_DATA, exist_ok=True)
-def get_user_file(nid):
- safe=nid.replace("@","_at_").replace(".","_")
- return os.path.join(BASE_DATA, f"{safe}.json")
+# Conexión Supabase - si faltan variables no truena
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
+supabase = None
+if url and key:
+    try:
+        supabase = create_client(url, key)
+    except Exception as e:
+        print(f"Error supabase: {e}")
+
+@app.route('/')
+def home():
+    return "Mi Negocio 11.5 - Funcionando!"
 
 @app.route('/manifest.json')
 def manifest():
- return jsonify({"name":"Mi Negocio 11.5","short_name":"Mi Negocio","start_url":"/","display":"standalone","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png"},{"src":"/api/logo.png","sizes":"512x512","type":"image/png"}]})
+    return jsonify({"name":"Mi Negocio 11.5","short_name":"Negocio"})
 
 @app.route('/logo.png')
 @app.route('/api/logo.png')
 def logo_file():
- posibles = [
-  'logo.png',
-  'api/logo.png',
-  os.path.join(os.path.dirname(__file__), 'logo.png'),
-  os.path.join(os.getcwd(), 'logo.png'),
-  os.path.join(os.getcwd(), 'api', 'logo.png'),
-  '/tmp/logo.png'
- ]
- for ruta in posibles:
-  try:
-   if os.path.exists(ruta):
-    return send_file(ruta, mimetype='image/png')
-  except: pass
- return "",204
+    posibles = ['logo.png','api/logo.png', os.path.join(os.path.dirname(__file__), 'logo.png')]
+    for ruta in posibles:
+        if os.path.exists(ruta):
+            return send_file(ruta, mimetype='image/png')
+    return "no logo", 404
 
 def _stripe_file(negocio_id):
     safe=str(negocio_id or '').replace('@','_at_').replace('.','_').replace('/','_')
