@@ -1,24 +1,27 @@
-<!DOCTYPE html><html><body>
-<h3>Pasar datos a la nube - V2</h3>
-<button id="b" style="background:green;color:white;padding:15px;width:100%">PULSA AQUI PARA SUBIR TODO A SUPABASE</button>
-<div id="log"></div>
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Subir</title></head>
+<body style="font-family:sans-serif;padding:20px">
+<h2>Subir todo a la nube V2 (rápido)</h2>
+<button id="b" style="background:green;color:white;padding:20px;width:100%;font-size:18px;border-radius:10px">PULSA AQUI PARA SUBIR</button>
+<div id="log" style="margin-top:15px;word-break:break-all"></div>
 <script>
-const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
-const SUPABASE_KEY = "TU_ANON_KEY";
+const URL = "https://txuggnfohyevpvdfxpfu.supabase.co";
+const KEY = "sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC";
 document.getElementById('b').onclick = async () => {
   let all = {};
-  for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i); all[k]=localStorage.getItem(k); }
-  let txt = JSON.stringify(all);
-  document.getElementById('log').innerText = "Tienes "+txt.length+" caracteres. Subiendo directo...";
-  const res = await fetch(SUPABASE_URL+"/rest/v1/respaldo", {
-    method:"POST",
-    headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json","Prefer":"return=representation"},
-    body: JSON.stringify({email:"esaul_1987@hotmail.com", datos: all})
-  });
-  let j = await res.text();
-  document.getElementById('log').innerText = "Respuesta: "+j;
-  if(res.ok) alert("OK LISTO!");
-  else alert("Error: "+j);
-}
+  for(let i=0;i<localStorage.length;i++){ let k=localStorage.key(i); try{all[k]=JSON.parse(localStorage.getItem(k))}catch(e){all[k]=localStorage.getItem(k)} }
+  let size = JSON.stringify(all).length;
+  document.getElementById('log').innerText = "Tienes "+size+" caracteres. Subiendo...";
+  try{
+    const r = await fetch(URL+"/rest/v1/respaldo",{
+      method:"POST",
+      headers:{"apikey":KEY,"Authorization":"Bearer "+KEY,"Content-Type":"application/json","Prefer":"return=representation"},
+      body: JSON.stringify({email:"esaul_1987@hotmail.com", datos: all})
+    });
+    let txt = await r.text();
+    document.getElementById('log').innerText = "Respuesta: "+txt;
+    if(r.ok){ alert("¡OK YA QUEDO SUBIDO!"); } else { alert("Error: "+txt); }
+  }catch(e){ document.getElementById('log').innerText = "Error: "+e.message; alert(e.message); }
+};
 </script>
 </body></html>
