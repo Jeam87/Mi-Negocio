@@ -1,42 +1,40 @@
-from flask import Flask, jsonify, request, send_file, redirect
-import os
-import json
-import secrets
-import urllib.parse
+from flask import Flask, jsonify, send_file, request, redirect
+import os, json, secrets, urllib.parse, urllib.request
 from datetime import datetime
 from supabase import create_client
 
 app = Flask(__name__)
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
-BASE_DATA = '/tmp'
+BASE_DATA = '/tmp/data' if os.path.exists('/tmp') else 'data'
 os.makedirs(BASE_DATA, exist_ok=True)
-
-# Conexión Supabase - si faltan variables no truena
-url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_KEY")
-supabase = None
-if url and key:
-    try:
-        supabase = create_client(url, key)
-    except Exception as e:
-        print(f"Error supabase: {e}")
-
-@app.route('/')
-def home():
-    return "Mi Negocio 11.5 - Funcionando!"
+def get_user_file(nid):
+ safe=nid.replace("@","_at_").replace(".","_")
+ return os.path.join(BASE_DATA, f"{safe}.json")
 
 @app.route('/manifest.json')
 def manifest():
-    return jsonify({"name":"Mi Negocio 11.5","short_name":"Negocio"})
+ return jsonify({"name":"Mi Negocio 11.5","short_name":"Mi Negocio","start_url":"/","display":"standalone","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png"},{"src":"/api/logo.png","sizes":"512x512","type":"image/png"}]})
 
 @app.route('/logo.png')
 @app.route('/api/logo.png')
 def logo_file():
-    posibles = ['logo.png','api/logo.png', os.path.join(os.path.dirname(__file__), 'logo.png')]
-    for ruta in posibles:
-        if os.path.exists(ruta):
-            return send_file(ruta, mimetype='image/png')
-    return "no logo", 404
+ posibles = [
+  'logo.png',
+  'api/logo.png',
+  os.path.join(os.path.dirname(__file__), 'logo.png'),
+  os.path.join(os.getcwd(), 'logo.png'),
+  os.path.join(os.getcwd(), 'api', 'logo.png'),
+  '/tmp/logo.png'
+ ]
+ for ruta in posibles:
+  try:
+   if os.path.exists(ruta):
+    return send_file(ruta, mimetype='image/png')
+  except: pass
+ return "",204
 
 def _stripe_file(negocio_id):
     safe=str(negocio_id or '').replace('@','_at_').replace('.','_').replace('/','_')
@@ -198,6 +196,7 @@ def crear_link_cobro():
 def api_register():
     d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
     try:
+        if supabase is None: return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
         res = supabase.auth.sign_up({"email": email, "password": pwd})
         if not res.user: raise Exception("no user")
         try: supabase.table("negocios").insert({"id": str(res.user.id), "owner_email": email}).execute()
@@ -210,6 +209,7 @@ def api_register():
 def api_login():
     d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
     try:
+        if supabase is None: return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
         res = supabase.auth.sign_in_with_password({"email": email, "password": pwd})
         if not res.user: return jsonify({"ok":False,"msg":"Error"}),401
         return jsonify({"ok":True,"email":email,"negocio_id":str(res.user.id),"rol":"owner"})
@@ -314,11 +314,11 @@ let vistaCal='mes', fechaVista=new Date(), fechaSel=getFechaSoloLocal(), metodoP
 function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago').value=m; ['efectivo','tarjeta','transferencia','fiado','apartado'].forEach(x=>{ let b=document.getElementById('mp-'+x); if(!b) return; let sel = b.id=='mp-'+m.toLowerCase(); b.className= sel? 'py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black' : 'py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black'; }); document.getElementById('boxPagoEfectivo').classList.toggle('hidden', m=='Fiado'||m=='Apartado'); document.getElementById('boxFiado').classList.toggle('hidden',!(m=='Fiado'||m=='Apartado')); }
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
-async function hacerRegistro(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y pass',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); msgLogin('✅ Cuenta creada',true);}
-async function hacerLogin(){let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg,false); currentUser=e; negocioId=j.negocio_id; localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}
+async function hacerRegistro(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg||'No se pudo registrar',false); msgLogin('✅ Cuenta creada',true);}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
+async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el negocio_id de Supabase',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
-async function guardarEnNube(){if(!currentUser) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,data})});}
+async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); if(!r.ok) throw new Error('Error '+r.status+' al cargar los datos'); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
+async function guardarEnNube(){if(!currentUser||!negocioId) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,data})});}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
