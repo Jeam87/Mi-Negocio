@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, request, send_file
-import os
+import os, json, secrets, urllib.parse
 from supabase import create_client
 
 app = Flask(__name__)
+
+BASE_DATA = '/tmp'
+os.makedirs(BASE_DATA, exist_ok=True)
 
 # Conexión Supabase - si faltan variables no truena
 url = os.getenv("SUPABASE_URL")
