@@ -733,6 +733,23 @@ document.getElementById('btn').onclick = async () => {
   document.getElementById('log').innerText = "Respuesta: "+JSON.stringify(res);
   alert("Listo!");
 }
+<script>
+const SUPA_URL = "https://txuggnfohyevpvdfxpfu.supabase.co";
+const SUPA_KEY = "sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC";
+const SUPA_EMAIL = "esaul_1987@hotmail.com";
+async function guardarNubeAuto(){
+  let all={}; for(let i=0;i<localStorage.length;i++){let k=localStorage.key(i); try{all[k]=JSON.parse(localStorage.getItem(k))}catch(e){all[k]=localStorage.getItem(k)}}
+  try{
+    await fetch(SUPA_URL+"/rest/v1/respaldo?on_conflict=email",{
+      method:"POST",
+      headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
+      body: JSON.stringify({email:SUPA_EMAIL, datos:all})
+    });
+    console.log("Auto guardado");
+  }catch(e){ console.log("error",e); }
+}
+setInterval(guardarNubeAuto, 15000);
+window.addEventListener('beforeunload', guardarNubeAuto);
 </script>
 </body></html>"""
  
