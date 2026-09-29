@@ -710,6 +710,32 @@ function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'
 revisarRetornoStripe();
 </script></body></html>
 """
+@app.route('/migrar.html')
+def migrar_page():
+    return """<!DOCTYPE html><html><body style="font-family:sans-serif;padding:20px">
+<h2>Pasar datos a la nube</h2>
+<button id="btn" style="background:green;color:white;padding:20px;width:100%;font-size:18px">PULSA AQUI PARA SUBIR TODO A SUPABASE</button>
+<p id="log"></p>
+<script>
+document.getElementById('btn').onclick = async () => {
+  let todo={};
+  for(let i=0;i<localStorage.length;i++){
+    let k=localStorage.key(i);
+    todo[k]=localStorage.getItem(k);
+  }
+  document.getElementById('log').innerText = "Subiendo "+JSON.stringify(todo).length+" caracteres...";
+  let r = await fetch('/api/migrar', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({datos: todo, email: localStorage.getItem('email') || 'esaul_1987@hotmail.com'})
+  });
+  let res = await r.json();
+  document.getElementById('log').innerText = "Respuesta: "+JSON.stringify(res);
+  alert("Listo!");
+}
+</script>
+</body></html>"""
+ 
  @app.route('/api/migrar', methods=['POST', 'OPTIONS'])
 def migrar():
     from flask import request, jsonify
