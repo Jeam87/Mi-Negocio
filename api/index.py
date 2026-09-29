@@ -708,7 +708,31 @@ function renderDesgloseDia(fechaStr){ let facts=getFacts().filter(f=>f.fecha==fe
 function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'); if(!sel) return; let opt=sel.options[sel.selectedIndex]; let nombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador'; let el=document.getElementById('cobroClienteNombre'); if(el) el.innerText=nombre; }
 
 revisarRetornoStripe();
-</script></body></html>
+</script>
+<script src="/api/autoguardado"></script>
+</body></html>
 """
+@app.route('/api/autoguardado')
+def autoguardado():
+    from flask import Response
+    js = """
+const SUPA_URL = "https://txuggnfohyevpvdfxpfu.supabase.co";
+const SUPA_KEY = "sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC";
+const SUPA_EMAIL = "esaul_1987@hotmail.com";
+async function guardarNubeAuto(){
+  let all={}; for(let i=0;i<localStorage.length;i++){let k=localStorage.key(i); try{all[k]=JSON.parse(localStorage.getItem(k))}catch(e){all[k]=localStorage.getItem(k)}}
+  try{
+    await fetch(SUPA_URL+"/rest/v1/respaldo?on_conflict=email",{
+      method:"POST",
+      headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"},
+      body: JSON.stringify({email:SUPA_EMAIL, datos:all})
+    });
+    console.log("Auto guardado ok");
+  }catch(e){}
+}
+setInterval(guardarNubeAuto, 15000);
+window.addEventListener('beforeunload', guardarNubeAuto);
+"""
+    return Response(js, mimetype='application/javascript')
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
