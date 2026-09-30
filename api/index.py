@@ -194,43 +194,99 @@ def crear_link_cobro():
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
+    d=request.get_json(silent=True) or {}
+    email=str(d.get('email') or '').lower().strip()
+    pwd=str(d.get('password') or '')
     try:
-        if supabase is None: return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
-        res = supabase.auth.sign_up({"email": email, "password": pwd})
-        if not res.user: raise Exception("no user")
-        try: supabase.table("negocios").insert({"id": str(res.user.id), "owner_email": email}).execute()
-        except: pass
-        return jsonify({"ok":True,"email":email,"negocio_id":str(res.user.id),"rol":"owner"})
+        if not email or not pwd:
+            return jsonify({"ok":False,"msg":"Pon correo y contraseña."}),400
+        if supabase is None:
+            return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
+        res=supabase.auth.sign_up({"email":email,"password":pwd})
+        if not res.user:
+            return jsonify({"ok":False,"msg":"Supabase no devolvió el usuario creado."}),400
+        negocio_id=str(res.user.id)
+        # Crea/actualiza el registro del negocio sin depender de users.json.
+        try:
+            supabase.table("negocios").upsert({"id":negocio_id,"owner_email":email}, on_conflict="id").execute()
+        except Exception as e:
+            # La cuenta de Supabase sí fue creada; devolvemos el error del negocio para poder corregirlo.
+            return jsonify({"ok":False,"msg":"La cuenta se creó en Supabase, pero no se pudo crear el negocio: "+str(e)}),500
+        return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":"owner"})
     except Exception as e:
-        return jsonify({"ok":False,"msg": str(e)}), 400
+        return jsonify({"ok":False,"msg":str(e)}),400
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    d=request.json; email=d.get('email','').lower().strip(); pwd=d.get('password','')
+    d=request.get_json(silent=True) or {}
+    email=str(d.get('email') or '').lower().strip()
+    pwd=str(d.get('password') or '')
     try:
-        if supabase is None: return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
-        res = supabase.auth.sign_in_with_password({"email": email, "password": pwd})
-        if not res.user: return jsonify({"ok":False,"msg":"Error"}),401
-        return jsonify({"ok":True,"email":email,"negocio_id":str(res.user.id),"rol":"owner"})
-    except:
-        return jsonify({"ok":False,"msg":"Error"}),401
+        if not email or not pwd:
+            return jsonify({"ok":False,"msg":"Pon correo y contraseña."}),400
+        if supabase is None:
+            return jsonify({"ok":False,"msg":"Faltan SUPABASE_URL y SUPABASE_KEY en las variables de entorno de Vercel."}),500
+        res=supabase.auth.sign_in_with_password({"email":email,"password":pwd})
+        if not res.user:
+            return jsonify({"ok":False,"msg":"Correo o contraseña incorrectos."}),401
+        negocio_id=str(res.user.id)
+        # Garantiza que exista el negocio aunque sea una cuenta creada anteriormente.
+        try:            supabase.table("negocios").upsert({"id":negocio_id,"owner_email":email}, on_conflict="id").execute()
+        except Exception as e:
+            return jsonify({"ok":False,"msg":"La contraseña es correcta, pero no se pudo preparar el negocio: "+str(e)}),500
+        return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":"owner"})
+    except Exception as e:
+        return jsonify({"ok":False,"msg":"No se pudo iniciar sesión: "+str(e)}),401
+
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
-  return jsonify({"ok":False,"msg":"No implementado"}),501
+ return jsonify({"ok":False,"msg":"No implementado"}),501
+
+def _respaldo_email_por_negocio(negocio_id):
+    """Obtiene el correo dueño del negocio para usar la tabla respaldo existente."""
+    if not negocio_id or supabase is None:
+        return None
+    res=supabase.table("negocios").select("owner_email").eq("id",negocio_id).limit(1).execute()
+    rows=res.data or []
+    return str(rows[0].get("owner_email") or "").lower().strip() if rows else None
+
 @app.route('/api/load', methods=['GET'])
 def api_load():
- negocio_id=request.args.get('negocio_id','').strip()
- if not negocio_id: return jsonify({"ok":False}),400
- ruta=get_user_file(negocio_id)
- data=json.load(open(ruta)) if os.path.exists(ruta) else {}
- return jsonify({"ok":True,"data":data})
+    try:
+        negocio_id=str(request.args.get('negocio_id') or '').strip()
+        if not negocio_id:
+            return jsonify({"ok":False,"msg":"Falta negocio_id."}),400
+        if supabase is None:
+            return jsonify({"ok":False,"msg":"Supabase no está configurado."}),500
+        email=_respaldo_email_por_negocio(negocio_id)
+        if not email:
+            return jsonify({"ok":True,"data":{}})
+        res=supabase.table("respaldo").select("datos").eq("email",email).limit(1).execute()
+        rows=res.data or []
+        data=rows[0].get("datos") if rows else {}
+        if not isinstance(data,dict):
+            data={}
+        return jsonify({"ok":True,"data":data})
+    except Exception as e:
+        return jsonify({"ok":False,"msg":"No se pudieron cargar los datos: "+str(e)}),500
+
 @app.route('/api/save', methods=['POST'])
 def api_save():
- d=request.json or {}; negocio_id=str(d.get('negocio_id') or '').strip(); data=d.get('data',{})
- if not negocio_id: return jsonify({"ok":False}),400
- with open(get_user_file(negocio_id),'w') as f: json.dump(data,f)
- return jsonify({"ok":True})
+    try:
+        d=request.get_json(silent=True) or {}
+        negocio_id=str(d.get('negocio_id') or '').strip()
+        data=d.get('data') or {}
+        if not negocio_id:
+            return jsonify({"ok":False,"msg":"Falta negocio_id."}),400
+        if supabase is None:
+            return jsonify({"ok":False,"msg":"Supabase no está configurado."}),500
+        email=_respaldo_email_por_negocio(negocio_id)
+        if not email:
+            return jsonify({"ok":False,"msg":"No se encontró el negocio en Supabase."}),404
+        supabase.table("respaldo").upsert({"email":email,"datos":data}, on_conflict="email").execute()
+        return jsonify({"ok":True})
+    except Exception as e:
+        return jsonify({"ok":False,"msg":"No se pudieron guardar los datos: "+str(e)}),500
 
 # =========================
 # ENTREGAS PROGRAMADAS
@@ -408,8 +464,7 @@ def home():
 <div id="modalProv" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 class="font-black text-[15px]">🏭 Editar Proveedor</h2><input type="hidden" id="pe-id"><input id="pe-nombre" placeholder="Nombre" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-tel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-que" placeholder="Qué surte" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="pe-direccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-horario" placeholder="Horario 8am-6pm" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-dias" placeholder="Días Lun-Sab" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><textarea id="pe-notas" placeholder="Notas, crédito, mínimo, etc" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarProvEdit()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">Guardar</button><button onclick="cerrarProvEdit()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div>
 <div id="modalCliente" class="hidden fixed inset-0 bg-black/70 z-[75] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 id="clienteModalTitulo" class="font-black text-[16px]">👤 Nuevo cliente</h2><input type="hidden" id="cliEditId"><input id="cliFormNombre" placeholder="Nombre completo *" class="w-full border-2 border-black p-3 rounded-xl mt-3 text-[13px] font-bold"><div class="grid grid-cols-2 gap-2 mt-2"><input id="cliFormTel" placeholder="📞 Teléfono" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="cliFormWhatsapp" placeholder="📲 WhatsApp" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="cliFormDireccion" placeholder="📍 Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><input id="cliFormCorreo" type="email" placeholder="✉️ Correo (opcional)" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><textarea id="cliFormObs" placeholder="📝 Observaciones / preferencias / pedido habitual" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarClienteForm()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">💾 Guardar</button><button onclick="cerrarClienteForm()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div><div id="modalDeuda" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black">💰 <span id="deudaClienteNombre"></span></h2><p class="text-[11px] text-gray-500" id="deudaClienteTel"></p><div class="mt-3 bg-red-50 border-2 border-red-200 p-3 rounded-xl text-center"><p class="text-[11px]">Debe</p><p class="font-black text-[22px] text-red-600" id="deudaTotal">$0</p><button onclick="recordarDeuda()" class="mt-2 bg-[#25D366] text-white px-4 py-2 rounded-full text-[11px] font-black">📲 Recordar</button></div><div id="deudaLista" class="mt-3 space-y-2"></div><div class="mt-4 bg-green-50 border-2 border-green-200 p-3 rounded-xl"><input id="abonoMonto" type="number" placeholder="$ Monto" class="w-full border-2 border-black p-2 rounded-xl mt-2"><button onclick="hacerAbono()" class="w-full mt-3 bg-black text-white py-3 rounded-xl font-black">ABONAR</button></div><button onclick="cerrarDeuda()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
 <div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre <span id="cierreFechaLabel"></span> - <span id="cierreUserLabel" class="text-blue-600"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy (tu turno)</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
-<div class="fixed bottom-0 left-0 right-0 bg-white border-t py-2 max-w-md mx-auto z-30">
-<div class="flex justify-around items-center">
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t py-2 max-w-md mx-auto z-30"><div class="flex justify-around items-center">
 <button onclick="showTab('vender')" class="flex flex-col items-center text-black min-w-[70px]"><i class="fa-solid fa-store"></i><span class="text-[8px] font-black">VENDER</span></button>
 <button onclick="showTab('entregas')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-truck-fast"></i><span class="text-[8px] font-black">ENTREGAS</span></button>
 <button onclick="showTab('inventario')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[8px] font-black">PRODUCTOS</span></button>
@@ -424,9 +479,9 @@ function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago'
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
 async function hacerRegistro(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg||'No se pudo registrar',false); msgLogin('✅ Cuenta creada',true);}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
-async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el negocio_id de Supabase',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario');}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
+async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el negocio_id de Supabase',false); await cargarDeNube(); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); msgLogin('',true);}catch(err){msgLogin('No se pudo cargar tu cuenta: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); if(!r.ok) throw new Error('Error '+r.status+' al cargar los datos'); let j=await r.json(); if(!j.ok) return; let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
+async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'})); if(!r.ok||!j.ok) throw new Error(j.msg||('Error '+r.status+' al cargar los datos')); let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
 async function guardarEnNube(){if(!currentUser||!negocioId) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,data})});}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
@@ -452,7 +507,7 @@ async function cargarEntregas(){if(!negocioId)return;try{let r=await fetch('/api
 function renderCalendarioEntregas(){let el=document.getElementById('entCalGrid');if(!el)return;let y=fechaVistaEntregas.getFullYear(),m=fechaVistaEntregas.getMonth();document.getElementById('entCalTitulo').innerText=fechaVistaEntregas.toLocaleDateString('es-MX',{month:'long',year:'numeric'});let primer=new Date(y,m,1).getDay(),dias=new Date(y,m+1,0).getDate();let html='<div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400"><div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div></div><div class="grid grid-cols-7 gap-1 mt-2">';for(let i=0;i<primer;i++)html+='<div></div>';for(let d=1;d<=dias;d++){let f=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,tiene=entregasCache.some(e=>e.fecha_entrega==f&&e.estado!='entregado'),hoy=f==fechaLocalISO(0);html+=`<button onclick="seleccionarDiaEntrega('${f}')" class="aspect-square rounded-xl flex flex-col items-center justify-center border-2 ${hoy?'bg-black text-white':'bg-gray-50'}"><span class="font-black text-[12px]">${d}</span>${tiene?'<span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-1"></span>':''}</button>`;}html+='</div>';el.innerHTML=html;}
 function seleccionarDiaEntrega(f){let e=entregasCache.filter(x=>x.fecha_entrega==f);let title=new Date(f+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});alert(e.length?`📅 ${title}\n\n${e.map(x=>`PARA: ${x.entregar_a||'Sin nombre'}\n${x.contenido||''}`).join('\n\n')}`:`📅 ${title}\n\nSin entregas.`);}
 function moverCalEntregas(dir){fechaVistaEntregas.setMonth(fechaVistaEntregas.getMonth()+dir);renderCalendarioEntregas();}
-function tarjetaEntrega(e){let tel=(e.telefono_ordena||'').replace(/\D/g,'');if(tel.length==10)tel='52'+tel;let mensaje=`🔔 Recordatorio de entrega\n\nPARA: ${e.entregar_a||'Sin nombre'}\nContenido: ${e.contenido||''}${e.hora_entrega?`\nHora: ${e.hora_entrega}`:''}${e.observaciones?`\nObservaciones: ${e.observaciones}`:''}`,wa=tel?`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`:`https://wa.me/?text=${encodeURIComponent(mensaje)}`;return `<div class="bg-white border-2 border-gray-200 rounded-[20px] p-4 shadow-sm ${e.estado=='entregado'?'opacity-50':''}"><div class="text-[18px] font-black">PARA: ${escEnt(e.entregar_a||'Sin nombre')} <span class="text-gray-400">-</span></div><div class="mt-2 text-[11px]"><b>Contenido:</b> ${escEnt(e.contenido||'—')}</div><div class="text-[11px]"><b>Ordenó:</b> ${escEnt(e.quien_ordena||'—')}${e.telefono_ordena?` · ${escEnt(e.telefono_ordena)}`:''}</div><div class="text-[11px]"><b>Observaciones:</b> ${escEnt(e.observaciones||'—')}</div>${e.hora_entrega?`<div class="mt-2 text-[10px] font-black text-blue-600">🕒 ${escEnt(e.hora_entrega)}</div>`:''}<div class="grid grid-cols-2 gap-2 mt-3"><a href="${wa}" target="_blank" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[11px] text-center">📲 WhatsApp</a>${e.estado=='entregado'?'<button disabled class="bg-gray-200 text-gray-500 py-3 rounded-xl font-black text-[11px]">✓ Entregado</button>':`<button onclick="marcarEntregaEntregada('${e.id}')" class="bg-black text-white py-3 rounded-xl font-black text-[11px]">ENTREGADO</button>`}</div></div>`;}
+function tarjetaEntrega(e){let tel=(e.telefono_ordena||'').replace(/[^0-9]/g,'');if(tel.length==10)tel='52'+tel;let mensaje=`🔔 Recordatorio de entrega\n\nPARA: ${e.entregar_a||'Sin nombre'}\nContenido: ${e.contenido||''}${e.hora_entrega?`\nHora: ${e.hora_entrega}`:''}${e.observaciones?`\nObservaciones: ${e.observaciones}`:''}`,wa=tel?`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`:`https://wa.me/?text=${encodeURIComponent(mensaje)}`;return `<div class="bg-white border-2 border-gray-200 rounded-[20px] p-4 shadow-sm ${e.estado=='entregado'?'opacity-50':''}"><div class="text-[18px] font-black">PARA: ${escEnt(e.entregar_a||'Sin nombre')} <span class="text-gray-400">-</span></div><div class="mt-2 text-[11px]"><b>Contenido:</b> ${escEnt(e.contenido||'—')}</div><div class="text-[11px]"><b>Ordenó:</b> ${escEnt(e.quien_ordena||'—')}${e.telefono_ordena?` · ${escEnt(e.telefono_ordena)}`:''}</div><div class="text-[11px]"><b>Observaciones:</b> ${escEnt(e.observaciones||'—')}</div>${e.hora_entrega?`<div class="mt-2 text-[10px] font-black text-blue-600">🕒 ${escEnt(e.hora_entrega)}</div>`:''}<div class="grid grid-cols-2 gap-2 mt-3"><a href="${wa}" target="_blank" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[11px] text-center">📲 WhatsApp</a>${e.estado=='entregado'?'<button disabled class="bg-gray-200 text-gray-500 py-3 rounded-xl font-black text-[11px]">✓ Entregado</button>':`<button onclick="marcarEntregaEntregada('${e.id}')" class="bg-black text-white py-3 rounded-xl font-black text-[11px]">ENTREGADO</button>`}</div></div>`;}
 function renderListaEntregas(){let hoy=fechaLocalISO(0),manana=fechaLocalISO(1),h=entregasCache.filter(e=>e.fecha_entrega==hoy).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99')),m=entregasCache.filter(e=>e.fecha_entrega==manana).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99'));document.getElementById('entHoy').innerHTML=h.length?h.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para hoy.</p>';document.getElementById('entManana').innerHTML=m.length?m.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para mañana.</p>';}
 async function marcarEntregaEntregada(id){try{let r=await fetch('/api/entregas/'+encodeURIComponent(id)+'?negocio_id='+encodeURIComponent(negocioId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:'entregado'})});let j=await r.json();if(!j.ok)throw new Error(j.msg||'Error');let e=entregasCache.find(x=>String(x.id)==String(id));if(e)e.estado='entregado';renderCalendarioEntregas();renderListaEntregas();}catch(e){alert('No se pudo marcar como entregado: '+e.message);}}
 function abrirAgendarEntrega(){document.getElementById('ag-que').value='';document.getElementById('ag-fecha').value=fechaLocalISO(1);document.getElementById('ag-hora').value='';document.getElementById('ag-para').value='';document.getElementById('ag-telefono').value='';document.getElementById('ag-obs').value='';document.getElementById('modalAgendarEntrega').classList.remove('hidden');}
@@ -466,7 +521,7 @@ function addProveedor(){ let n=document.getElementById('provNombre').value.trim(
 function abrirProvEdit(id){ let p=getProveedores().find(x=>x.id==id); if(!p) return; document.getElementById('pe-id').value=p.id; document.getElementById('pe-nombre').value=p.nombre||''; document.getElementById('pe-tel').value=p.tel||''; document.getElementById('pe-que').value=p.que||''; document.getElementById('pe-direccion').value=p.direccion||''; document.getElementById('pe-horario').value=p.horario||''; document.getElementById('pe-dias').value=p.dias||''; document.getElementById('pe-notas').value=p.notas||''; document.getElementById('modalProv').classList.remove('hidden'); }
 function cerrarProvEdit(){ document.getElementById('modalProv').classList.add('hidden'); }
 function guardarProvEdit(){ let id=document.getElementById('pe-id').value; let provs=getProveedores(); let p=provs.find(x=>x.id==id); if(!p) return; p.nombre=document.getElementById('pe-nombre').value.trim(); p.tel=document.getElementById('pe-tel').value.trim(); p.que=document.getElementById('pe-que').value.trim(); p.direccion=document.getElementById('pe-direccion').value.trim(); p.horario=document.getElementById('pe-horario').value.trim(); p.dias=document.getElementById('pe-dias').value.trim(); p.notas=document.getElementById('pe-notas').value.trim(); setItem('proveedores',provs); renderProveedores(); cerrarProvEdit(); }
-function renderProveedores(){ let provs=getProveedores(); let inv=getInv(); let el=document.getElementById('listaProveedores'); if(!el) return; if(!provs.length){ el.innerHTML='<p class="text-[11px] text-gray-400 text-center py-4">Sin proveedores</p>'; } else { el.innerHTML=provs.map(p=>{ let items=inv.filter(i=>String(i.proveedorId)==String(p.id)); let queBadge=p.que? `<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded-full font-black ml-2">${p.que}</span>`:''; let listaInv=items.length? `<div class="mt-2 bg-gray-50 rounded-xl p-2"><div class="text-[9px] font-black text-gray-500 mb-1">📦 PRODUCTOS DEL INVENTARIO QUE SE COMPRAN AQUÍ</div><div class="flex flex-wrap gap-1">${items.map(i=>`<span class="bg-white border px-2 py-1 rounded-full text-[9px] font-bold">${i.nombre}</span>`).join('')}</div></div>`:'<div class="mt-2 text-[9px] text-gray-400">Sin productos de inventario asignados</div>'; return `<div class="bg-white p-4 rounded-[16px] border-2 border-gray-200 shadow-sm"><div class="flex justify-between items-start"><div class="flex-1"><div class="flex items-center flex-wrap gap-1"><b class="text-[16px]">${p.nombre}</b> ${queBadge}</div><div class="mt-3 space-y-1 text-[13px] text-gray-800"><div>${p.tel? `📱 <b>${p.tel}</b>` : '<span class="text-gray-400">📱 Sin teléfono</span>'}</div><div>${p.direccion? `📍 ${p.direccion}` : '<span class="text-gray-400">📍 Sin dirección</span>'}</div><div>${(p.horario||p.dias)? `🕒 ${p.horario||''} ${p.dias? '• '+p.dias:''}` : '<span class="text-gray-400">🕒 Sin horario</span>'}</div><div class="text-[12px] mt-2">${p.notas? `📝 ${p.notas}` : ''}</div></div>${listaInv}</div><div class="flex flex-col gap-2 ml-3"><button onclick="abrirProvEdit('${p.id}')" class="bg-blue-500 text-white w-11 h-11 rounded-full text-[14px] flex items-center justify-center shadow">✏️</button><a href="tel:${(p.tel||'').replace(/\D/g,'')}" class="bg-green-100 text-green-700 w-11 h-11 rounded-full text-[12px] flex items-center justify-center font-black shadow">📞</a></div></div></div>`; }).join(''); } let sel=document.getElementById('g-proveedor'); if(sel){ let actual=sel.value; sel.innerHTML='<option value="">Sin proveedor</option>'+provs.map(pr=>`<option value="${pr.id}">${pr.nombre} ${pr.tel? '- '+pr.tel:''}</option>`).join(''); if(actual) sel.value=actual; } poblarSelectProveedores('inv-proveedor',document.getElementById('inv-proveedor')?.value||''); let sel2=document.getElementById('g-inv-id'); if(sel2){ sel2.innerHTML='<option value="">No cargar stock</option>'+inv.map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join(''); } }
+function renderProveedores(){ let provs=getProveedores(); let inv=getInv(); let el=document.getElementById('listaProveedores'); if(!el) return; if(!provs.length){ el.innerHTML='<p class="text-[11px] text-gray-400 text-center py-4">Sin proveedores</p>'; } else { el.innerHTML=provs.map(p=>{ let items=inv.filter(i=>String(i.proveedorId)==String(p.id)); let queBadge=p.que? `<span class="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded-full font-black ml-2">${p.que}</span>`:''; let listaInv=items.length? `<div class="mt-2 bg-gray-50 rounded-xl p-2"><div class="text-[9px] font-black text-gray-500 mb-1">📦 PRODUCTOS DEL INVENTARIO QUE SE COMPRAN AQUÍ</div><div class="flex flex-wrap gap-1">${items.map(i=>`<span class="bg-white border px-2 py-1 rounded-full text-[9px] font-bold">${i.nombre}</span>`).join('')}</div></div>`:'<div class="mt-2 text-[9px] text-gray-400">Sin productos de inventario asignados</div>'; return `<div class="bg-white p-4 rounded-[16px] border-2 border-gray-200 shadow-sm"><div class="flex justify-between items-start"><div class="flex-1"><div class="flex items-center flex-wrap gap-1"><b class="text-[16px]">${p.nombre}</b> ${queBadge}</div><div class="mt-3 space-y-1 text-[13px] text-gray-800"><div>${p.tel? `📱 <b>${p.tel}</b>` : '<span class="text-gray-400">📱 Sin teléfono</span>'}</div><div>${p.direccion? `📍 ${p.direccion}` : '<span class="text-gray-400">📍 Sin dirección</span>'}</div><div>${(p.horario||p.dias)? `🕒 ${p.horario||''} ${p.dias? '• '+p.dias:''}` : '<span class="text-gray-400">🕒 Sin horario</span>'}</div><div class="text-[12px] mt-2">${p.notas? `📝 ${p.notas}` : ''}</div></div>${listaInv}</div><div class="flex flex-col gap-2 ml-3"><button onclick="abrirProvEdit('${p.id}')" class="bg-blue-500 text-white w-11 h-11 rounded-full text-[14px] flex items-center justify-center shadow">✏️</button><a href="tel:${(p.tel||'').replace(/[^0-9]/g,'')}" class="bg-green-100 text-green-700 w-11 h-11 rounded-full text-[12px] flex items-center justify-center font-black shadow">📞</a></div></div></div>`; }).join(''); } let sel=document.getElementById('g-proveedor'); if(sel){ let actual=sel.value; sel.innerHTML='<option value="">Sin proveedor</option>'+provs.map(pr=>`<option value="${pr.id}">${pr.nombre} ${pr.tel? '- '+pr.tel:''}</option>`).join(''); if(actual) sel.value=actual; } poblarSelectProveedores('inv-proveedor',document.getElementById('inv-proveedor')?.value||''); let sel2=document.getElementById('g-inv-id'); if(sel2){ sel2.innerHTML='<option value="">No cargar stock</option>'+inv.map(i=>`<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join(''); } }
 function addCategoriaVenta(){ let n=document.getElementById('nuevaCatNombre').value.trim(); if(!n) return; let cats=getCategoriasVenta(); cats.push({id:n.toLowerCase().replace(/\\s+/g,'-')+'-'+Date.now(),nombre:n}); setItem('categoriasVenta',cats); document.getElementById('nuevaCatNombre').value=''; renderCategoriasVenta(); renderProdCategoriaSelect(); }
 function editarCategoriaVenta(id){
  let cats=getCategoriasVenta();
@@ -518,7 +573,7 @@ function guardarClienteForm(){ let nombre=document.getElementById('cliFormNombre
 function addCliente(){ abrirClienteNuevo(); }
 function addClienteRapido(){ let nombre=document.getElementById('quickClienteNombre').value.trim(); let tel=document.getElementById('quickClienteTel').value.trim(); if(!nombre) return alert('Nombre'); let cli=getCli(); let nuevo={id:Date.now().toString(),nombre,tel,whatsapp:tel,direccion:'',correo:'',observaciones:''}; cli.push(nuevo); setItem('clientesV2',cli); document.getElementById('quickClienteNombre').value=''; document.getElementById('quickClienteTel').value=''; renderClientes(); document.getElementById('selCliente').value=nuevo.id; }
 function borrarCliente(id){ let c=getCli().find(x=>String(x.id)==String(id)); if(!c) return; if(!confirm(`¿Borrar al cliente "${c.nombre}"? Sus ventas y deudas históricas no se borrarán.`)) return; setItem('clientesV2',getCli().filter(x=>String(x.id)!=String(id))); renderClientes(); }
-function recordarDeuda(){ if(!clienteDeudaActual) return; let cli=getCli().find(c=>c.id==clienteDeudaActual); let deudas=getDeudas().filter(d=>d.clienteId==clienteDeudaActual && d.restante>0); let total=deudas.reduce((s,d)=>s+d.restante,0); let tel=cli.whatsapp||cli.tel||''; if(!tel){ tel=prompt('WhatsApp'); if(!tel) return; } tel=tel.replace(/\D/g,''); if(tel.length==10) tel='52'+tel; let texto=`Hola ${cli.nombre} 👋 soy de ${getEmp().nombre||'Mi Negocio'}. Te recuerdo adeudo $${total.toFixed(0)}`; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
+function recordarDeuda(){ if(!clienteDeudaActual) return; let cli=getCli().find(c=>c.id==clienteDeudaActual); let deudas=getDeudas().filter(d=>d.clienteId==clienteDeudaActual && d.restante>0); let total=deudas.reduce((s,d)=>s+d.restante,0); let tel=cli.whatsapp||cli.tel||''; if(!tel){ tel=prompt('WhatsApp'); if(!tel) return; } tel=tel.replace(/[^0-9]/g,''); if(tel.length==10) tel='52'+tel; let texto=`Hola ${cli.nombre} 👋 soy de ${getEmp().nombre||'Mi Negocio'}. Te recuerdo adeudo $${total.toFixed(0)}`; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function renderClientes(){ let cli=getCli(); let deudas=getDeudas(); let totalPorCobrar=0; deudas.forEach(d=>{ if(d.restante>0) totalPorCobrar+=d.restante; }); document.getElementById('totalDeudaGlobal').innerText='$'+totalPorCobrar.toFixed(0)+' por cobrar'; let lista=document.getElementById('listaClientes'); if(lista) lista.innerHTML=cli.map(c=>{ let dCliente=deudas.filter(d=>d.clienteId==c.id && d.restante>0); let totalDebe=dCliente.reduce((s,d)=>s+d.restante,0); let contacto=c.whatsapp||c.tel||''; return `<div class="bg-gray-50 p-3 rounded-xl border"><div class="flex justify-between items-start gap-2"><div class="flex-1"><b class="text-[13px]">${c.nombre}</b> ${totalDebe>0? `<span class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full">Debe $${totalDebe.toFixed(0)}</span>`:''}<br><span class="text-[11px]">📞 ${c.tel||'Sin teléfono'} ${contacto&&contacto!=c.tel?' • 📲 '+contacto:''}</span>${c.direccion?`<br><span class="text-[10px] text-gray-500">📍 ${c.direccion}</span>`:''}${c.observaciones?`<br><span class="text-[10px] text-gray-500">📝 ${c.observaciones}</span>`:''}</div><div class="flex gap-1"><button onclick="editarCliente('${c.id}')" class="bg-blue-500 text-white w-9 h-9 rounded-full text-[12px]">✏️</button><button onclick="borrarCliente('${c.id}')" class="bg-red-100 text-red-500 w-9 h-9 rounded-full font-black">❌</button></div></div><button onclick="abrirDeuda('${c.id}')" class="w-full mt-2 bg-black text-white py-2 rounded-xl text-[11px]">💰 Ver cuenta / deuda</button></div>`; }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin clientes</p>'; let sel=document.getElementById('selCliente'); if(sel){ let actual=sel.value; sel.innerHTML='<option value="">Mostrador</option>'+cli.map(c=>`<option value="${c.id}" data-tel="${c.tel||''}" data-whatsapp="${c.whatsapp||c.tel||''}" data-nombre="${c.nombre}">${c.nombre}</option>`).join(''); if(actual) sel.value=actual; } }
 function addFijo(){ let n=document.getElementById('fijoNombre').value.trim(), m=parseFloat(document.getElementById('fijoMonto').value); if(!n||!m) return; let f=getFijos(); f.push({id:Date.now().toString(), nombre:n, monto:m}); setItem('gastosFijos',f); document.getElementById('fijoNombre').value=''; document.getElementById('fijoMonto').value=''; renderFijos(); calc(); calc2(); }
 function renderFijos(){ let f=getFijos(); let total=f.reduce((s,x)=>s+x.monto,0); document.getElementById('totalFijos').innerText=total.toFixed(0); let lotes=parseInt(localStorage.getItem('lotesMes_'+negocioId)||'30')||30; document.getElementById('lotesMes').value=lotes; window._costoFijoPorLote=lotes>0? total/lotes : 0; document.getElementById('listaFijos').innerHTML=f.map(x=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl border"><div><b class="text-[12px]">${x.nombre}</b><br><span class="text-[10px]">$${x.monto}/mes</span></div><button onclick="if(confirm('Borrar?')){setItem('gastosFijos',getFijos().filter(y=>y.id!='${x.id}')); renderFijos(); calc(); calc2();}" class="text-red-500 font-black">X</button></div>`).join(''); }
@@ -642,8 +697,7 @@ function borrarPresupuestoCancelado(id){
  setItem('presupuestos',ps);
  renderPresupuestos();
 }
-function imprimirTicket(){ 
-  let contenido = document.getElementById('ticketContenido').innerText;
+function imprimirTicket(){   let contenido = document.getElementById('ticketContenido').innerText;
   let contenidoHTML = document.getElementById('ticketContenido').innerHTML;
 
   // Si el cel puede compartir, lo manda a Quick Printer
@@ -656,8 +710,8 @@ function imprimirTicket(){
     });
   } else {
     let w=window.open('','','width=300,height=600'); 
-    w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenidoHTML+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>');
-        w.document.close();
+    w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenidoHTML+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); 
+    w.document.close();
   }
 }
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
@@ -846,8 +900,9 @@ def autoguardado():
     js = """
 const SUPA_URL = "https://txuggnfohyevpvdfxpfu.supabase.co";
 const SUPA_KEY = "sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC";
-const SUPA_EMAIL = "esaul_1987@hotmail.com";
+const SUPA_EMAIL = (localStorage.getItem("session_email")||"").trim().toLowerCase();
 async function guardarNubeAuto(){
+  if(!SUPA_EMAIL) return;
   let all={}; for(let i=0;i<localStorage.length;i++){let k=localStorage.key(i); try{all[k]=JSON.parse(localStorage.getItem(k))}catch(e){all[k]=localStorage.getItem(k)}}
   try{
     await fetch(SUPA_URL+"/rest/v1/respaldo?on_conflict=email",{
