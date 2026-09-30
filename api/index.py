@@ -206,12 +206,8 @@ def api_register():
         if not res.user:
             return jsonify({"ok":False,"msg":"Supabase no devolvió el usuario creado."}),400
         negocio_id=str(res.user.id)
-        # Crea/actualiza el registro del negocio sin depender de users.json.
-        try:
-            supabase.table("negocios").upsert({"id":negocio_id,"owner_email":email}, on_conflict="id").execute()
-        except Exception as e:
-            # La cuenta de Supabase sí fue creada; devolvemos el error del negocio para poder corregirlo.
-            return jsonify({"ok":False,"msg":"La cuenta se creó en Supabase, pero no se pudo crear el negocio: "+str(e)}),500
+        # El registro de Auth es suficiente para crear la cuenta.
+        # No hacemos depender el alta de la tabla negocios/RLS.
         return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":"owner"})
     except Exception as e:
         return jsonify({"ok":False,"msg":str(e)}),400
@@ -230,37 +226,31 @@ def api_login():
         if not res.user:
             return jsonify({"ok":False,"msg":"Correo o contraseña incorrectos."}),401
         negocio_id=str(res.user.id)
-        # Garantiza que exista el negocio aunque sea una cuenta creada anteriormente.
-        try:            supabase.table("negocios").upsert({"id":negocio_id,"owner_email":email}, on_conflict="id").execute()
-        except Exception as e:
-            return jsonify({"ok":False,"msg":"La contraseña es correcta, pero no se pudo preparar el negocio: "+str(e)}),500
-        return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":"owner"})
-    except Exception as e:
+        # Login depende únicamente de Supabase Auth.
+        # No bloqueamos el acceso por la tabla negocios/RLS.
+        return jsonify({"ok":True,"email":email,"negocio_id":negocio_id,"rol":"owner"})    except Exception as e:
         return jsonify({"ok":False,"msg":"No se pudo iniciar sesión: "+str(e)}),401
 
 @app.route('/api/invite', methods=['POST'])
 def api_invite():
  return jsonify({"ok":False,"msg":"No implementado"}),501
 
-def _respaldo_email_por_negocio(negocio_id):
-    """Obtiene el correo dueño del negocio para usar la tabla respaldo existente."""
-    if not negocio_id or supabase is None:
-        return None
-    res=supabase.table("negocios").select("owner_email").eq("id",negocio_id).limit(1).execute()
-    rows=res.data or []
-    return str(rows[0].get("owner_email") or "").lower().strip() if rows else None
+def _email_respaldo(request_email):
+    """Normaliza el correo usado por la tabla respaldo, sin depender de negocios."""
+    email=str(request_email or "").lower().strip()
+    return email or None
 
 @app.route('/api/load', methods=['GET'])
 def api_load():
     try:
         negocio_id=str(request.args.get('negocio_id') or '').strip()
+        email=_email_respaldo(request.args.get('email'))
         if not negocio_id:
             return jsonify({"ok":False,"msg":"Falta negocio_id."}),400
+        if not email:
+            return jsonify({"ok":False,"msg":"Falta el correo de la cuenta."}),400
         if supabase is None:
             return jsonify({"ok":False,"msg":"Supabase no está configurado."}),500
-        email=_respaldo_email_por_negocio(negocio_id)
-        if not email:
-            return jsonify({"ok":True,"data":{}})
         res=supabase.table("respaldo").select("datos").eq("email",email).limit(1).execute()
         rows=res.data or []
         data=rows[0].get("datos") if rows else {}
@@ -275,14 +265,14 @@ def api_save():
     try:
         d=request.get_json(silent=True) or {}
         negocio_id=str(d.get('negocio_id') or '').strip()
+        email=_email_respaldo(d.get('email'))
         data=d.get('data') or {}
         if not negocio_id:
             return jsonify({"ok":False,"msg":"Falta negocio_id."}),400
+        if not email:
+            return jsonify({"ok":False,"msg":"Falta el correo de la cuenta."}),400
         if supabase is None:
             return jsonify({"ok":False,"msg":"Supabase no está configurado."}),500
-        email=_respaldo_email_por_negocio(negocio_id)
-        if not email:
-            return jsonify({"ok":False,"msg":"No se encontró el negocio en Supabase."}),404
         supabase.table("respaldo").upsert({"email":email,"datos":data}, on_conflict="email").execute()
         return jsonify({"ok":True})
     except Exception as e:
@@ -464,12 +454,12 @@ def home():
 <div id="modalProv" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 class="font-black text-[15px]">🏭 Editar Proveedor</h2><input type="hidden" id="pe-id"><input id="pe-nombre" placeholder="Nombre" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-tel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-que" placeholder="Qué surte" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="pe-direccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-horario" placeholder="Horario 8am-6pm" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-dias" placeholder="Días Lun-Sab" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><textarea id="pe-notas" placeholder="Notas, crédito, mínimo, etc" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarProvEdit()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">Guardar</button><button onclick="cerrarProvEdit()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div>
 <div id="modalCliente" class="hidden fixed inset-0 bg-black/70 z-[75] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 id="clienteModalTitulo" class="font-black text-[16px]">👤 Nuevo cliente</h2><input type="hidden" id="cliEditId"><input id="cliFormNombre" placeholder="Nombre completo *" class="w-full border-2 border-black p-3 rounded-xl mt-3 text-[13px] font-bold"><div class="grid grid-cols-2 gap-2 mt-2"><input id="cliFormTel" placeholder="📞 Teléfono" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="cliFormWhatsapp" placeholder="📲 WhatsApp" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="cliFormDireccion" placeholder="📍 Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><input id="cliFormCorreo" type="email" placeholder="✉️ Correo (opcional)" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><textarea id="cliFormObs" placeholder="📝 Observaciones / preferencias / pedido habitual" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarClienteForm()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">💾 Guardar</button><button onclick="cerrarClienteForm()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div><div id="modalDeuda" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black">💰 <span id="deudaClienteNombre"></span></h2><p class="text-[11px] text-gray-500" id="deudaClienteTel"></p><div class="mt-3 bg-red-50 border-2 border-red-200 p-3 rounded-xl text-center"><p class="text-[11px]">Debe</p><p class="font-black text-[22px] text-red-600" id="deudaTotal">$0</p><button onclick="recordarDeuda()" class="mt-2 bg-[#25D366] text-white px-4 py-2 rounded-full text-[11px] font-black">📲 Recordar</button></div><div id="deudaLista" class="mt-3 space-y-2"></div><div class="mt-4 bg-green-50 border-2 border-green-200 p-3 rounded-xl"><input id="abonoMonto" type="number" placeholder="$ Monto" class="w-full border-2 border-black p-2 rounded-xl mt-2"><button onclick="hacerAbono()" class="w-full mt-3 bg-black text-white py-3 rounded-xl font-black">ABONAR</button></div><button onclick="cerrarDeuda()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
 <div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre <span id="cierreFechaLabel"></span> - <span id="cierreUserLabel" class="text-blue-600"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy (tu turno)</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
-<div class="fixed bottom-0 left-0 right-0 bg-white border-t py-2 max-w-md mx-auto z-30"><div class="flex justify-around items-center">
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t py-2 max-w-md mx-auto z-30">
+<div class="flex justify-around items-center">
 <button onclick="showTab('vender')" class="flex flex-col items-center text-black min-w-[70px]"><i class="fa-solid fa-store"></i><span class="text-[8px] font-black">VENDER</span></button>
 <button onclick="showTab('entregas')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-truck-fast"></i><span class="text-[8px] font-black">ENTREGAS</span></button>
 <button onclick="showTab('inventario')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[8px] font-black">PRODUCTOS</span></button>
-</div><div class="text-center mt-1"><button onclick="abrirMenuMas()" class="text-[8px] font-bold text-gray-400">☰ Más funciones</button></div>
-</div></div></div>
+</div><div class="text-center mt-1"><button onclick="abrirMenuMas()" class="text-[8px] font-bold text-gray-400">☰ Más funciones</button></div></div></div></div>
 <script>
 let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null, clienteDeudaActual=null, gastoTipoSel='salida', presupuestoCobroId=null;
 function getFechaLocal(){ let now=new Date(); return now.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+', '+now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); }
@@ -478,12 +468,12 @@ let vistaCal='mes', fechaVista=new Date(), fechaSel=getFechaSoloLocal(), metodoP
 function setMetodoPago(m){ metodoPagoSel=m; document.getElementById('metodoPago').value=m; ['efectivo','tarjeta','transferencia','fiado','apartado'].forEach(x=>{ let b=document.getElementById('mp-'+x); if(!b) return; let sel = b.id=='mp-'+m.toLowerCase(); b.className= sel? 'py-3 rounded-xl border-2 font-black text-[12px] bg-black text-white border-black' : 'py-3 rounded-xl border-2 font-bold text-[12px] bg-white border-black'; }); document.getElementById('boxPagoEfectivo').classList.toggle('hidden', m=='Fiado'||m=='Apartado'); document.getElementById('boxFiado').classList.toggle('hidden',!(m=='Fiado'||m=='Apartado')); }
 function actualizarHora(){ let el=document.getElementById('horaActual'); if(el) el.innerText='🕒 '+getFechaLocal(); } setInterval(actualizarHora,1000);
 function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerText=txt; el.classList.remove('hidden'); el.className='mt-3 text-[11px] font-bold text-center p-2 rounded-xl '+(ok?'bg-green-100 text-green-700':'bg-red-100 text-red-700');}
-async function hacerRegistro(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json(); if(!j.ok) return msgLogin(j.msg||'No se pudo registrar',false); msgLogin('✅ Cuenta creada',true);}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
-async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value.trim(); if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el negocio_id de Supabase',false); await cargarDeNube(); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); msgLogin('',true);}catch(err){msgLogin('No se pudo cargar tu cuenta: '+(err.message||err),false);}}
+async function hacerRegistro(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); if(p.length<6) return msgLogin('La contraseña debe tener al menos 6 caracteres.',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||('No se pudo registrar (HTTP '+r.status+')'),false); msgLogin('✅ Cuenta creada. Si Supabase pide confirmar tu correo, confírmalo y después pulsa ENTRAR.',true);}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
+async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el identificador de tu cuenta.',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); try{await cargarDeNube();}catch(loadErr){console.error(loadErr); alert('Entraste correctamente, pero no se pudieron cargar tus datos guardados. Puedes usar la app y después revisamos la conexión con la tabla respaldo.');} }catch(err){msgLogin('No se pudo iniciar sesión: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)); let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'})); if(!r.ok||!j.ok) throw new Error(j.msg||('Error '+r.status+' al cargar los datos')); let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
-async function guardarEnNube(){if(!currentUser||!negocioId) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,data})});}
-window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('userLabel').innerText=e; await cargarDeNube(); showTab('inventario'); }});
+async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)+'&email='+encodeURIComponent(currentUser)); let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'})); if(!r.ok||!j.ok) throw new Error(j.msg||('Error '+r.status+' al cargar los datos')); let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
+async function guardarEnNube(){if(!currentUser||!negocioId) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,email:currentUser,data})});}
+window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
 function getProd(){ return JSON.parse(localStorage.getItem('productosV2_'+negocioId)||localStorage.getItem('productosV2')||'[]'); }
@@ -697,9 +687,9 @@ function borrarPresupuestoCancelado(id){
  setItem('presupuestos',ps);
  renderPresupuestos();
 }
-function imprimirTicket(){   let contenido = document.getElementById('ticketContenido').innerText;
+function imprimirTicket(){ 
+  let contenido = document.getElementById('ticketContenido').innerText;
   let contenidoHTML = document.getElementById('ticketContenido').innerHTML;
-
   // Si el cel puede compartir, lo manda a Quick Printer
   if(navigator.share){
     navigator.share({ text: contenido }).catch(()=>{
