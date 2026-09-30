@@ -74,6 +74,7 @@
 <p class="text-[9px] text-gray-500 mt-2">No escribas aquí tu clave secreta de Stripe. La conexión se autoriza directamente en Stripe.</p>
 </div>
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-2"><input id="colabEmail" type="email" placeholder="colab@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
+<button onclick="cargarNubeAuto()" id="btn-recarga-nube" style="background:#0ea5e9;color:white;padding:14px;border-radius:16px;width:100%;font-weight:900;margin:12px 0;border:2px solid black;">🔄 Recargar mis datos de la nube</button>
 <button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button>
 <div id="ticketVista" class="mt-6 border-2 border-dashed border-black p-3 rounded-xl bg-yellow-50"><p class="text-[11px] font-black text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-4 rounded-xl text-[12px] font-mono shadow-sm border"></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div>
 </div></div>
@@ -535,6 +536,44 @@ function renderCalendario(){ let facts=getFacts(); let y=fechaVista.getFullYear(
 function renderDesgloseDia(fechaStr){ let facts=getFacts().filter(f=>f.fecha==fechaStr); document.getElementById('fechaSelLabel').innerText=fechaStr; document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fechaHora}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400">Sin movimientos</p>'; }
 function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'); if(!sel) return; let opt=sel.options[sel.selectedIndex]; let nombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador'; let el=document.getElementById('cobroClienteNombre'); if(el) el.innerText=nombre; }
 
+  // === PARCHE NUBE - NO BORRA NADA, SOLO AGREGA ===
+async function cargarNubeAuto(){
+  try{
+    const email = localStorage.getItem('session_email') || localStorage.getItem('email_sesion') || localStorage.getItem('email');
+    if(!email){ alert('No hay email de sesión'); return; }
+    const btn = document.getElementById('btn-recarga-nube');
+    if(btn){ btn.innerText='⏳ Cargando de la nube...'; btn.disabled=true; }
+    const r = await fetch('/api/index.py?email='+encodeURIComponent(email));
+    const data = await r.json();
+    console.log('Nube:', data);
+    // Guarda todo lo que venga, sin tocar lo demás
+    if(data.inventarioMaestro) localStorage.setItem('inventarioMaestro', JSON.stringify(data.inventarioMaestro));
+    if(data.inventario) localStorage.setItem('inventario', JSON.stringify(data.inventario));
+    if(data.productosV2) localStorage.setItem('productosV2', JSON.stringify(data.productosV2));
+    if(data.clientesV2) localStorage.setItem('clientesV2', JSON.stringify(data.clientesV2));
+    if(data.ventas) localStorage.setItem('ventas', JSON.stringify(data.ventas));
+    if(data.empresaConfig) localStorage.setItem('empresaConfig', JSON.stringify(data.empresaConfig));
+    if(data.config){
+      localStorage.setItem('empresaConfig', JSON.stringify(data.config));
+      if(data.config.logo) localStorage.setItem('logo', data.config.logo);
+    }
+    if(data.logo) localStorage.setItem('logo', data.logo);
+    if(btn) btn.innerText='✅ ¡Recargado!';
+    setTimeout(()=>location.reload(), 800);
+  }catch(e){ alert('Error nube: '+e.message); console.error(e); const b=document.getElementById('btn-recarga-nube'); if(b){ b.innerText='🔄 Recargar mis datos de la nube'; b.disabled=false; } }
+}
+function intentarAutoRecarga(){
+  setTimeout(()=>{
+    try{
+      const inv = localStorage.getItem('inventarioMaestro') || localStorage.getItem('inventario') || localStorage.getItem('productosV2') || '[]';
+      const vacio = !inv || inv==='[]' || inv==='{}' || inv==='null' || (JSON.parse(inv).length===0);
+      if(vacio){ console.log('Vacío detectado, auto recarga'); cargarNubeAuto(); }
+    }catch(e){ cargarNubeAuto(); }
+  },1500);
+}
+// Auto-ejecuta después de login
+const _oldIniciar = window.iniciarApp || window.login || null;
+if(localStorage.getItem('session_email')) intentarAutoRecarga();
 revisarRetornoStripe();
 </script>
 <script src="/api/autoguardado"></script>
