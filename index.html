@@ -131,17 +131,30 @@ function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.r
 async function cargarDeNube(){
   try{
     alert('☁️ Cargando de la nube...');
-    let user = JSON.parse(localStorage.getItem('mr_user')||'null');
-    if(!user){ alert('No hay sesión, inicia sesión de nuevo'); return; }
+    // buscar usuario donde esté
+    let user = null;
+    try{ user = JSON.parse(localStorage.getItem('mr_user')||'null'); }catch(e){}
+    if(!user){ try{ user = JSON.parse(localStorage.getItem('usuario')||'null'); }catch(e){} }
+    if(!user){ try{ user = JSON.parse(localStorage.getItem('user')||'null'); }catch(e){} }
+    if(!user && window.curUser) user = window.curUser;
+    if(!user && window.usuario) user = window.usuario;
+    // si es supabase auth
+    if(!user){
+      let sb = localStorage.getItem('sb-llvabxwnxefjviwudvbp-auth-token');
+      if(sb){ let p=JSON.parse(sb); if(p && p.user) user={id:p.user.id, email:p.user.email}; }
+    }
+    console.log('USER ENCONTRADO:', user);
+    if(!user ||!user.id){ alert('No hay sesión, inicia sesión de nuevo. Ve a Config y dale Salir y vuelve a entrar.'); return; }
+
     let r = await fetch('/api/load?user_id='+user.id);
     let data = await r.json();
     if(!r.ok){ alert('Error: '+JSON.stringify(data)); return; }
     if(data && data.data){
       for(let k in data.data){ localStorage.setItem(k, JSON.stringify(data.data[k])); }
-      alert('✅ Datos recuperados de la nube!');
+      alert('✅ Datos recuperados! Se va a recargar');
       location.reload();
-    } else { alert('No hay datos en la nube aún'); }
-  }catch(e){ alert('Error cargar: '+e.message); }
+    } else { alert('No hay datos en la nube aún, dale a Guardar primero'); }
+  }catch(e){ alert('Error cargar: '+e.message); console.error(e); }
 }
 async function guardarEnNube(){
   try{
