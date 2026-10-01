@@ -74,7 +74,7 @@
 <p class="text-[9px] text-gray-500 mt-2">No escribas aquí tu clave secreta de Stripe. La conexión se autoriza directamente en Stripe.</p>
 </div>
 <div class="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-3"><p class="font-black text-[12px]">👥 Colaboradores</p><div class="grid grid-cols-5 gap-2 mt-2"><input id="colabEmail" type="email" placeholder="colab@gmail.com" class="col-span-3 border-2 border-black p-2 rounded-xl text-[12px]"><input id="colabPass" placeholder="Pass" class="col-span-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="invitarColab()" class="bg-purple-600 text-white rounded-xl font-black">+</button></div></div>
-<button onclick="cargarDeNube()" id="btn-recarga-nube" style="background:#0ea5e9;color:white;padding:14px;border-radius:16px;width:100%;font-weight:900;margin:12px 0;border:2px solid black;">🔄 Recargar mis datos de la nube</button>
+<button onclick="cargarDeNube()" id="btn-recargar" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold mt-2">☁️ Recargar mis datos de la nube</button>
 <button onclick="guardarEmpresa()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button><button onclick="probarTicket()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">🧾 Probar ticket</button>
 <div id="ticketVista" class="mt-6 border-2 border-dashed border-black p-3 rounded-xl bg-yellow-50"><p class="text-[11px] font-black text-center mb-2">VISTA PREVIA</p><div id="ticketContenido" class="bg-white p-4 rounded-xl text-[12px] font-mono shadow-sm border"></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="imprimirTicket()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarWhatsAppTicket(true)" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div></div>
 </div></div>
@@ -128,8 +128,34 @@ function msgLogin(txt,ok){let el=document.getElementById('loginMsg'); el.innerTe
 async function hacerRegistro(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); if(p.length<6) return msgLogin('La contraseña debe tener al menos 6 caracteres.',false); let r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||('No se pudo registrar (HTTP '+r.status+')'),false); msgLogin('✅ Cuenta creada. Si Supabase pide confirmar tu correo, confírmalo y después pulsa ENTRAR.',true);}catch(err){msgLogin('Error de conexión con el servidor: '+(err.message||err),false);}}
 async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el identificador de tu cuenta.',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); try{await cargarDeNube();}catch(loadErr){console.error(loadErr); alert('Entraste correctamente, pero no se pudieron cargar tus datos guardados. Puedes usar la app y después revisamos la conexión con la tabla respaldo.');} }catch(err){msgLogin('No se pudo iniciar sesión: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
-async function cargarDeNube(){if(!currentUser||!negocioId) return; let r=await fetch('/api/load?negocio_id='+encodeURIComponent(negocioId)+'&email='+encodeURIComponent(currentUser)); let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'})); if(!r.ok||!j.ok) throw new Error(j.msg||('Error '+r.status+' al cargar los datos')); let data=j.data||{}; for(let k in data){ localStorage.setItem(k+'_'+negocioId, data[k]); } renderFijos(); renderInventario(); renderCategoriasVenta(); renderProdCategoriaSelect(); renderClientes(); renderCalendario(); cargarEmpresa(); renderInventarioMaster(); renderProveedores(); actualizarHora();}
-async function guardarEnNube(){if(!currentUser||!negocioId) return; let keys=['productosV2','inventarioMaestro','clientesV2','facturas','categoriasVenta','gastosFijos','empresaConfig','lotesMes','deudas','proveedores','presupuestos']; let data={}; keys.forEach(k=>{ let v=localStorage.getItem(k+'_'+negocioId) || localStorage.getItem(k); if(v) data[k]=v; }); await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,email:currentUser,data})});}
+async function cargarDeNube(){
+  try{
+    alert('☁️ Cargando de la nube...');
+    let user = JSON.parse(localStorage.getItem('mr_user')||'null');
+    if(!user){ alert('No hay sesión, inicia sesión de nuevo'); return; }
+    let r = await fetch('/api/load?user_id='+user.id);
+    let data = await r.json();
+    if(!r.ok){ alert('Error: '+JSON.stringify(data)); return; }
+    if(data && data.data){
+      for(let k in data.data){ localStorage.setItem(k, JSON.stringify(data.data[k])); }
+      alert('✅ Datos recuperados de la nube!');
+      location.reload();
+    } else { alert('No hay datos en la nube aún'); }
+  }catch(e){ alert('Error cargar: '+e.message); }
+}
+async function guardarEnNube(){
+  try{
+    alert('💾 Guardando en la nube...');
+    let user = JSON.parse(localStorage.getItem('mr_user')||'null');
+    if(!user){ alert('No hay sesión'); return; }
+    let payload = {};
+    ['mr_inventario','mr_productos','mr_clientes','mr_facturas','mr_fijos','mr_proveedores','mr_empresa','mr_deudas'].forEach(k=>{ let v=localStorage.getItem(k); if(v) payload[k]=JSON.parse(v); });
+    let r = await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:user.id, data:payload})});
+    let data = await r.json();
+    if(!r.ok){ alert('Error: '+JSON.stringify(data)); return; }
+    alert('✅ Guardado en la nube!');
+  }catch(e){ alert('Error guardar: '+e.message); }
+}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
