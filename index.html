@@ -148,18 +148,18 @@ async function guardarEnNubeAuto(){
     if(!email) return;
     const get = (k) => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
     const payload = {
-      inventarioMaestro: get('inventarioMaestro'),
-      inventario: get('inventario'),
-      productosV2: get('productosV2'),
-      clientesV2: get('clientesV2'),
-      ventas: get('ventas'),
-      empresaConfig: get('empresaConfig'),
-      agenda: get('agenda'),
-      citas: get('citas'),
-      pedidos: get('pedidos'),
-      entregas: get('entregas'),
-      agendamientos: get('agendamientos')
-    };
+  inventarioMaestro: conseguir('inventarioMaestro'),
+  inventario: conseguir('inventario'),
+  productosV2: conseguir('productosV2'),
+  clientesV2: conseguir('clientesV2'),
+  ventas: conseguir('ventas'),
+  empresaConfig: conseguir('empresaConfig'),
+  agenda: conseguir('agenda'),
+  citas: conseguir('citas'),
+  pedidos: conseguir('pedidos'),
+  entregas: conseguir('entregas'),
+  agendamientos: conseguir('agendamientos')
+};
     await fetch('/api/index.py', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email, data: payload})});
     console.log('✅ Nube guardada con agenda');
   }catch(e){ console.log(e); }
