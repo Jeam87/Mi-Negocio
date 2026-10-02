@@ -142,21 +142,28 @@ async function cargarDeNube(){
     }
   }catch(e){ console.log('Sin datos en nube aún', e); }
 }
-async function guardarEnNube(){
+async function guardarEnNubeAuto(){
   try{
-    let email = (localStorage.getItem('session_email') || currentUser || "").toLowerCase();
+    const email = (localStorage.getItem('session_email')||'').toLowerCase();
     if(!email) return;
-    let payload = {};
-    for(let i=0;i<localStorage.length;i++){
-      let k = localStorage.key(i);
-      if(k==='session_email' || k==='currentUser' || k.startsWith('sb-')) continue;
-      let v = localStorage.getItem(k);
-      if(!v) continue;
-      try{ payload[k]=JSON.parse(v); }catch(e){ payload[k]=v; }
-    }
-    await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:email, data:payload})});
-  }catch(e){ console.error(e); }
-} 
+    const get = (k) => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+    const payload = {
+      inventarioMaestro: get('inventarioMaestro'),
+      inventario: get('inventario'),
+      productosV2: get('productosV2'),
+      clientesV2: get('clientesV2'),
+      ventas: get('ventas'),
+      empresaConfig: get('empresaConfig'),
+      agenda: get('agenda'),
+      citas: get('citas'),
+      pedidos: get('pedidos'),
+      entregas: get('entregas'),
+      agendamientos: get('agendamientos')
+    };
+    await fetch('/api/index.py', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email, data: payload})});
+    console.log('✅ Nube guardada con agenda');
+  }catch(e){ console.log(e); }
+}
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
@@ -580,6 +587,11 @@ async function cargarNubeAuto(){
     if(data.clientesV2) localStorage.setItem('clientesV2', JSON.stringify(data.clientesV2));
     if(data.ventas) localStorage.setItem('ventas', JSON.stringify(data.ventas));
     if(data.empresaConfig) localStorage.setItem('empresaConfig', JSON.stringify(data.empresaConfig));
+    if(data.agenda) localStorage.setItem('agenda', JSON.stringify(data.agenda));
+    if(data.citas) localStorage.setItem('citas', JSON.stringify(data.citas));
+    if(data.pedidos) localStorage.setItem('pedidos', JSON.stringify(data.pedidos));
+    if(data.entregas) localStorage.setItem('entregas', JSON.stringify(data.entregas));
+    if(data.agendamientos) localStorage.setItem('agendamientos', JSON.stringify(data.agendamientos));
     if(data.config){
       localStorage.setItem('empresaConfig', JSON.stringify(data.config));
       if(data.config.logo) localStorage.setItem('logo', data.config.logo);
