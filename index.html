@@ -130,66 +130,29 @@ async function hacerLogin(){try{let e=document.getElementById('loginEmail').valu
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
   try{
-    alert('☁️ Cargando de la nube...');
-    // 1. Obtener usuario directo de Supabase
-    let userId = null;
-    if(window.supabase && window.supabase.auth){
-      let { data } = await window.supabase.auth.getUser();
-      if(data && data.user) userId = data.user.id;
-    }
-    // 2. Si no, buscar en localStorage cualquier sb-*-auth-token
-    if(!userId){
-      for(let k of Object.keys(localStorage)){
-        if(k.startsWith('sb-') && k.endsWith('-auth-token')){
-          try{
-            let v = JSON.parse(localStorage.getItem(k));
-            if(v && v.user && v.user.id) userId = v.user.id;
-          }catch(e){}
-        }
+    let email = (localStorage.getItem('session_email') || currentUser || "").toLowerCase();
+    if(!email) return;
+    let r = await fetch('/api/load?user_id='+encodeURIComponent(email));
+    let j = await r.json();
+    if(j && j.data && Object.keys(j.data).length>0){
+      for(let k in j.data){
+        localStorage.setItem(k, JSON.stringify(j.data[k]));
+        localStorage.setItem(k+'_'+email, JSON.stringify(j.data[k]));
       }
     }
-    if(!userId){ alert('No hay sesión activa. Ve a Config > Salir, y entra de nuevo con tu correo. Si sigue fallando, cierra TODAS las pestañas de vercel y vuelve a abrir.'); return; }
-
-    alert('ID encontrado: '+userId.substring(0,8)+'... cargando...');
-    let r = await fetch('/api/load?user_id='+userId);
-    let txt = await r.text();
-    let data;
-    try{ data = JSON.parse(txt); }catch(e){ alert('Respuesta del servidor no es JSON: '+txt.substring(0,200)); return; }
-    if(!r.ok){ alert('Error del servidor: '+JSON.stringify(data)); return; }
-    if(data && data.data && Object.keys(data.data).length>0){
-      for(let k in data.data){ localStorage.setItem(k, JSON.stringify(data.data[k])); }
-      alert('✅ Datos recuperados! '+Object.keys(data.data).length+' tablas');
-      location.reload();
-    } else { alert('La nube está vacía para este usuario. Primero dale a Guardar en la nube en tu otro celular.'); }
-  }catch(e){ alert('Error cargar: '+e.message); console.error(e); }
+  }catch(e){ console.log('Sin datos en nube aún', e); }
 }
-
 async function guardarEnNube(){
   try{
-    alert('💾 Guardando...');
-    let userId = null;
-    if(window.supabase && window.supabase.auth){
-      let { data } = await window.supabase.auth.getUser();
-      if(data && data.user) userId = data.user.id;
-    }
-    if(!userId){
-      for(let k of Object.keys(localStorage)){
-        if(k.startsWith('sb-') && k.endsWith('-auth-token')){
-          try{
-            let v = JSON.parse(localStorage.getItem(k));
-            if(v && v.user && v.user.id) userId = v.user.id;
-          }catch(e){}
-        }
-      }
-    }
-    if(!userId){ alert('No hay sesión'); return; }
+    let email = (localStorage.getItem('session_email') || currentUser || "").toLowerCase();
+    if(!email) return;
     let payload = {};
-    ['mr_inventario','mr_productos','mr_clientes','mr_facturas','mr_fijos','mr_proveedores','mr_empresa','mr_deudas','mr_empleados','mr_caja','mr_gastos'].forEach(k=>{ let v=localStorage.getItem(k); if(v){ try{payload[k]=JSON.parse(v)}catch(e){} } });
-    let r = await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:userId, data:payload})});
-    let data = await r.json();
-    if(!r.ok){ alert('Error: '+JSON.stringify(data)); return; }
-    alert('✅ Guardado en la nube!');
-  }catch(e){ alert('Error guardar: '+e.message); }
+    ['inventarioMaestro','productosV2','clientesV2','facturas','gastosFijos','proveedores','empresaConfig','categoriasVenta','deudas','ventas','inventario','mr_inventario','mr_productos'].forEach(k=>{
+      let v=localStorage.getItem(k+'_'+email) || localStorage.getItem(k);
+      if(v){ try{payload[k]=JSON.parse(v)}catch(e){} }
+    });
+    await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id:email, data:payload})});
+  }catch(e){ console.error(e); }
 }
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
