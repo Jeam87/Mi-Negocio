@@ -144,23 +144,25 @@ async function cargarDeNube(){
 }
 async function guardarEnNubeAuto(){
   try{
-    const email = (localStorage.getItem('session_email')||'').toLowerCase();
+    const email = (localStorage.getItem('sesionEmail') || localStorage.getItem('email') || localStorage.getItem('user_email') || '').trim();
     if(!email) return;
-    const get = (k) => { try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
-    const payload = {
-  inventarioMaestro: get('inventarioMaestro'),
-  inventario: get('inventario'),
-  productosV2: get('productosV2'),
-  clientesV2: get('clientesV2'),
-  ventas: get('ventas'),
-  empresaConfig: get('empresaConfig'),
-  agenda: get('agenda'),
-  citas: get('citas'),
-  pedidos: get('pedidos'),
-  entregas: get('entregas'),
-  agendamientos: get('agendamientos')
-};
-    await fetch('/api/index.py', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email, data: payload})});
+    const payload = {};
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k.includes('@')) continue; // no guardar copias con email
+      try{ payload[k] = JSON.parse(localStorage.getItem(k)); }
+      catch(e){ payload[k] = localStorage.getItem(k); }
+    }
+    await fetch('/api/index.py', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email: email, data: payload})
+    });
+    await fetch('/api/load?user_id='+encodeURIComponent(email), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({data: payload})
+    }).catch(()=>{});
     console.log('✅ Nube guardada con agenda');
   }catch(e){ console.log(e); }
 }
