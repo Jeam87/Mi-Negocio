@@ -9,8 +9,8 @@ except:
     has_sb = False
 
 class handler(BaseHTTPRequestHandler):
-    def send(self, obj):
-        self.send_response(200)
+    def send(self, obj, code=200):
+        self.send_response(code)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
@@ -25,43 +25,44 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
+    def get_client(self):
+        # Lee cualquiera de los dos nombres
+        url = os.environ.get('SUPABASE_URL') or os.environ.get('NEXT_PUBLIC_SUPABASE_URL')
+        key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_SECRET_KEY')
+        if not has_sb or not url or not key:
+            return None, f"url={bool(url)} key={bool(key)} has_sb={has_sb}"
+        return create_client(url, key), None
+
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
-        user_id = qs.get('user_id',[None])[0] or qs.get('email',[None])[0] or qs.get('id',[None])[0]
-        if not user_id:
-            user_id = "esaul_1987@hotmail.com"
-        try:
-            url = os.environ.get('SUPABASE_URL')
-            key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-            data = {}
-            if has_sb and url and key:
-                sb = create_client(url, key)
+        user_id = qs.get('user_id',[None])[0] or qs.get('email',[None])[0] or qs.get('id',[None])[0] or "esaul_1987@hotmail.com"
+        user_id = user_id.strip().lower()
+
+        sb, err = self.get_client()
+        data = {}
+        if sb:
+            try:
                 r = sb.table('negocio_data').select('data').eq('user_id', user_id).execute()
                 if r.data:
-                    data = r.data[0].get('data',{})
-            # Devolvemos el identificador en TODOS los nombres posibles
-            return self.send({"ok":True, "data":data, "user_id":user_id, "id":user_id, "email":user_id, "identifier":user_id})
-        except Exception as e:
-            return self.send({"ok":True, "data":{}, "user_id":user_id, "id":user_id, "email":user_id, "identifier":user_id, "warn":str(e)})
+                    data = r.data[0].get('data',{}) or {}
+            except Exception as e:
+                err = str(e)
+
+        return self.send({"ok":True, "data":data, "user_id":user_id, "id":user_id, "email":user_id, "identifier":user_id, "debug":err})
 
     def do_POST(self):
         length = int(self.headers.get('Content-Length',0))
         raw = self.rfile.read(length).decode() if length else "{}"
-        try:
-            body = json.loads(raw)
-        except:
-            body = {}
-        user_id = body.get('user_id') or body.get('email') or body.get('id') or "esaul_1987@hotmail.com"
-        data = body.get('data',{})
+        try: body = json.loads(raw)
+        except: body = {}
+        user_id = (body.get('user_id') or body.get('email') or body.get('id') or "esaul_1987@hotmail.com").strip().lower()
+        data = body.get('data',{}) or {}
 
-        try:
-            url = os.environ.get('SUPABASE_URL')
-            key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
-            if has_sb and url and key:
-                sb = create_client(url, key)
-                # asegurar que existe
-                sb.table('negocio_data').upsert({"user_id":user_id, "data":data or {}}).execute()
-        except Exception as e:
-            pass
+        sb, err = self.get_client()
+        if sb:
+            try:
+                sb.table('negocio_data').upsert({"user_id":user_id, "data":data}, on_conflict="user_id").execute()
+            except Exception as e:
+                err = str(e)
 
-        return self.send({"ok":True, "registered":True, "data":data or {}, "user_id":user_id, "id":user_id, "email":user_id, "identifier":user_id})
+        return self.send({"ok":True, "registered":True, "data":data, "user_id":user_id, "id":user_id, "email":user_id, "identifier":user_id, "debug":err})
