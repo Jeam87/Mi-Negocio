@@ -138,32 +138,8 @@ async function cargarDeNube(){
     for(let k in data.data){
       try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k]: JSON.stringify(data.data[k])); }catch(e){}
     }
-  }
-}
- async function guardarEnNubeAuto(){
- try{
- async function guardarEnNubeAuto(){
-  try{
-    const email = localStorage.getItem('session_email');
-    if(!email) return;
-    let payload = {};
-    for(let i=0;i<localStorage.length;i++){
-      let k=localStorage.key(i);
-      if(k &&!k.includes('@') &&!k.includes('session_')){
-        try{ payload[k]=JSON.parse(localStorage.getItem(k)); }catch{ payload[k]=localStorage.getItem(k); }
-      }
-    }
-    let res = await fetch('/api/save?user_id='+encodeURIComponent(email),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({data:payload})
-    });
-    let txt = await res.text();
-    console.log('Guardado nube:', res.status, txt.slice(0,120));
-  }catch(e){
-    console.log('No se pudo guardar en nube, sigo en local', e);
-  }
- }
+  } 
+} 
    async function guardarEnNubeAuto(){
   try{
     const email = localStorage.getItem('session_email');
