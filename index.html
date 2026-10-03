@@ -1,4 +1,46 @@
-<!DOCTYPE html><html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi Negocio 11.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>input,select,textarea{color:#000!important;background:#fff!important}button,.button-like{transition:transform .08s ease,filter .08s ease}button:active,.button-like:active{transform:scale(.96);filter:brightness(.82)}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:650px;height:650px;pointer-events:none;z-index:0;opacity:0.18;object-fit:contain;}#appContent{position:relative;z-index:1;}#splashInicio{position:fixed;inset:0;background:white;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}#splashInicio img{width:85vw;max-width:380px;height:auto;animation:pop 0.8s ease}@keyframes pop{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}</style></head><body class="bg-[#FFF8F0] min-h-screen"><div id="splashInicio"><img src="/logo.png" onerror="this.src='/api/logo.png'"><p style="margin-top:20px;font-weight:900;font-size:22px">Mi Negocio 11.5</p><p style="font-size:12px;color:#888">Cargando...</p></div><div id="modalMasFunciones" class="hidden fixed inset-0 bg-black/60 z-[90] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5">
+<!DOCTYPE html><html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi Negocio 11.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="/estilos.css">
+</head><body class="bg-[#FFF8F0] min-h-screen"><div id="splashInicio"><img src="/logo.png" onerror="this.src='/api/logo.png'"><p style="margin-top:20px;font-weight:900;font-size:22px">Mi Negocio 11.5</p><p style="font-size:12px;color:#888">Cargando...</p></div><div id="modalMasFunciones" class="hidden fixed inset-0 bg-black/60 z-[90] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5">
+<h2 class="font-black text-[16px]">☰ Más funciones</h2>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<button onclick="showTab('costos');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Crear / Costos</button>
+<button onclick="showTab('finanzas');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Finanzas</button>
+<button onclick="showTab('clientes');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Clientes</button>
+<button onclick="showTab('proveedores');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Proveedores</button>
+<button onclick="showTab('config');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Configuración</button>
+<button onclick="showTab('inventario');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Inventario</button>
+</div><button onclick="cerrarMenuMas()" class="w-full mt-3 bg-black text-white py-3 rounded-xl font-black">Cerrar</button>
+</div></div>
+<script>setTimeout(()=>{let s=document.getElementById('splashInicio'); if(s) s.style.display='none'},1800)</script><div class="max-w-md mx-auto pb-[140px] relative"><img id="logoBg" class="logo-watermark hidden"><div id="appContent">
+<div id="loginScreen" class="fixed inset-0 bg-[#FFF8F0] z-[100] flex flex-col items-center justify-center p-6"><h1 class="font-black text-[24px]">Mi Negocio 11.5</h1><p class="text-[11px] text-gray-500">Logo grande + proveedores completos</p><div class="bg-white w-full rounded-[28px] p-5 shadow-xl border-2 border-black mt-6"><input id="loginEmail" type="email" placeholder="Correo" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px]"><input id="loginPass" type="password" placeholder="Contraseña" class="w-full border-2 border-black p-4 rounded-2xl font-bold text-[14px] mt-3"><button onclick="hacerLogin()" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">ENTRAR</button><button onclick="hacerRegistro()" class="w-full mt-2 bg-white border-2 border-black py-3 rounded-2xl font-bold text-[13px]">REGISTRARME</button><p id="loginMsg" class="hidden mt-3 text-[11px] font-bold text-center p-2 rounded-xl"></p></div></div>
+<div class="bg-white p-3 flex justify-between items-center sticky top-0 z-20 shadow-sm"><div class="flex items-center gap-3"><img id="logoHeader" class="w-20 h-20 rounded-full object-cover border-[4px] border-black hidden shadow-xl" onerror="this.src='/api/logo.png'"><div><h1 class="font-black text-[16px]">Mi Negocio 11.5</h1><p id="userLabel" class="text-[10px] text-gray-500"></p><p id="horaActual" class="text-[10px] font-black text-green-600"></p></div></div><div class="flex gap-2"><button onclick="showTab('config')" class="text-[10px] bg-black text-white px-3 py-2 rounded-full">Config</button><button onclick="cerrarSesion()" class="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-full">Salir</button></div></div>
+
+<div id="tab-vender" class="p-3 hidden">
+<div class="bg-white rounded-[20px] p-3 shadow-sm mb-3"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">Categorías</h3><button onclick="document.getElementById('boxNuevaCat').classList.toggle('hidden')" class="text-[10px] bg-black text-white px-3 py-1 rounded-full">+ Nueva</button></div><p class="text-[9px] text-gray-500 mt-1">Toca ✏️ en una categoría para cambiarle el nombre.</p><div id="filtrosCats" class="flex gap-2 mt-3 overflow-x-auto pb-2"></div><div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div class="font-black text-[11px] mb-2">➕ Nueva categoría</div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
+<div class="bg-white rounded-[20px] p-3 shadow-sm mb-3 border-2 border-purple-100"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">📋 Presupuestos guardados</h3><button onclick="renderPresupuestos()" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full font-bold">↻</button></div><div id="listaPresupuestos" class="mt-3 space-y-2"></div></div>
+<div id="alertaStock" class="hidden bg-red-100 border-2 border-red-300 rounded-xl p-2 mb-3 text-[11px] font-bold text-red-700"></div>
+<div id="listaVenta" class="grid grid-cols-2 gap-3"></div>
+<div class="mt-6 bg-white rounded-[28px] p-4 shadow-xl border-2 border-black">
+<div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-2 mb-3"><p class="text-[10px] font-black">👤 Cliente</p><select id="selCliente" class="w-full border-2 border-black p-3 rounded-xl text-[12px] font-bold mt-2" onchange="actualizarClienteTicket()"></select><div class="flex gap-2 mt-2"><input id="quickClienteNombre" placeholder="Nombre" class="flex-1 border-2 border-black p-2 rounded-xl text-[11px] font-bold"><input id="quickClienteTel" placeholder="WhatsApp" class="flex-1 border-2 border-black p-2 rounded-xl text-[11px] font-bold"><button onclick="addClienteRapido()" class="bg-black text-white px-3 rounded-xl font-black text-[12px]">+</button></div></div>
+<div class="mt-3 bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-3">
+<div class="font-black text-[12px]">🚚 Entrega programada <span class="text-[9px] text-gray-500 font-normal">(opcional)</span></div>
+<div class="grid grid-cols-2 gap-2 mt-2">
+<div><label class="text-[9px] font-black">Fecha de entrega</label><input id="ventaFechaEntrega" type="date" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold"></div>
+<div><label class="text-[9px] font-black">Hora <span class="font-normal">(opcional)</span></label><input id="ventaHoraEntrega" type="time" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold"></div>
+</div>
+<label class="block text-[9px] font-black mt-2">¿Entregar a alguien más? PARA:</label>
+<input id="ventaEntregarA" placeholder="Nombre de quien recibe" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold mt-1">
+<textarea id="ventaObsEntrega" placeholder="Observaciones de la entrega (opcional)" rows="2" class="w-full border-2 border-black p-2 rounded-xl text-[11px] mt-2"></textarea>
+</div>
+<div id="ticket" class="space-y-2">Vacío</div>
+<div class="mt-3 bg-gray-50 p-2 rounded-xl flex gap-2 items-center"><span class="text-[11px] font-black">Descuento %</span><input id="descPorc" type="number" value="0" class="w-16 border-2 border-black p-1 rounded-xl text-center font-black" oninput="renderCarrito()"><span class="text-[10px]">Motivo</span><input id="descMotivo" placeholder="Promo" class="flex-1 border-2 border-black p-1 rounded-xl text-[10px]"></div>
+<div class="flex justify-between font-black text-[20px] mt-3 border-t-2 pt-3">Total $ <span id="c-total">0</span></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="abrirCobro()" class="bg-black text-white py-4 rounded-2xl font-black">COBRAR</button><button onclick="guardarPresupuestoWhatsApp()" class="bg-[#25D366] text-white py-4 rounded-2xl font-black">📲 PRESUPUESTO</button></div></div></div>
+
+<div id="tab-entregas" class="p-3 hidden">
+<div class="bg-white rounded-[28px] p-4 shadow-sm border-2 border-black">
+<div class="flex justify-between items-center"><div><h2 class="font-black text-[18px]">🚚 ENTREGAS</h2><p class="text-[10px] text-gray-500">Pedidos programados</p></div><button onclick="cargarEntregas()" class="bg-gray-100 px-3 py-2 rounded-xl font-black text-[11px]">↻</button></div>
+<div class="mt-4 flex justify-between items-center"><button onclick="moverCalEntregas(-1)" class="w-9 h-9 bg-gray-100 rounded-full font-black">‹</button><h3 id="entCalTitulo" class="font-black text-[14px]"></h3><button onclick="moverCalEntregas(1)" class="w-9 h-9 bg-gray-100 rounded-full font-black">›</button></div>
+<!DOCTYPE html><html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi Negocio 11.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="/estilos.css">
+</head><body class="bg-[#FFF8F0] min-h-screen"><div id="splashInicio"><img src="/logo.png" onerror="this.src='/api/logo.png'"><p style="margin-top:20px;font-weight:900;font-size:22px">Mi Negocio 11.5</p><p style="font-size:12px;color:#888">Cargando...</p></div><div id="modalMasFunciones" class="hidden fixed inset-0 bg-black/60 z-[90] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5">
 <h2 class="font-black text-[16px]">☰ Más funciones</h2>
 <div class="grid grid-cols-2 gap-2 mt-4">
 <button onclick="showTab('costos');cerrarMenuMas()" class="bg-gray-100 p-4 rounded-xl font-black text-[11px]">Crear / Costos</button>
@@ -117,7 +159,96 @@
 <button onclick="showTab('entregas')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-truck-fast"></i><span class="text-[8px] font-black">ENTREGAS</span></button>
 <button onclick="showTab('inventario')" class="flex flex-col items-center text-gray-600 min-w-[70px]"><i class="fa-solid fa-boxes-stacked"></i><span class="text-[8px] font-black">PRODUCTOS</span></button>
 </div><div class="text-center mt-1"><button onclick="abrirMenuMas()" class="text-[8px] font-bold text-gray-400">☰ Más funciones</button></div></div></div></div>
-<script>
+
+<script src="/agenda.js"></script>
+<script src="/app.js"></script>
+<script src="/api/autoguardado"></script>
+</body></html>
+input,select,textarea{color:#000!important;background:#fff!important}button,.button-like{transition:transform .08s ease,filter .08s ease}button:active,.button-like:active{transform:scale(.96);filter:brightness(.82)}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:650px;height:650px;pointer-events:none;z-index:0;opacity:0.18;object-fit:contain;}#appContent{position:relative;z-index:1;}#splashInicio{position:fixed;inset:0;background:white;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}#splashInicio img{width:85vw;max-width:380px;height:auto;animation:pop 0.8s ease}@keyframes pop{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
+let entregasCache=[], fechaVistaEntregas=new Date(2026,9,1);
+function fechaLocalISO(offset=0){let d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+offset);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function escEnt(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+async function cargarEntregas(){
+  if(!negocioId)return;
+  const key='entregas_'+negocioId;
+  let locales=[];
+  try{ locales=JSON.parse(localStorage.getItem(key)||'[]'); if(!Array.isArray(locales)) locales=[]; }catch(e){ locales=[]; }
+  try{
+    let r=await fetch('/api/entregas?negocio_id='+encodeURIComponent(negocioId),{cache:'no-store'});
+    let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'}));
+    if(!r.ok||!j.ok) throw new Error(j.msg||('HTTP '+r.status));
+    const remotas=Array.isArray(j.entregas)?j.entregas:[];
+    const mapa=new Map();
+    [...locales,...remotas].forEach(e=>{
+      const id=String(e.id||'');
+      if(id) mapa.set(id,e);
+    });
+    entregasCache=Array.from(mapa.values()).sort((a,b)=>
+      String(a.fecha_entrega||'').localeCompare(String(b.fecha_entrega||'')) ||
+      String(a.hora_entrega||'').localeCompare(String(b.hora_entrega||''))
+    );
+    localStorage.setItem(key,JSON.stringify(entregasCache));
+    localStorage.setItem('entregas',JSON.stringify(entregasCache));
+    renderCalendarioEntregas();renderListaEntregas();
+  }catch(e){
+    entregasCache=locales;
+    renderCalendarioEntregas();renderListaEntregas();
+    let h=document.getElementById('entHoy'),m=document.getElementById('entManana');
+    if(!locales.length){
+      if(h)h.innerHTML='<p class="text-[11px] text-red-600 font-bold">No se pudieron cargar las entregas: '+escEnt(e.message||e)+'</p>';
+      if(m)m.innerHTML='';
+    }
+  }
+}
+function renderCalendarioEntregas(){let el=document.getElementById('entCalGrid');if(!el)return;let y=fechaVistaEntregas.getFullYear(),m=fechaVistaEntregas.getMonth();document.getElementById('entCalTitulo').innerText=fechaVistaEntregas.toLocaleDateString('es-MX',{month:'long',year:'numeric'});let primer=new Date(y,m,1).getDay(),dias=new Date(y,m+1,0).getDate();let html='<div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400"><div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div></div><div class="grid grid-cols-7 gap-1 mt-2">';for(let i=0;i<primer;i++)html+='<div></div>';for(let d=1;d<=dias;d++){let f=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,tiene=entregasCache.some(e=>e.fecha_entrega==f&&e.estado!='entregado'),hoy=f==fechaLocalISO(0);html+=`<button onclick="seleccionarDiaEntrega('${f}')" class="aspect-square rounded-xl flex flex-col items-center justify-center border-2 ${hoy?'bg-black text-white':'bg-gray-50'}"><span class="font-black text-[12px]">${d}</span>${tiene?'<span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-1"></span>':''}</button>`;}html+='</div>';el.innerHTML=html;}
+function seleccionarDiaEntrega(f){let e=entregasCache.filter(x=>x.fecha_entrega==f);let title=new Date(f+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});alert(e.length?`📅 ${title}\n\n${e.map(x=>`PARA: ${x.entregar_a||'Sin nombre'}\n${x.contenido||''}`).join('\n\n')}`:`📅 ${title}\n\nSin entregas.`);}
+function moverCalEntregas(dir){fechaVistaEntregas.setMonth(fechaVistaEntregas.getMonth()+dir);renderCalendarioEntregas();}
+function tarjetaEntrega(e){let tel=(e.telefono_ordena||'').replace(/[^0-9]/g,'');if(tel.length==10)tel='52'+tel;let mensaje=`🔔 Recordatorio de entrega\n\nPARA: ${e.entregar_a||'Sin nombre'}\nContenido: ${e.contenido||''}${e.hora_entrega?`\nHora: ${e.hora_entrega}`:''}${e.observaciones?`\nObservaciones: ${e.observaciones}`:''}`,wa=tel?`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`:`https://wa.me/?text=${encodeURIComponent(mensaje)}`;return `<div class="bg-white border-2 border-gray-200 rounded-[20px] p-4 shadow-sm ${e.estado=='entregado'?'opacity-50':''}"><div class="text-[18px] font-black">PARA: ${escEnt(e.entregar_a||'Sin nombre')} <span class="text-gray-400">-</span></div><div class="mt-2 text-[11px]"><b>Contenido:</b> ${escEnt(e.contenido||'—')}</div><div class="text-[11px]"><b>Ordenó:</b> ${escEnt(e.quien_ordena||'—')}${e.telefono_ordena?` · ${escEnt(e.telefono_ordena)}`:''}</div><div class="text-[11px]"><b>Observaciones:</b> ${escEnt(e.observaciones||'—')}</div>${e.hora_entrega?`<div class="mt-2 text-[10px] font-black text-blue-600">🕒 ${escEnt(e.hora_entrega)}</div>`:''}<div class="grid grid-cols-2 gap-2 mt-3"><a href="${wa}" target="_blank" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[11px] text-center">📲 WhatsApp</a>${e.estado=='entregado'?'<button disabled class="bg-gray-200 text-gray-500 py-3 rounded-xl font-black text-[11px]">✓ Entregado</button>':`<button onclick="marcarEntregaEntregada('${e.id}')" class="bg-black text-white py-3 rounded-xl font-black text-[11px]">ENTREGADO</button>`}</div></div>`;}
+function renderListaEntregas(){let hoy=fechaLocalISO(0),manana=fechaLocalISO(1),h=entregasCache.filter(e=>e.fecha_entrega==hoy).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99')),m=entregasCache.filter(e=>e.fecha_entrega==manana).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99'));document.getElementById('entHoy').innerHTML=h.length?h.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para hoy.</p>';document.getElementById('entManana').innerHTML=m.length?m.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para mañana.</p>';}
+async function marcarEntregaEntregada(id){try{let r=await fetch('/api/entregas/'+encodeURIComponent(id)+'?negocio_id='+encodeURIComponent(negocioId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:'entregado'})});let j=await r.json();if(!j.ok)throw new Error(j.msg||'Error');let e=entregasCache.find(x=>String(x.id)==String(id));if(e)e.estado='entregado';renderCalendarioEntregas();renderListaEntregas();}catch(e){alert('No se pudo marcar como entregado: '+e.message);}}
+function abrirAgendarEntrega(){document.getElementById('ag-que').value='';document.getElementById('ag-fecha').value=fechaLocalISO(1);document.getElementById('ag-hora').value='';document.getElementById('ag-para').value='';document.getElementById('ag-telefono').value='';document.getElementById('ag-obs').value='';document.getElementById('modalAgendarEntrega').classList.remove('hidden');}
+function cerrarAgendarEntrega(){document.getElementById('modalAgendarEntrega').classList.add('hidden');}
+async function guardarEntregaManual(){
+  let contenido=document.getElementById('ag-que').value.trim(),
+      fecha=document.getElementById('ag-fecha').value,
+      hora=document.getElementById('ag-hora').value||null,
+      para=document.getElementById('ag-para').value.trim(),
+      tel=document.getElementById('ag-telefono').value.trim(),
+      obs=document.getElementById('ag-obs').value.trim();
+  if(!contenido||!fecha||!para)return alert('Completa Qué es, Fecha y Para quién es.');
+  if(!negocioId)return alert('No hay una cuenta activa. Cierra sesión y vuelve a entrar.');
+  if(fecha<fechaLocalISO(0))return alert('La fecha de entrega no puede ser anterior a hoy.');
+  const entrega={
+    id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
+    negocio_id:negocioId,fecha_venta:fechaLocalISO(0),fecha_entrega:fecha,hora_entrega:hora,
+    contenido,observaciones:obs,quien_ordena:currentUser||'',telefono_ordena:tel,
+    entregar_a:para,estado:'pendiente'
+  };
+  try{
+    let r=await fetch('/api/entregas',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...entrega,id:undefined})
+    });
+    let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió JSON válido'}));
+    if(!r.ok||!j.ok)throw new Error(j.msg||('HTTP '+r.status));
+    const guardada=j.entrega||j.data||j;
+    const finalEntrega={...entrega,...(guardada&&typeof guardada==='object'?guardada:{})};
+    if(!finalEntrega.id||String(finalEntrega.id)=='undefined')finalEntrega.id=entrega.id;
+    let key='entregas_'+negocioId, arr=[];
+    try{arr=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(arr))arr=[];}catch(e){arr=[];}
+    arr.push(finalEntrega);
+    localStorage.setItem(key,JSON.stringify(arr));
+    localStorage.setItem('entregas',JSON.stringify(arr));
+    entregasCache=arr;
+    renderCalendarioEntregas();renderListaEntregas();
+    cerrarAgendarEntrega();
+    alert('✅ Entrega agendada y guardada');
+  }catch(e){
+    alert('No se pudo guardar la entrega. No se marcó como guardada: '+(e.message||e));
+  }
+}
+async function guardarEntregaDesdeVenta(fechaVenta){let fecha=document.getElementById('ventaFechaEntrega')?.value||'',hoy=fechaLocalISO(0);if(!fecha||fecha<=hoy)return;let hora=document.getElementById('ventaHoraEntrega')?.value||null,para=document.getElementById('ventaEntregarA')?.value.trim()||'',obs=document.getElementById('ventaObsEntrega')?.value.trim()||'',sel=document.getElementById('selCliente'),opt=sel?.options[sel.selectedIndex],quien=opt?.getAttribute('data-nombre')||opt?.text||'Mostrador',tel=opt?.getAttribute('data-whatsapp')||opt?.getAttribute('data-tel')||'',contenido=carrito.map(c=>`${c.nombre} x${c.qty}`).join(', ');if(!para)para=quien;let r=await fetch('/api/entregas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,fecha_venta:fechaVenta,fecha_entrega:fecha,hora_entrega:hora,contenido,observaciones:obs,quien_ordena:quien,telefono_ordena:tel,entregar_a:para,estado:'pendiente'})});let j=await r.json().catch(()=>({ok:false,msg:'Respuesta inválida del servidor'}));if(!r.ok||!j.ok)throw new Error(j.msg||('HTTP '+r.status+' al guardar entrega'));let e=j.entrega||j.data||{negocio_id:negocioId,fecha_venta:fechaVenta,fecha_entrega:fecha,hora_entrega:hora,contenido,observaciones:obs,quien_ordena:quien,telefono_ordena:tel,entregar_a:para,estado:'pendiente'};if(!e.id)e.id='local-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);let key='entregas_'+negocioId,arr=[];try{arr=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(arr))arr=[];}catch(x){arr=[];}arr.push(e);localStorage.setItem(key,JSON.stringify(arr));localStorage.setItem('entregas',JSON.stringify(arr));entregasCache=arr;renderCalendarioEntregas();renderListaEntregas();return e;}
+
 let carrito=[], fotoTemp='', logoTemp='', categoriaFiltro='todas', editId=null, currentUser=null, negocioId=null, ultimoTicket=null, ultimoCierre=null, clienteDeudaActual=null, gastoTipoSel='salida', presupuestoCobroId=null;
 function getFechaLocal(){ let now=new Date(); return now.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'})+', '+now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); }
 function getFechaSoloLocal(){ let now=new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`; }
@@ -144,7 +275,7 @@ async function cargarDeNube(){
 }
 async function guardarEnNubeAuto(){
   try{
-    const email = (localStorage.getItem('sesionEmail') || localStorage.getItem('email') || localStorage.getItem('user_email') || '').trim();
+    const email = (localStorage.getItem('session_email') || localStorage.getItem('sesionEmail') || localStorage.getItem('email') || localStorage.getItem('user_email') || '').trim();
     if(!email) return;
     const payload = {};
     for(let i=0;i<localStorage.length;i++){
@@ -183,20 +314,6 @@ function factorABase(u){ u=normalizarUnidad(u); let map={g:1,kg:1000,ml:1,L:1000
 function convertir(cant, de, a){ de=normalizarUnidad(de); a=normalizarUnidad(a); if(de==a) return cant; return cant * factorABase(de) / factorABase(a); }
 function parseCantidadTexto(texto, unidadBase){ if(!texto) return 0; texto=texto.toString().toLowerCase().trim().replace(',', '.'); let num=parseFloat(texto); if(isNaN(num)) return 0; if(texto.includes('kg')) return convertir(num, 'kg', unidadBase); if(texto.includes('ml')) return convertir(num, 'ml', unidadBase); if((texto.includes(' g') || texto.endsWith('g')) &&!texto.includes('kg')) return convertir(num, 'g', unidadBase); if(texto.includes('l') &&!texto.includes('ml')) return convertir(num, 'L', unidadBase); return num; }
 
-let entregasCache=[], fechaVistaEntregas=new Date(2026,9,1);
-function fechaLocalISO(offset=0){let d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+offset);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function escEnt(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
-async function cargarEntregas(){if(!negocioId)return;try{let r=await fetch('/api/entregas?negocio_id='+encodeURIComponent(negocioId));let j=await r.json();if(!j.ok)throw new Error(j.msg||'No se pudieron cargar las entregas');entregasCache=j.entregas||[];renderCalendarioEntregas();renderListaEntregas();}catch(e){let h=document.getElementById('entHoy'),m=document.getElementById('entManana');if(h)h.innerHTML='<p class="text-[11px] text-red-600 font-bold">No se pudieron cargar las entregas.</p>';if(m)m.innerHTML='';}}
-function renderCalendarioEntregas(){let el=document.getElementById('entCalGrid');if(!el)return;let y=fechaVistaEntregas.getFullYear(),m=fechaVistaEntregas.getMonth();document.getElementById('entCalTitulo').innerText=fechaVistaEntregas.toLocaleDateString('es-MX',{month:'long',year:'numeric'});let primer=new Date(y,m,1).getDay(),dias=new Date(y,m+1,0).getDate();let html='<div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-gray-400"><div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div></div><div class="grid grid-cols-7 gap-1 mt-2">';for(let i=0;i<primer;i++)html+='<div></div>';for(let d=1;d<=dias;d++){let f=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,tiene=entregasCache.some(e=>e.fecha_entrega==f&&e.estado!='entregado'),hoy=f==fechaLocalISO(0);html+=`<button onclick="seleccionarDiaEntrega('${f}')" class="aspect-square rounded-xl flex flex-col items-center justify-center border-2 ${hoy?'bg-black text-white':'bg-gray-50'}"><span class="font-black text-[12px]">${d}</span>${tiene?'<span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-1"></span>':''}</button>`;}html+='</div>';el.innerHTML=html;}
-function seleccionarDiaEntrega(f){let e=entregasCache.filter(x=>x.fecha_entrega==f);let title=new Date(f+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});alert(e.length?`📅 ${title}\n\n${e.map(x=>`PARA: ${x.entregar_a||'Sin nombre'}\n${x.contenido||''}`).join('\n\n')}`:`📅 ${title}\n\nSin entregas.`);}
-function moverCalEntregas(dir){fechaVistaEntregas.setMonth(fechaVistaEntregas.getMonth()+dir);renderCalendarioEntregas();}
-function tarjetaEntrega(e){let tel=(e.telefono_ordena||'').replace(/[^0-9]/g,'');if(tel.length==10)tel='52'+tel;let mensaje=`🔔 Recordatorio de entrega\n\nPARA: ${e.entregar_a||'Sin nombre'}\nContenido: ${e.contenido||''}${e.hora_entrega?`\nHora: ${e.hora_entrega}`:''}${e.observaciones?`\nObservaciones: ${e.observaciones}`:''}`,wa=tel?`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`:`https://wa.me/?text=${encodeURIComponent(mensaje)}`;return `<div class="bg-white border-2 border-gray-200 rounded-[20px] p-4 shadow-sm ${e.estado=='entregado'?'opacity-50':''}"><div class="text-[18px] font-black">PARA: ${escEnt(e.entregar_a||'Sin nombre')} <span class="text-gray-400">-</span></div><div class="mt-2 text-[11px]"><b>Contenido:</b> ${escEnt(e.contenido||'—')}</div><div class="text-[11px]"><b>Ordenó:</b> ${escEnt(e.quien_ordena||'—')}${e.telefono_ordena?` · ${escEnt(e.telefono_ordena)}`:''}</div><div class="text-[11px]"><b>Observaciones:</b> ${escEnt(e.observaciones||'—')}</div>${e.hora_entrega?`<div class="mt-2 text-[10px] font-black text-blue-600">🕒 ${escEnt(e.hora_entrega)}</div>`:''}<div class="grid grid-cols-2 gap-2 mt-3"><a href="${wa}" target="_blank" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[11px] text-center">📲 WhatsApp</a>${e.estado=='entregado'?'<button disabled class="bg-gray-200 text-gray-500 py-3 rounded-xl font-black text-[11px]">✓ Entregado</button>':`<button onclick="marcarEntregaEntregada('${e.id}')" class="bg-black text-white py-3 rounded-xl font-black text-[11px]">ENTREGADO</button>`}</div></div>`;}
-function renderListaEntregas(){let hoy=fechaLocalISO(0),manana=fechaLocalISO(1),h=entregasCache.filter(e=>e.fecha_entrega==hoy).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99')),m=entregasCache.filter(e=>e.fecha_entrega==manana).sort((a,b)=>(a.hora_entrega||'99').localeCompare(b.hora_entrega||'99'));document.getElementById('entHoy').innerHTML=h.length?h.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para hoy.</p>';document.getElementById('entManana').innerHTML=m.length?m.map(tarjetaEntrega).join(''):'<p class="text-[11px] text-gray-400">No hay entregas para mañana.</p>';}
-async function marcarEntregaEntregada(id){try{let r=await fetch('/api/entregas/'+encodeURIComponent(id)+'?negocio_id='+encodeURIComponent(negocioId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:'entregado'})});let j=await r.json();if(!j.ok)throw new Error(j.msg||'Error');let e=entregasCache.find(x=>String(x.id)==String(id));if(e)e.estado='entregado';renderCalendarioEntregas();renderListaEntregas();}catch(e){alert('No se pudo marcar como entregado: '+e.message);}}
-function abrirAgendarEntrega(){document.getElementById('ag-que').value='';document.getElementById('ag-fecha').value=fechaLocalISO(1);document.getElementById('ag-hora').value='';document.getElementById('ag-para').value='';document.getElementById('ag-telefono').value='';document.getElementById('ag-obs').value='';document.getElementById('modalAgendarEntrega').classList.remove('hidden');}
-function cerrarAgendarEntrega(){document.getElementById('modalAgendarEntrega').classList.add('hidden');}
-async function guardarEntregaManual(){let contenido=document.getElementById('ag-que').value.trim(),fecha=document.getElementById('ag-fecha').value,hora=document.getElementById('ag-hora').value||null,para=document.getElementById('ag-para').value.trim(),tel=document.getElementById('ag-telefono').value.trim(),obs=document.getElementById('ag-obs').value.trim();if(!contenido||!fecha||!para)return alert('Completa Qué es, Fecha y Para quién es.');if(fecha<fechaLocalISO(0))return alert('La fecha de entrega no puede ser anterior a hoy.');try{let r=await fetch('/api/entregas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,fecha_venta:fechaLocalISO(0),fecha_entrega:fecha,hora_entrega:hora,contenido,observaciones:obs,quien_ordena:currentUser||'',telefono_ordena:tel,entregar_a:para,estado:'pendiente'})});let j=await r.json();if(!j.ok)throw new Error(j.msg||'Error');cerrarAgendarEntrega();await cargarEntregas();alert('✅ Entrega agendada');}catch(e){alert('No se pudo guardar: '+e.message);}}
-async function guardarEntregaDesdeVenta(fechaVenta){let fecha=document.getElementById('ventaFechaEntrega')?.value||'',hoy=fechaLocalISO(0);if(!fecha||fecha<=hoy)return;let hora=document.getElementById('ventaHoraEntrega')?.value||null,para=document.getElementById('ventaEntregarA')?.value.trim()||'',obs=document.getElementById('ventaObsEntrega')?.value.trim()||'',sel=document.getElementById('selCliente'),opt=sel?.options[sel.selectedIndex],quien=opt?.getAttribute('data-nombre')||opt?.text||'Mostrador',tel=opt?.getAttribute('data-whatsapp')||opt?.getAttribute('data-tel')||'',contenido=carrito.map(c=>`${c.nombre} x${c.qty}`).join(', ');if(!para)para=quien;let r=await fetch('/api/entregas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId,fecha_venta:fechaVenta,fecha_entrega:fecha,hora_entrega:hora,contenido,observaciones:obs,quien_ordena:quien,telefono_ordena:tel,entregar_a:para,estado:'pendiente'})});let j=await r.json();if(!j.ok)throw new Error(j.msg||'No se pudo agendar la entrega');return j.entrega;}
 function limpiarCamposEntregaVenta(){['ventaFechaEntrega','ventaHoraEntrega','ventaEntregarA','ventaObsEntrega'].forEach(id=>{let e=document.getElementById(id);if(e)e.value='';});}
 function abrirMenuMas(){document.getElementById('modalMasFunciones').classList.remove('hidden');}
 function cerrarMenuMas(){document.getElementById('modalMasFunciones').classList.add('hidden');}
@@ -616,6 +733,3 @@ function intentarAutoRecarga(){
 const _oldIniciar = window.iniciarApp || window.login || null;
 if(localStorage.getItem('session_email')) intentarAutoRecarga();
 revisarRetornoStripe();
-</script>
-<script src="/api/autoguardado"></script>
-</body></html>
