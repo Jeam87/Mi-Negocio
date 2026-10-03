@@ -592,34 +592,30 @@ function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'
 
   // === PARCHE NUBE - NO BORRA NADA, SOLO AGREGA ===
 async function cargarNubeAuto(){
-  try{
-    const email = localStorage.getItem('session_email') || localStorage.getItem('email_sesion') || localStorage.getItem('email');
-    if(!email){ alert('No hay email de sesión'); return; }
-    const btn = document.getElementById('btn-recarga-nube');
-    if(btn){ btn.innerText='⏳ Cargando de la nube...'; btn.disabled=true; }
-    const r = await fetch('/api/index.py?email='+encodeURIComponent(email));
-    const data = await r.json();
-    console.log('Nube:', data);
-    // Guarda todo lo que venga, sin tocar lo demás
-    if(data.inventarioMaestro) localStorage.setItem('inventarioMaestro', JSON.stringify(data.inventarioMaestro));
-    if(data.inventario) localStorage.setItem('inventario', JSON.stringify(data.inventario));
-    if(data.productosV2) localStorage.setItem('productosV2', JSON.stringify(data.productosV2));
-    if(data.clientesV2) localStorage.setItem('clientesV2', JSON.stringify(data.clientesV2));
-    if(data.ventas) localStorage.setItem('ventas', JSON.stringify(data.ventas));
-    if(data.empresaConfig) localStorage.setItem('empresaConfig', JSON.stringify(data.empresaConfig));
-    if(data.agenda) localStorage.setItem('agenda', JSON.stringify(data.agenda));
-    if(data.citas) localStorage.setItem('citas', JSON.stringify(data.citas));
-    if(data.pedidos) localStorage.setItem('pedidos', JSON.stringify(data.pedidos));
-    if(data.entregas) localStorage.setItem('entregas', JSON.stringify(data.entregas));
-    if(data.agendamientos) localStorage.setItem('agendamientos', JSON.stringify(data.agendamientos));
-    if(data.config){
-      localStorage.setItem('empresaConfig', JSON.stringify(data.config));
-      if(data.config.logo) localStorage.setItem('logo', data.config.logo);
-    }
-    if(data.logo) localStorage.setItem('logo', data.logo);
-    if(btn) btn.innerText='✅ ¡Recargado!';
-    setTimeout(()=>location.reload(), 800);
-  }catch(e){ alert('Error nube: '+e.message); console.error(e); const b=document.getElementById('btn-recarga-nube'); if(b){ b.innerText='🔄 Recargar mis datos de la nube'; b.disabled=false; } }
+ try{
+  const email = localStorage.getItem('session_email');
+  if(!email){ alert('No hay email de sesión'); return; }
+  const btn = document.getElementById('btn-recargar-nube');
+  if(btn){ btn.innerText='⏳ Cargando de la nube...'; }
+  const r = await fetch('/api/load.py?user_id='+encodeURIComponent(email));
+  const txt = await r.text();
+  let data;
+  try{ data = JSON.parse(txt); }catch{ console.log(txt); alert('Error cargando nube: '+txt.slice(0,150)); if(btn){ btn.innerText='Recargar de la nube'; } return; }
+  console.log('Nube:', data);
+  const d = data.data || data;
+  if(d.inventarioMaestro) localStorage.setItem('inventarioMaestro', JSON.stringify(d.inventarioMaestro));
+  if(d.inventario) localStorage.setItem('inventario', JSON.stringify(d.inventario));
+  if(d.productosV2) localStorage.setItem('productosV2', JSON.stringify(d.productosV2));
+  if(d.clientesV2) localStorage.setItem('clientesV2', JSON.stringify(d.clientesV2));
+  if(d.ventas) localStorage.setItem('ventas', JSON.stringify(d.ventas));
+  if(d.empresaConfig) localStorage.setItem('empresaConfig', JSON.stringify(d.empresaConfig));
+  if(d.agenda) localStorage.setItem('agenda', JSON.stringify(d.agenda));
+  if(d.citas) localStorage.setItem('citas', JSON.stringify(d.citas));
+  if(d.pedidos) localStorage.setItem('pedidos', JSON.stringify(d.pedidos));
+  if(d.entregas) localStorage.setItem('entregas', JSON.stringify(d.entregas));
+  if(btn){ btn.innerText='✅ Cargado'; setTimeout(()=>{ btn.innerText='Recargar de la nube'; location.reload(); }, 800); }
+  else { location.reload(); }
+ }catch(e){ console.log('Error cargarNubeAuto', e); alert('Error: '+(e.message||e)); }
 }
 function intentarAutoRecarga(){
   setTimeout(()=>{
