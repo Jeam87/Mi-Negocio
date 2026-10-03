@@ -129,16 +129,21 @@ async function hacerRegistro(){try{let e=document.getElementById('loginEmail').v
 async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el identificador de tu cuenta.',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); try{await cargarDeNube();}catch(loadErr){console.error(loadErr); alert('Entraste correctamente, pero no se pudieron cargar tus datos guardados. Puedes usar la app y después revisamos la conexión con la tabla respaldo.');} }catch(err){msgLogin('No se pudo iniciar sesión: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
-  if(!currentUser) return;
-  const res = await fetch('/api/load?user_id='+encodeURIComponent(currentUser));
-  const txt = await res.text();
-  let data;
-  try{ data = JSON.parse(txt); }catch{ data=null; }
-  if(data && data.data){
-    for(let k in data.data){
-      try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k] : JSON.stringify(data.data[k])); }catch{}
+  try{
+    if(!currentUser) return;
+    const res = await fetch('/api/load?user_id='+encodeURIComponent(currentUser));
+    if(!res.ok) return;
+    const txt = await res.text();
+    let data;
+    try{ data = JSON.parse(txt); }catch{ return; }
+    if(data && data.data){
+      for(let k in data.data){
+        try{
+          localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k] : JSON.stringify(data.data[k]));
+        }catch{}
+      }
     }
-  }
+  }catch(e){ console.log('Error nube', e); }
 }
    async function guardarEnNubeAuto(){
   try{
