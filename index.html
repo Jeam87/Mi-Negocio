@@ -25,14 +25,14 @@
 <div class="grid grid-cols-2 gap-2 mt-2">
 <div><label class="text-[9px] font-black">Fecha de entrega</label><input id="ventaFechaEntrega" type="date" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold"></div>
 <div><label class="text-[9px] font-black">Hora <span class="font-normal">(opcional)</span></label><input id="ventaHoraEntrega" type="time" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold"></div>
-</div>​​
-< label  class = "block text-[9px] font-black mt-2" > ¿Entregar a alguien más? PARA : </etiqueta>​
-< input  id = "ventaEntregarA"  placeholder = "Nombre de quien recibe"  class = "w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold mt-1" >
-< textarea  id = "ventaObsEntrega"  placeholder = "Observaciones de la entrega (opcional)"  rows = "2"  class = "w - full border-2 border-black p-2 rounded-xl text-[11px] mt-2 " > </textarea>
-</div>​​
-< div  id = "ticket"  class = "space-y-2" > Vacío </ div >
-< div  class = "mt-3 bg-gray-50 p-2 rounded-xl flex gap-2 items-center" > < span  class = "text-[11px] font-black" > Descuento % </ span > < input  id = "descPorc"  type = "number"  value = "0"  class = "w-16 border-2 border-black p-1 rounded-xl text-center font-black"  oninput = "renderCarrito()" > < span  class = "text-[10px]" > Motivo </ span > < input  id = "descMotivo"  placeholder = "Promo"  class = "flex-1 border-2 border-black p-1 rounded-xl text-[10px]" > </ div >
-       
+</div>
+<label class="block text-[9px] font-black mt-2">¿Entregar a alguien más? PARA:</label>
+<input id="ventaEntregarA" placeholder="Nombre de quien recibe" class="w-full border-2 border-black p-2 rounded-xl text-[11px] font-bold mt-1">
+<textarea id="ventaObsEntrega" placeholder="Observaciones de la entrega (opcional)" rows="2" class="w-full border-2 border-black p-2 rounded-xl text-[11px] mt-2"></textarea>
+</div>
+<div id="ticket" class="space-y-2">Vacío</div>
+<div class="mt-3 bg-gray-50 p-2 rounded-xl flex gap-2 items-center"><span class="text-[11px] font-black">Descuento %</span><input id="descPorc" type="number" value="0" class="w-16 border-2 border-black p-1 rounded-xl text-center font-black" oninput="renderCarrito()"><span class="text-[10px]">Motivo</span><input id="descMotivo" placeholder="Promo" class="flex-1 border-2 border-black p-1 rounded-xl text-[10px]"></div>
+<div class="flex justify-between font-black text-[20px] mt-3 border-t-2 pt-3">Total $ <span id="c-total">0</span></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="abrirCobro()" class="bg-black text-white py-4 rounded-2xl font-black">COBRAR</button><button onclick="guardarPresupuestoWhatsApp()" class="bg-[#25D366] text-white py-4 rounded-2xl font-black">📲 PRESUPUESTO</button></div></div></div>
 
 <div id="tab-entregas" class="p-3 hidden">
 <div class="bg-white rounded-[28px] p-4 shadow-sm border-2 border-black">
@@ -129,66 +129,34 @@ async function hacerRegistro(){try{let e=document.getElementById('loginEmail').v
 async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el identificador de tu cuenta.',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); try{await cargarDeNube();}catch(loadErr){console.error(loadErr); alert('Entraste correctamente, pero no se pudieron cargar tus datos guardados. Puedes usar la app y después revisamos la conexión con la tabla respaldo.');} }catch(err){msgLogin('No se pudo iniciar sesión: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
- try{
   if(!currentUser) return;
-  let uid=encodeURIComponent(currentUser);
-  let url='/api/load?user_id='+uid;
-  let res=await fetch(url);
-  if(!res.ok) return;
-  let txt=await res.text();
+  const res = await fetch('/api/load.py?user_id='+encodeURIComponent(currentUser));
+  const txt = await res.text();
   let data;
-  try{
-   data=JSON.parse(txt);
-  }catch{
-   return;
+  try{ data = JSON.parse(txt); }catch{ console.log('Respuesta load.py:', txt.slice(0,200)); return; }
+  if(data && data.data){
+    for(let k in data.data){
+      try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k]: JSON.stringify(data.data[k])); }catch(e){}
+    }
   }
-  if(!data) return;
-  if(!data.data) return;
-  let obj=data.data;
-  for(let k in obj){
-   try{
-    let v=obj[k];
-    let sv=typeof v==='string'?v:JSON.stringify(v);
-    localStorage.setItem(k,sv);
-   }catch{}
-  }
- }catch(e){
-  console.log('Error nube',e);
- }
 }
-
-async function guardarEnNubeAuto(){
+ async function guardarEnNubeAuto(){
  try{
-  let email=localStorage.getItem('session_email');
-  if(!email) return;
-  let payload={};
+  if(typeof usuarioActual === 'undefined' ||!usuarioActual) return;
+  const payload = {};
   for(let i=0;i<localStorage.length;i++){
-   let k=localStorage.key(i);
-   if(!k) continue;
-   if(k.includes('@')) continue;
-   if(k.includes('session_')) continue;
-   try{
-    let v=localStorage.getItem(k);
-    payload[k]=JSON.parse(v);
-   }catch{
-    payload[k]=localStorage.getItem(k);
-   }
+   const k=localStorage.key(i);
+   if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
   }
-  let uid=encodeURIComponent(email);
-  let url='/api/save?user_id='+uid;
-  let res=await fetch(url,{
+  const res = await fetch('/api/save.py?user_id='+encodeURIComponent(usuarioActual),{
    method:'POST',
-   headers:{
-    'Content-Type':'application/json'
-   },
-   body:JSON.stringify({data:payload})
+   headers:{'Content-Type':'application/json'},
+   body: JSON.stringify({data:payload})
   });
-  let txt=await res.text();
-  console.log('Guardado nube:',res.status);
- }catch(e){
-  console.log('No nube, sigo local',e);
- }
-}
+  const txt = await res.text();
+  try{ JSON.parse(txt); }catch{ console.log('Respuesta save:', txt); }
+ }catch(e){ console.log('Error save', e); }
+ } 
 window.addEventListener('load', async ()=>{
   let e=localStorage.getItem('session_email');
   let n=localStorage.getItem('session_negocio');
