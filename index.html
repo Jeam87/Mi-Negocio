@@ -579,7 +579,7 @@ async function cargarNubeAuto(){
     if(!email){ alert('No hay email de sesión'); return; }
     const btn = document.getElementById('btn-recarga-nube');
     if(btn){ btn.innerText='⏳ Cargando de la nube...'; btn.disabled=true; }
-    const r = await fetch('/api/index.py?email='+encodeURIComponent(email));
+    const r = await fetch('/api/load?user_id=' + encodeURIComponent(email) + '&t=' + Date.now(), {cache:'no-store'});
     const data = await r.json();
     console.log('Nube:', data);
     // Guarda todo lo que venga, sin tocar lo demás
@@ -617,5 +617,4 @@ const _oldIniciar = window.iniciarApp || window.login || null;
 if(localStorage.getItem('session_email')) intentarAutoRecarga();
 revisarRetornoStripe();
 </script>
-<script src="/api/autoguardado"></script>
 </body></html>
