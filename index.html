@@ -133,13 +133,13 @@ async function cargarDeNube(){
   const res = await fetch('/api/load?user_id='+encodeURIComponent(currentUser));
   const txt = await res.text();
   let data;
-  try{ data = JSON.parse(txt); }catch{ console.log('Respuesta load.py:', txt.slice(0,200)); return; }
+  try{ data = JSON.parse(txt); }catch{ data=null; }
   if(data && data.data){
     for(let k in data.data){
-      try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k]: JSON.stringify(data.data[k])); }catch(e){}
+      try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k] : JSON.stringify(data.data[k])); }catch{}
     }
-  } 
-} 
+  }
+}
    async function guardarEnNubeAuto(){
   try{
     const email = localStorage.getItem('session_email');
