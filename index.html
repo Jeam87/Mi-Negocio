@@ -129,44 +129,62 @@ async function hacerRegistro(){try{let e=document.getElementById('loginEmail').v
 async function hacerLogin(){try{let e=document.getElementById('loginEmail').value.trim().toLowerCase(); let p=document.getElementById('loginPass').value; if(!e||!p) return msgLogin('Pon correo y contraseña',false); let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}); let j=await r.json().catch(()=>({ok:false,msg:'El servidor no devolvió una respuesta válida.'})); if(!r.ok||!j.ok) return msgLogin(j.msg||'No se pudo iniciar sesión',false); currentUser=e; negocioId=j.negocio_id; if(!negocioId) return msgLogin('No se recibió el identificador de tu cuenta.',false); localStorage.setItem('session_email',e); localStorage.setItem('session_negocio',negocioId); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); try{await cargarDeNube();}catch(loadErr){console.error(loadErr); alert('Entraste correctamente, pero no se pudieron cargar tus datos guardados. Puedes usar la app y después revisamos la conexión con la tabla respaldo.');} }catch(err){msgLogin('No se pudo iniciar sesión: '+(err.message||err),false);}}
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
-  try{
-    let email = (localStorage.getItem('session_email') || currentUser || "").toLowerCase();
-    if(!email) return;
-    let r = await fetch('/api/load?user_id='+encodeURIComponent(email));
-    let j = await r.json();
-    if(j && j.data && Object.keys(j.data).length>0){
-      for(let k in j.data){
-        localStorage.setItem(k, JSON.stringify(j.data[k]));
-        localStorage.setItem(k+'_'+email, JSON.stringify(j.data[k]));
+  if(!currentUser) return;
+  const res = await fetch('/api/load.py?user_id='+encodeURIComponent(currentUser));
+  const txt = await res.text();
+  let data;
+  try{ data = JSON.parse(txt); }catch{ console.log('Respuesta load.py:', txt.slice(0,200)); return; }
+  if(data && data.data){
+    for(let k in data.data){
+      try{ localStorage.setItem(k, typeof data.data[k]==='string'? data.data[k]: JSON.stringify(data.data[k])); }catch(e){}
+    }
+  }
+}
+ async function guardarEnNubeAuto(){
+ try{
+  if(typeof usuarioActual === 'undefined' ||!usuarioActual) return;
+  const payload = {};
+  for(let i=0;i<localStorage.length;i++){
+   const k=localStorage.key(i);
+   if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
+  }
+  const res = await fetch('/api/save.py?user_id='+encodeURIComponent(usuarioActual),{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body: JSON.stringify({data:payload})
+  });
+  const txt = await res.text();
+  try{ JSON.parse(txt); }catch{ console.log('Respuesta save:', txt); }
+ }catch(e){ console.log('Error save', e); }
+ } 
+window.addEventListener('load', async ()=>{
+  let e=localStorage.getItem('session_email');
+  let n=localStorage.getItem('session_negocio');
+  if(e&&n){
+    document.getElementById('loginEmail').value=e;
+    currentUser=e;
+    negocioId=n;
+    try{
+      await cargarDeNube();
+      document.getElementById('userLabel').innerText=e;
+      document.getElementById('loginScreen').classList.add('hidden');
+      showTab('inventario');
+    }catch(err){
+      console.log('Error cargando nube:', err);
+      // No borres sesión si es solo error de JSON/red
+      if(String(err.message).includes('not valid JSON') || String(err).includes('The page')){
+        document.getElementById('userLabel').innerText=e;
+        document.getElementById('loginScreen').classList.add('hidden');
+        showTab('inventario');
+        return;
       }
+      localStorage.removeItem('session_email');
+      localStorage.removeItem('session_negocio');
+      currentUser=null; negocioId=null;
+      msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false);
     }
-  }catch(e){ console.log('Sin datos en nube aún', e); }
-}
-async function guardarEnNubeAuto(){
-  try{
-    const email = (localStorage.getItem('sesionEmail') || localStorage.getItem('email') || localStorage.getItem('user_email') || '').trim();
-    if(!email) return;
-    const payload = {};
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k.includes('@')) continue; // no guardar copias con email
-      try{ payload[k] = JSON.parse(localStorage.getItem(k)); }
-      catch(e){ payload[k] = localStorage.getItem(k); }
-    }
-    await fetch('/api/index.py', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email: email, data: payload})
-    });
-    await fetch('/api/load?user_id='+encodeURIComponent(email), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({data: payload})
-    }).catch(()=>{});
-    console.log('✅ Nube guardada con agenda');
-  }catch(e){ console.log(e); }
-}
-window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
+  }
+});
 async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
 function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
 function getProd(){ return JSON.parse(localStorage.getItem('productosV2_'+negocioId)||localStorage.getItem('productosV2')||'[]'); }
