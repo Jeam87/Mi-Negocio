@@ -144,26 +144,21 @@ async function cargarDeNube(){
 }
 async function guardarEnNubeAuto(){
   try{
-    const email = (localStorage.getItem('sesionEmail') || localStorage.getItem('email') || localStorage.getItem('user_email') || '').trim();
+    const email = (localStorage.getItem('...
     if(!email) return;
     const payload = {};
     for(let i=0;i<localStorage.length;i++){
       const k = localStorage.key(i);
-      if(k.includes('@')) continue; // no guardar copias con email
-      try{ payload[k] = JSON.parse(localStorage.getItem(k)); }
-      catch(e){ payload[k] = localStorage.getItem(k); }
+      if(k.includes('@')) continue;
+      try{ payload[k] = JSON.parse(local
+      catch(e){ payload[k] = localStorag
     }
-    await fetch('/api/index.py', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email: email, data: payload})
-    });
     await fetch('/api/load?user_id='+encodeURIComponent(email), {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({data: payload})
     }).catch(()=>{});
-    console.log('✅ Nube guardada con agenda');
+    console.log('✅ Nube guardada con ag');
   }catch(e){ console.log(e); }
 }
 window.addEventListener('load', async ()=>{ let e=localStorage.getItem('session_email'); let n=localStorage.getItem('session_negocio'); if(e&&n){ document.getElementById('loginEmail').value=e; currentUser=e; negocioId=n; try{ await cargarDeNube(); document.getElementById('userLabel').innerText=e; document.getElementById('loginScreen').classList.add('hidden'); showTab('inventario'); }catch(err){ localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); currentUser=null; negocioId=null; msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false); } }});
