@@ -130,7 +130,7 @@ async function hacerLogin(){try{let e=document.getElementById('loginEmail').valu
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
   if(!currentUser) return;
-  const res = await fetch('/api/load.py?user_id='+encodeURIComponent(currentUser));
+  const res = await fetch('/api/load?user_id='+encodeURIComponent(currentUser));
   const txt = await res.text();
   let data;
   try{ data = JSON.parse(txt); }catch{ console.log('Respuesta load.py:', txt.slice(0,200)); return; }
@@ -148,7 +148,7 @@ async function cargarDeNube(){
    const k=localStorage.key(i);
    if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
   }
-  const res = await fetch('/api/save.py?user_id='+encodeURIComponent(usuarioActual),{
+  const res = await fetch('/api/save?user_id='+encodeURIComponent(usuarioActual),{
    method:'POST',
    headers:{'Content-Type':'application/json'},
    body: JSON.stringify({data:payload})
