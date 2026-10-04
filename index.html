@@ -628,7 +628,7 @@ function intentarAutoRecarga(){
 }
 // Auto-ejecuta después de login
 const _oldIniciar = window.iniciarApp || window.login || null;
-if(localStorage.getItem('session_email')) intentarAutoRecarga(); cargarEntregas(); }
+if(localStorage.getItem('session_email')) intentarAutoRecarga(); cargarEntregas();
 revisarRetornoStripe();
 </script>
 <script src="/api/autoguardado"></script>
