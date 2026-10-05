@@ -3,50 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mi Tienda</title>
+<title>Mi Tienda Jacona</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}
-body{font-family:system-ui; margin:0; background:#f8f8f8; padding-bottom:200px}
-header{background:#111; color:white; padding:24px; text-align:center}
-#productos{display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:14px; padding:16px}
-.card{background:white; border-radius:16px; padding:10px; box-shadow:0 2px 10px rgba(0,0,0,.08)}
-.card img{width:100%; height:140px; object-fit:cover; border-radius:10px}
-.card button{background:#111; color:white; border:0; padding:10px; width:100%; border-radius:10px; margin-top:8px; font-weight:bold}
-#carrito{position:fixed; bottom:0; left:0; right:0; background:white; padding:16px; border-radius:20px 20px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:#f5f5f5}
+header{background:#25D366;color:white;padding:15px;text-align:center}
+#productos{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;padding-bottom:200px}
+.card{background:white;border-radius:12px;padding:10px;box-shadow:0 2px 5px rgba(0,0,0,.1);text-align:center}
+.card img{width:100%;height:110px;object-fit:contain;background:#fff;border-radius:8px}
+.card h3{font-size:14px;margin:8px 0 2px;min-height:20px}
+.card.desc{font-size:11px;color:#666;margin:2px 0 6px;min-height:28px;line-height:12px}
+.card p.precio{font-weight:bold;margin:4px 0;color:#111;font-size:15px}
+.card button{background:#25D366;border:none;color:white;padding:8px 12px;border-radius:8px;width:100%;font-weight:bold}
+#carrito{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px;box-shadow:0 -2px 10px rgba(0,0,0,.2);border-radius:16px 16px 0 0}
+#lista-carrito{max-height:120px;overflow:auto;margin-bottom:8px;font-size:13px}
+.total{font-weight:bold;font-size:18px;margin:8px 0}
+.btn-ws{background:#25D366;color:white;border:none;width:100%;padding:14px;border-radius:10px;font-size:16px;font-weight:bold}
 </style>
 </head>
 <body>
-<header><h1 id="storeName">Cargando...</h1><p id="storeInfo"></p></header>
+<header>
+<h1 id="nombre-tienda">Cargando tienda...</h1>
+</header>
 <div id="productos"></div>
-<div id="carrito" style="display:none">
-  <div id="lista"></div>
-  <button id="btnWa" style="background:#25D366; color:white; border:0; padding:16px; width:100%; border-radius:12px; font-size:17px; font-weight:bold; margin-top:12px">Pedir por WhatsApp</button>
+<div id="carrito">
+<div id="lista-carrito">Carrito vacío</div>
+<div class="total" id="total-txt">Total: $0</div>
+<button class="btn-ws" onclick="enviarWhatsApp()">Pedir por WhatsApp</button>
 </div>
 <script>
-const SUPABASE_URL = 'https://txuggnfohyevpvdfxpfu.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const storeId = new URLSearchParams(window.location.search).get('id') || 'eedfc281-71bb-4765-8883-8bec75ea3102';
-let perfil=null, carrito=[];
-async function cargar(){
-  const {data:prof}=await supabaseClient.from('profiles').select('*').eq('id',storeId).single();
-  perfil=prof;
-  document.getElementById('storeName').innerText=prof.business_name;
-  let {data:prods}=await supabaseClient.from('products').select('*').eq('user_id',storeId);
-  if(!prods||!prods.length){let r=await supabaseClient.from('products').select('*').limit(20); prods=r.data||[]}
-  document.getElementById('productos').innerHTML=prods.map(p=>`<div class="card"><img src="${p.image_url||p.imagen||'https://via.placeholder.com/300'}"><h3>${p.name||p.nombre}</h3><p>$${p.price||p.precio}</p><button onclick="agregar('${(p.name||'Prod').replace(/'/g,'')}',${p.price||0})">Agregar</button></div>`).join('');
+// --- CONFIGURA ESTO ---
+const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbG...TU_LLAVE_LARGA";
+let NUMERO_WHATSAPP = "523521234567";
+// ----------------------
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let carrito = [];
+let nombreTienda = "Mi Tienda Jacona";
+const params = new URLSearchParams(window.location.search);
+const tienda_id = params.get('id');
+
+async function cargarTienda(){
+ if(!tienda_id){
+   document.getElementById('nombre-tienda').innerText = "Falta?id= en la URL";
+   return;
+ }
+ const {data: tienda} = await supabaseClient.from('tiendas').select('*').eq('id', tienda_id).single();
+ if(tienda){
+   nombreTienda = tienda.nombre;
+   document.getElementById('nombre-tienda').innerText = tienda.nombre;
+   document.title = tienda.nombre;
+   if(tienda.whatsapp) NUMERO_WHATSAPP = tienda.whatsapp;
+ }
+ const {data: productos} = await supabaseClient.from('productos').select('*').eq('tienda_id', tienda_id);
+ const cont = document.getElementById('productos');
+ cont.innerHTML = "";
+ productos.forEach(p => {
+   const img = p.imagen_url || p.imagen || 'https://via.placeholder.com/150?text=Sin+Foto';
+   const descripcion = p.descripcion || p.descripcion_producto || '';
+   cont.innerHTML += `
+     <div class="card">
+       <img src="${img}" onerror="this.src='https://via.placeholder.com/150?text=Sin+Foto'">
+       <h3>${p.nombre}</h3>
+       <div class="desc">${descripcion}</div>
+       <p class="precio">$${p.precio}</p>
+       <button onclick="agregar('${p.nombre.replace(/'/g,"\\'")}', ${p.precio})">Agregar</button>
+     </div>`;
+ });
 }
-function agregar(n,p){carrito.push({nombre:n,precio:Number(p)}); render()}
-function render(){
-  document.getElementById('carrito').style.display=carrito.length?'block':'none';
-  const total=carrito.reduce((s,c)=>s+c.precio,0);
-  document.getElementById('lista').innerHTML=carrito.map(c=>`• ${c.nombre} $${c.precio}`).join('<br>')+`<br><b>Total: $${total}</b>`;
-  const wa=(perfil?.whatsapp||'523513053390').replace(/[^0-9]/g,'');
-  const txt=encodeURIComponent(`Hola ${perfil.business_name}! Quiero:\n${carrito.map(c=>`- ${c.nombre} $${c.precio}`).join('\n')}\nTotal $${total}`);
-  document.getElementById('btnWa').onclick=()=>window.open(`https://wa.me/${wa}?text=${txt}`,'_blank');
+
+function agregar(nombre, precio){
+ carrito.push({nombre, precio});
+ renderCarrito();
 }
-cargar();
+
+function renderCarrito(){
+ const agrupado = {};
+ carrito.forEach(p => {
+   if(agrupado[p.nombre]) agrupado[p.nombre].cantidad += 1;
+   else agrupado[p.nombre] = {...p, cantidad: 1};
+ });
+ let html = "";
+ let total = 0;
+ for(let k in agrupado){
+   let it = agrupado[k];
+   let sub = it.precio * it.cantidad;
+   html += `${it.nombre} x${it.cantidad} = $${sub}<br>`;
+   total += sub;
+ }
+ if(carrito.length==0) html = "Carrito vacío";
+ document.getElementById('lista-carrito').innerHTML = html;
+ document.getElementById('total-txt').innerText = "Total: $"+total;
+}
+
+function enviarWhatsApp(){
+ if(carrito.length==0) { alert("Carrito vacío"); return; }
+ const agrupado = {};
+ carrito.forEach(p => {
+   if(agrupado[p.nombre]) agrupado[p.nombre].cantidad += 1;
+   else agrupado[p.nombre] = {...p, cantidad: 1};
+ });
+ let mensaje = `Hola ${nombreTienda}! Quiero:%0A`;
+ let total = 0;
+ for(let k in agrupado){
+   let it = agrupado[k];
+   let sub = it.precio * it.cantidad;
+   mensaje += `• ${it.nombre} x${it.cantidad} = $${sub}%0A`;
+   total += sub;
+ }
+ mensaje += `%0ATotal: $${total}%0A%0AGracias!`;
+ window.open(`https://wa.me/${NUMERO_WHATSAPP.replace(/\D/g,'')}?text=${mensaje}`, '_blank');
+}
+
+cargarTienda();
 </script>
 </body>
 </html>
