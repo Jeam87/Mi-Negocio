@@ -1,38 +1,52 @@
-from http.server import BaseHTTPRequestHandler
-import os, json, urllib.parse
-from urllib import request as url_req
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        qs = urllib.parse.parse_qs(parsed.query)
-        user_id = qs.get('user_id',[None])[0] or parsed.path.split('/')[-1].split('?')[0] or "eedfc281-71bb-4765-8883-8bec75ea3102"
-
-        supa_url = os.environ.get('SUPABASE_URL')
-        supa_key = os.environ.get('SUPABASE_ANON_KEY') or os.environ.get('SUPABASE_KEY')
-        productos = []
-        try:
-            url = f"{supa_url}/rest/v1/products?user_id=eq.{user_id}&select=*"
-            req = url_req.Request(url, headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"})
-            with url_req.urlopen(req, timeout=10) as r:
-                productos = json.loads(r.read().decode())
-        except: pass
-
-        cards = ""
-        for p in productos:
-            nombre = p.get('name') or p.get('nombre') or 'Producto'
-            precio = p.get('price') or p.get('precio') or 0
-            desc = (p.get('description') or p.get('descripcion') or '')[:100]
-            img = p.get('image_url') or p.get('imagen') or ''
-            img_tag = f"<img src='{img}' class='w-full h-40 object-cover rounded-xl mb-3'/>" if img else ""
-            wa = urllib.parse.quote(f"Hola! Quiero {nombre} - ${precio}")
-            cards += f"<div class='bg-white rounded-2xl p-4 shadow mb-4'>{img_tag}<h3 class='font-bold text-lg'>{nombre}</h3><p class='text-sm text-gray-500'>{desc}</p><div class='flex justify-between items-center mt-3'><span class='text-green-600 font-black text-xl'>${precio}</span><a href='https://wa.me/523521009999?text={wa}' target='_blank' class='bg-green-500 text-white px-5 py-2 rounded-full font-bold text-sm'>Pedir WhatsApp</a></div></div>"
-
-        if not cards:
-            cards = "<div class='bg-white p-6 rounded-2xl text-center'>No hay productos</div>"
-
-        html = f"<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Mi Tienda</title><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-gray-100'><div class='max-w-md mx-auto p-4'><div class='bg-white rounded-2xl p-5 mb-4 text-center shadow'><h1 class='font-black text-2xl'>🛒 Mi Tienda Jacona</h1><p class='text-xs text-gray-500'>Tap para pedir por WhatsApp</p></div>{cards}</div></body></html>"
-        self.send_response(200)
-        self.send_header('Content-type','text/html; charset=utf-8')
-        self.end_headers()
-        self.wfile.write(html.encode())
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Tienda Jacona</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui; margin:0; background:#f8f8f8; padding-bottom:200px}
+header{background:#111; color:white; padding:24px; text-align:center}
+#productos{display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:14px; padding:16px}
+.card{background:white; border-radius:16px; padding:10px; box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.card img{width:100%; height:140px; object-fit:cover; border-radius:10px}
+.card button{background:#111; color:white; border:0; padding:10px; width:100%; border-radius:10px; margin-top:8px; font-weight:bold}
+#carrito{position:fixed; bottom:0; left:0; right:0; background:white; padding:16px; border-radius:20px 20px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+<header><h1 id="storeName">Cargando...</h1><p id="storeInfo"></p></header>
+<div id="productos"></div>
+<div id="carrito" style="display:none">
+  <div id="lista"></div>
+  <button id="btnWa" style="background:#25D366; color:white; border:0; padding:16px; width:100%; border-radius:12px; font-size:17px; font-weight:bold; margin-top:12px">Pedir por WhatsApp</button>
+</div>
+<script>
+const SUPABASE_URL = 'https://txuggnfohyevpvdfxpfu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const storeId = new URLSearchParams(window.location.search).get('id') || 'eedfc281-71bb-4765-8883-8bec75ea3102';
+let perfil=null, carrito=[];
+async function cargar(){
+  const {data:prof}=await supabaseClient.from('profiles').select('*').eq('id',storeId).single();
+  perfil=prof;
+  document.getElementById('storeName').innerText=prof.business_name;
+  let {data:prods}=await supabaseClient.from('products').select('*').eq('user_id',storeId);
+  if(!prods||!prods.length){let r=await supabaseClient.from('products').select('*').limit(20); prods=r.data||[]}
+  document.getElementById('productos').innerHTML=prods.map(p=>`<div class="card"><img src="${p.image_url||p.imagen||'https://via.placeholder.com/300'}"><h3>${p.name||p.nombre}</h3><p>$${p.price||p.precio}</p><button onclick="agregar('${(p.name||'Prod').replace(/'/g,'')}',${p.price||0})">Agregar</button></div>`).join('');
+}
+function agregar(n,p){carrito.push({nombre:n,precio:Number(p)}); render()}
+function render(){
+  document.getElementById('carrito').style.display=carrito.length?'block':'none';
+  const total=carrito.reduce((s,c)=>s+c.precio,0);
+  document.getElementById('lista').innerHTML=carrito.map(c=>`• ${c.nombre} $${c.precio}`).join('<br>')+`<br><b>Total: $${total}</b>`;
+  const wa=(perfil?.whatsapp||'523513053390').replace(/[^0-9]/g,'');
+  const txt=encodeURIComponent(`Hola ${perfil.business_name}! Quiero:\n${carrito.map(c=>`- ${c.nombre} $${c.precio}`).join('\n')}\nTotal $${total}`);
+  document.getElementById('btnWa').onclick=()=>window.open(`https://wa.me/${wa}?text=${txt}`,'_blank');
+}
+cargar();
+</script>
+</body>
+</html>
