@@ -6,27 +6,35 @@ import time
 import urllib.parse
 import urllib.request
 import urllib.error
-
+import base64
 from http.server import BaseHTTPRequestHandler
 
 
-# =========================================================
-# CONFIGURACIÓN
-# =========================================================
+# ============================================================
+# STRIPE WEBHOOK - TIENDA EN LINEA
+# ============================================================
+#
+# Archivo:
+# api/stripe-webhook-tienda.py
+#
+# Variables de Vercel:
+# SUPABASE_URL
+# SUPABASE_SERVICE_ROLE_KEY
+# STRIPE_SECRET_KEY
+# STRIPE_WEBHOOK_SECRET
+#
+# Funciones:
+# - Confirma pagos de Stripe.
+# - Crea el pedido en la Agenda.
+# - Evita crear la Agenda dos veces.
+# - Devuelve inventario cuando un pago asincrónico falla.
+# - Devuelve inventario cuando un Checkout expira.
+# ============================================================
+
 
 def env(nombre):
     return os.getenv(nombre, "").strip()
 
-
-SUPABASE_URL = env("SUPABASE_URL")
-SUPABASE_KEY = env("SUPABASE_SERVICE_ROLE_KEY")
-STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET")
-
-
-# =========================================================
-# RESPUESTAS HTTP
-# =========================================================
 
 def responder(handler, datos, codigo=200):
     cuerpo = json.dumps(
@@ -35,56 +43,24 @@ def responder(handler, datos, codigo=200):
     ).encode("utf-8")
 
     handler.send_response(codigo)
-
-    handler.send_header(
-        "Access-Control-Allow-Origin",
-        "*"
-    )
-
-    handler.send_header(
-        "Access-Control-Allow-Methods",
-        "POST, OPTIONS"
-    )
-
-    handler.send_header(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Stripe-Signature"
-    )
-
     handler.send_header(
         "Content-Type",
         "application/json; charset=utf-8"
     )
-
     handler.send_header(
-        "Content-Length",
-        str(len(cuerpo))
+        "Access-Control-Allow-Origin",
+        "*"
     )
-
+    handler.send_header(
+        "Access-Control-Allow-Methods",
+        "POST, OPTIONS"
+    )
+    handler.send_header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Stripe-Signature"
+    )
     handler.end_headers()
     handler.wfile.write(cuerpo)
-
-
-def leer_json(handler):
-    try:
-        cantidad = int(
-            handler.headers.get(
-                "Content-Length",
-                "0"
-            )
-        )
-
-        cuerpo = handler.rfile.read(cantidad)
-
-        if not cuerpo:
-            return {}
-
-        return json.loads(
-            cuerpo.decode("utf-8")
-        )
-
-    except Exception:
-        return {}
 
 
 def leer_cuerpo(handler):
@@ -93,50 +69,51 @@ def leer_cuerpo(handler):
             handler.headers.get(
                 "Content-Length",
                 "0"
-            )
+            ) or "0"
         )
-
-        return handler.rfile.read(cantidad)
-
     except Exception:
-        return b""
+        cantidad = 0
+
+    return handler.rfile.read(cantidad)
 
 
-# =========================================================
+# ============================================================
 # SUPABASE
-# =========================================================
+# ============================================================
 
 def supabase_request(
     metodo,
     tabla,
-    params="",
-    datos=None,
+    params=None,
+    data=None,
     prefer=None
 ):
-    if not SUPABASE_URL:
+    url_base = env("SUPABASE_URL").rstrip("/")
+    service_key = env("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not url_base:
         raise RuntimeError(
-            "Falta SUPABASE_URL."
+            "Falta SUPABASE_URL en Vercel."
         )
 
-    if not SUPABASE_KEY:
+    if not service_key:
         raise RuntimeError(
-            "Falta SUPABASE_SERVICE_ROLE_KEY."
+            "Falta SUPABASE_SERVICE_ROLE_KEY en Vercel."
         )
 
-    url = (
-        SUPABASE_URL.rstrip("/")
-        + "/rest/v1/"
-        + tabla
-    )
+    url = f"{url_base}/rest/v1/{tabla}"
 
     if params:
-        url += "?" + params
+        url += "?" + urllib.parse.urlencode(
+            params,
+            doseq=True
+        )
 
     cuerpo = None
 
-    if datos is not None:
+    if data is not None:
         cuerpo = json.dumps(
-            datos,
+            data,
             ensure_ascii=False
         ).encode("utf-8")
 
@@ -148,12 +125,12 @@ def supabase_request(
 
     request.add_header(
         "apikey",
-        SUPABASE_KEY
+        service_key
     )
 
     request.add_header(
         "Authorization",
-        "Bearer " + SUPABASE_KEY
+        "Bearer " + service_key
     )
 
     request.add_header(
@@ -178,180 +155,148 @@ def supabase_request(
             timeout=20
         ) as respuesta:
 
-            contenido = respuesta.read().decode(
+            texto = respuesta.read().decode(
                 "utf-8"
-            )
+            ) or ""
 
-            if not contenido:
-                return []
+            if not texto:
+                return None
 
             try:
-                return json.loads(contenido)
-
+                return json.loads(texto)
             except Exception:
-                return contenido
+                return texto
 
     except urllib.error.HTTPError as error:
 
-        cuerpo_error = ""
+        texto = (
+            error.read().decode("utf-8")
+            if error.fp
+            else ""
+        )
 
         try:
-            cuerpo_error = (
-                error.read()
-                .decode("utf-8")
-            )
+            detalle = json.loads(texto)
         except Exception:
-            pass
+            detalle = texto
 
         raise RuntimeError(
-            "Error de Supabase "
-            + str(error.code)
-            + ": "
-            + cuerpo_error
+            f"Supabase {metodo} {tabla}: {detalle}"
         )
 
 
-# =========================================================
-# STRIPE API
-# =========================================================
+def supabase_rpc(nombre_funcion, argumentos):
 
-def stripe_request(
-    metodo,
-    ruta,
-    cuenta=None,
-    datos=None
-):
-    if not STRIPE_SECRET_KEY:
+    url_base = env("SUPABASE_URL").rstrip("/")
+    service_key = env("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not url_base:
         raise RuntimeError(
-            "Falta STRIPE_SECRET_KEY."
+            "Falta SUPABASE_URL en Vercel."
+        )
+
+    if not service_key:
+        raise RuntimeError(
+            "Falta SUPABASE_SERVICE_ROLE_KEY en Vercel."
         )
 
     url = (
-        "https://api.stripe.com"
-        + ruta
+        f"{url_base}/rest/v1/rpc/"
+        f"{nombre_funcion}"
     )
 
-    cuerpo = None
-
-    if datos is not None:
-
-        cuerpo = urllib.parse.urlencode(
-            datos
-        ).encode("utf-8")
+    cuerpo = json.dumps(
+        argumentos,
+        ensure_ascii=False
+    ).encode("utf-8")
 
     request = urllib.request.Request(
         url,
         data=cuerpo,
-        method=metodo
+        method="POST"
     )
 
-    credenciales = (
-        STRIPE_SECRET_KEY
-        + ":"
+    request.add_header(
+        "apikey",
+        service_key
     )
-
-    import base64
-
-    autorizacion = base64.b64encode(
-        credenciales.encode("utf-8")
-    ).decode("ascii")
 
     request.add_header(
         "Authorization",
-        "Basic " + autorizacion
+        "Bearer " + service_key
     )
 
     request.add_header(
         "Content-Type",
-        "application/x-www-form-urlencoded"
+        "application/json"
     )
 
-    if cuenta:
-        request.add_header(
-            "Stripe-Account",
-            cuenta
-        )
+    request.add_header(
+        "Accept",
+        "application/json"
+    )
 
     try:
-
         with urllib.request.urlopen(
             request,
             timeout=20
         ) as respuesta:
 
-            contenido = (
-                respuesta.read()
-                .decode("utf-8")
-            )
+            texto = respuesta.read().decode(
+                "utf-8"
+            ) or ""
 
-            if not contenido:
-                return {}
+            if not texto:
+                return None
 
-            return json.loads(
-                contenido
-            )
+            try:
+                return json.loads(texto)
+            except Exception:
+                return texto
 
     except urllib.error.HTTPError as error:
 
-        cuerpo_error = ""
+        texto = (
+            error.read().decode("utf-8")
+            if error.fp
+            else ""
+        )
 
         try:
-            cuerpo_error = (
-                error.read()
-                .decode("utf-8")
-            )
+            detalle = json.loads(texto)
         except Exception:
-            pass
-
-        try:
-            info = json.loads(
-                cuerpo_error
-            )
-
-            mensaje = (
-                info
-                .get("error", {})
-                .get("message")
-            )
-
-            if mensaje:
-                raise RuntimeError(
-                    "Stripe: " + mensaje
-                )
-
-        except RuntimeError:
-            raise
-
-        except Exception:
-            pass
+            detalle = texto
 
         raise RuntimeError(
-            "Error de Stripe "
-            + str(error.code)
-            + ": "
-            + cuerpo_error
+            f"Supabase RPC {nombre_funcion}: "
+            f"{detalle}"
         )
 
 
-# =========================================================
-# FIRMA DEL WEBHOOK DE STRIPE
-# =========================================================
+# ============================================================
+# VERIFICAR FIRMA DE STRIPE
+# ============================================================
 
 def verificar_firma_stripe(
-    cuerpo,
-    firma
+    payload,
+    encabezado,
+    secreto
 ):
-    if not STRIPE_WEBHOOK_SECRET:
-        raise RuntimeError(
-            "Falta STRIPE_WEBHOOK_SECRET."
-        )
 
-    if not firma:
+    if not encabezado:
         return False
 
-    partes = {}
+    if not secreto:
+        return False
 
-    for parte in firma.split(","):
+    timestamp = None
+    firmas = []
+
+    partes = encabezado.split(",")
+
+    for parte in partes:
+
+        parte = parte.strip()
 
         if "=" not in parte:
             continue
@@ -361,542 +306,621 @@ def verificar_firma_stripe(
             1
         )
 
-        partes.setdefault(
-            clave,
-            []
-        ).append(valor)
+        if clave == "t":
 
-    timestamps = partes.get(
-        "t",
-        []
-    )
+            try:
+                timestamp = int(valor)
+            except Exception:
+                timestamp = None
 
-    firmas = partes.get(
-        "v1",
-        []
-    )
+        elif clave == "v1":
 
-    if not timestamps or not firmas:
+            firmas.append(valor)
+
+    if timestamp is None:
         return False
 
-    try:
-        timestamp = int(
-            timestamps[0]
-        )
-
-    except Exception:
+    if not firmas:
         return False
 
     # Evita aceptar eventos demasiado antiguos.
-    if abs(
-        int(time.time())
-        - timestamp
-    ) > 300:
+    if abs(int(time.time()) - timestamp) > 300:
         return False
 
     mensaje = (
-        str(timestamp)
-        + "."
-        + cuerpo.decode("utf-8")
+        str(timestamp).encode("utf-8")
+        + b"."
+        + payload
     )
 
     esperado = hmac.new(
-        STRIPE_WEBHOOK_SECRET.encode(
-            "utf-8"
-        ),
-        mensaje.encode("utf-8"),
+        secreto.encode("utf-8"),
+        mensaje,
         hashlib.sha256
     ).hexdigest()
 
-    for firma_real in firmas:
+    for firma in firmas:
 
         if hmac.compare_digest(
             esperado,
-            firma_real
+            firma
         ):
             return True
 
     return False
 
 
-# =========================================================
-# BUSCAR PEDIDO
-# =========================================================
+# ============================================================
+# PEDIDOS
+# ============================================================
 
 def obtener_pedido(order_id):
 
-    filtro = (
-        "id=eq."
-        + urllib.parse.quote(
-            str(order_id),
-            safe=""
-        )
-    )
-
-    resultado = supabase_request(
+    filas = supabase_request(
         "GET",
         "store_orders",
-        filtro
-        + "&select=*"
+        {
+            "id": f"eq.{order_id}",
+            "select": "*",
+            "limit": "1"
+        }
     )
 
-    if not resultado:
-        return None
-
-    return resultado[0]
-
-
-# =========================================================
-# ACTUALIZAR PEDIDO
-# =========================================================
-
-def actualizar_pedido(
-    order_id,
-    cambios
-):
-
-    filtro = (
-        "id=eq."
-        + urllib.parse.quote(
-            str(order_id),
-            safe=""
-        )
-    )
-
-    resultado = supabase_request(
-        "PATCH",
-        "store_orders",
-        filtro,
-        cambios,
-        "return=representation"
-    )
-
-    if resultado:
-        return resultado[0]
+    if filas:
+        return filas[0]
 
     return None
 
 
-# =========================================================
-# CREAR AGENDA
-# =========================================================
+def obtener_items_pedido(order_id):
 
-def crear_agenda_desde_pedido(
-    pedido
-):
-
-    negocio_id = (
-        pedido.get("negocio_id")
-        or ""
+    filas = supabase_request(
+        "GET",
+        "store_order_items",
+        {
+            "order_id": f"eq.{order_id}",
+            "select": (
+                "product_id,"
+                "nombre,"
+                "precio,"
+                "cantidad,"
+                "subtotal"
+            )
+        }
     )
 
-    if not negocio_id:
-        raise RuntimeError(
-            "El pedido no tiene negocio_id."
+    return filas or []
+
+
+# ============================================================
+# CREAR TEXTO PARA AGENDA
+# ============================================================
+
+def crear_contenido_agenda(
+    pedido,
+    items
+):
+
+    contenido = pedido.get(
+        "contenido"
+    )
+
+    if contenido:
+        return str(contenido)[:5000]
+
+    partes = []
+
+    for item in items:
+
+        nombre = str(
+            item.get("nombre")
+            or "Producto"
         )
 
-    # Evitar crear dos veces
-    # la misma entrega.
+        cantidad = int(
+            item.get("cantidad")
+            or 1
+        )
 
-    if pedido.get(
-        "agenda_created"
+        precio = item.get(
+            "precio"
+        ) or 0
+
+        try:
+            precio_texto = (
+                f"${float(precio):,.2f}"
+            )
+        except Exception:
+            precio_texto = str(precio)
+
+        partes.append(
+            f"{cantidad} x {nombre} "
+            f"({precio_texto})"
+        )
+
+    if not partes:
+        return "Pedido de tienda en línea"
+
+    return ", ".join(partes)[:5000]
+
+
+# ============================================================
+# CREAR PEDIDO EN AGENDA
+# ============================================================
+
+def crear_agenda_si_no_existe(order_id):
+
+    pedido = obtener_pedido(
+        order_id
+    )
+
+    if not pedido:
+        raise RuntimeError(
+            "No se encontró el pedido: "
+            + str(order_id)
+        )
+
+    # Si ya fue creado anteriormente,
+    # no volvemos a crear otro.
+    if bool(
+        pedido.get("agenda_created")
     ):
         return False
 
-    contenido = (
-        pedido.get("contenido")
+    items = obtener_items_pedido(
+        order_id
+    )
+
+    contenido = crear_contenido_agenda(
+        pedido,
+        items
+    )
+
+    created_at = str(
+        pedido.get("created_at")
         or ""
     )
 
-    if not contenido:
-
-        # Intentamos reconstruir
-        # el contenido desde los artículos.
-
-        filtro = (
-            "order_id=eq."
-            + urllib.parse.quote(
-                str(pedido.get("id")),
-                safe=""
-            )
-        )
-
-        articulos = supabase_request(
-            "GET",
-            "store_order_items",
-            filtro
-            + "&select=*"
-        )
-
-        partes = []
-
-        for articulo in articulos:
-
-            nombre = (
-                articulo.get("nombre")
-                or "Producto"
-            )
-
-            cantidad = int(
-                articulo.get(
-                    "cantidad",
-                    1
-                )
-                or 1
-            )
-
-            partes.append(
-                nombre
-                + " x"
-                + str(cantidad)
-            )
-
-        contenido = ", ".join(
-            partes
-        )
+    if len(created_at) >= 10:
+        fecha_venta = created_at[:10]
+    else:
+        fecha_venta = None
 
     fecha_entrega = (
-        pedido.get(
-            "fecha_entrega"
-        )
+        pedido.get("fecha_entrega")
+        or fecha_venta
+    )
+
+    hora_entrega = pedido.get(
+        "hora_entrega"
+    )
+
+    tipo_entrega = str(
+        pedido.get("tipo_entrega")
         or ""
-    )
+    ).lower()
 
-    hora_entrega = (
-        pedido.get(
-            "hora_entrega"
+    if tipo_entrega in (
+        "recoger",
+        "pickup",
+        "recogida"
+    ):
+
+        entregar_a = (
+            "Recoger en tienda"
         )
-        or ""
-    )
-
-    cliente = (
-        pedido.get(
-            "cliente_nombre"
-        )
-        or ""
-    )
-
-    telefono = (
-        pedido.get(
-            "cliente_telefono"
-        )
-        or ""
-    )
-
-    email = (
-        pedido.get(
-            "cliente_email"
-        )
-        or ""
-    )
-
-    direccion = (
-        pedido.get(
-            "direccion"
-        )
-        or ""
-    )
-
-    referencia = (
-        pedido.get(
-            "referencia"
-        )
-        or ""
-    )
-
-    comentarios = (
-        pedido.get(
-            "comentarios"
-        )
-        or ""
-    )
-
-    tipo_entrega = (
-        pedido.get(
-            "tipo_entrega"
-        )
-        or "domicilio"
-    )
-
-    observaciones = (
-        "Pedido de tienda en línea."
-        + " Cliente: "
-        + cliente
-    )
-
-    if email:
-        observaciones += (
-            " Email: "
-            + email
-        )
-
-    if tipo_entrega == "domicilio":
-
-        if direccion:
-            observaciones += (
-                " Dirección: "
-                + direccion
-            )
-
-        if referencia:
-            observaciones += (
-                " Referencia: "
-                + referencia
-            )
 
     else:
 
-        observaciones += (
-            " Entrega: recoger en tienda."
-        )
+        entregar_a = str(
+            pedido.get("direccion")
+            or ""
+        ).strip()
 
-    if comentarios:
-        observaciones += (
-            " Comentarios: "
-            + comentarios
-        )
+        if not entregar_a:
+            entregar_a = "Domicilio"
 
-    entrega = {
-        "negocio_id": negocio_id,
-        "fecha_venta": (
-            str(
-                pedido.get(
-                    "created_at",
-                    ""
-                )
-            )[:10]
-            or fecha_entrega
+    observaciones = str(
+        pedido.get("comentarios")
+        or ""
+    ).strip()
+
+    referencia = str(
+        pedido.get("referencia")
+        or ""
+    ).strip()
+
+    if referencia:
+
+        if observaciones:
+            observaciones += (
+                " | Referencia: "
+                + referencia
+            )
+        else:
+            observaciones = (
+                "Referencia: "
+                + referencia
+            )
+
+    observaciones = (
+        "Pedido de tienda en línea. "
+        + observaciones
+    ).strip()[:5000]
+
+    agenda = {
+        "negocio_id": pedido.get(
+            "negocio_id"
         ),
+
+        "fecha_venta": fecha_venta,
+
         "fecha_entrega": fecha_entrega,
+
         "hora_entrega": hora_entrega,
+
         "contenido": contenido,
+
         "observaciones": observaciones,
-        "quien_ordena": cliente,
-        "telefono_ordena": telefono,
-        "entregar_a": (
-            cliente
-            if tipo_entrega == "domicilio"
-            else "Recoger en tienda"
-        ),
+
+        "quien_ordena": str(
+            pedido.get(
+                "cliente_nombre"
+            )
+            or "Cliente tienda"
+        )[:200],
+
+        "telefono_ordena": str(
+            pedido.get(
+                "cliente_telefono"
+            )
+            or ""
+        )[:50],
+
+        "entregar_a": entregar_a[:1000],
+
         "estado": "pendiente"
     }
 
-    resultado = supabase_request(
+    # Insertamos en la misma tabla que
+    # utiliza la Agenda principal.
+    supabase_request(
         "POST",
         "entregas",
-        "",
-        entrega,
-        "return=representation"
+        data=agenda,
+        prefer="return=minimal"
     )
 
-    if resultado is None:
-        raise RuntimeError(
-            "No se pudo crear la entrega."
-        )
-
-    actualizar_pedido(
-        pedido.get("id"),
+    # Marcamos el pedido para que una
+    # segunda notificación de Stripe
+    # no vuelva a crear la Agenda.
+    supabase_request(
+        "PATCH",
+        "store_orders",
+        {
+            "id": f"eq.{order_id}"
+        },
         {
             "agenda_created": True
-        }
+        },
+        prefer="return=minimal"
     )
+
+    return True # ============================================================
+# MARCAR PEDIDO COMO PAGADO
+# ============================================================
+
+def marcar_pedido_pagado(
+    order_id,
+    session
+):
+
+    pedido = obtener_pedido(
+        order_id
+    )
+
+    if not pedido:
+        raise RuntimeError(
+            "No se encontró el pedido: "
+            + str(order_id)
+        )
+
+    payment_intent = session.get(
+        "payment_intent"
+    )
+
+    supabase_request(
+        "PATCH",
+        "store_orders",
+        {
+            "id": f"eq.{order_id}"
+        },
+        {
+            "estado": "confirmado",
+            "estado_pago": "pagado",
+            "stripe_session_id": session.get(
+                "id"
+            ),
+            "stripe_payment_intent_id":
+                payment_intent
+        },
+        prefer="return=minimal"
+    )
+
+    # Después de confirmar el pago,
+    # creamos la Agenda si todavía no existe.
+    crear_agenda_si_no_existe(
+        order_id
+    )
+
+
+# ============================================================
+# DEVOLVER INVENTARIO
+# ============================================================
+
+def devolver_inventario(
+    order_id,
+    nuevo_estado_pago,
+    nuevo_estado_pedido
+):
+
+    pedido = obtener_pedido(
+        order_id
+    )
+
+    if not pedido:
+        raise RuntimeError(
+            "No se encontró el pedido: "
+            + str(order_id)
+        )
+
+    estado_pago_actual = str(
+        pedido.get("estado_pago")
+        or ""
+    ).lower()
+
+    # Si ya fue pagado, jamás devolvemos
+    # el inventario.
+    if estado_pago_actual == "pagado":
+        return False
+
+    # Si ya fue procesado anteriormente,
+    # no devolvemos el inventario otra vez.
+    if estado_pago_actual in (
+        "fallido",
+        "expirado",
+        "cancelado"
+    ):
+        return False
+
+    items = obtener_items_pedido(
+        order_id
+    )
+
+    # Cambiamos el estado solamente si
+    # todavía estaba pendiente.
+    #
+    # Esto hace que un webhook repetido
+    # de Stripe no devuelva el inventario
+    # dos veces.
+    cambiados = supabase_request(
+        "PATCH",
+        "store_orders",
+        {
+            "id": f"eq.{order_id}",
+            "estado_pago": "eq.pendiente"
+        },
+        {
+            "estado": nuevo_estado_pedido,
+            "estado_pago": nuevo_estado_pago
+        },
+        prefer="return=representation"
+    ) or []
+
+    if not cambiados:
+        return False
+
+    if not items:
+        return True
+
+    elementos = []
+
+    for item in items:
+
+        product_id = item.get(
+            "product_id"
+        )
+
+        try:
+            cantidad = int(
+                item.get("cantidad")
+                or 0
+            )
+        except Exception:
+            cantidad = 0
+
+        if product_id and cantidad > 0:
+
+            elementos.append({
+                "product_id": str(
+                    product_id
+                ),
+                "cantidad": cantidad
+            })
+
+    if elementos:
+
+        # Utilizamos la función SQL que
+        # ya creaste en Supabase.
+        supabase_rpc(
+            "store_devolver_stock",
+            {
+                "p_items": elementos
+            }
+        )
 
     return True
 
 
-# =========================================================
-# PROCESAR PAGO CONFIRMADO
-# =========================================================
+# ============================================================
+# PROCESAR EVENTOS DE STRIPE
+# ============================================================
 
-def procesar_pago_confirmado(
-    session,
-    evento_tipo
-):
+def procesar_evento(evento):
 
-    metadata = (
-        session.get(
-            "metadata"
-        )
-        or {}
+    tipo_evento = evento.get(
+        "type"
     )
 
-    order_id = (
+    datos = evento.get(
+        "data"
+    ) or {}
+
+    objeto = datos.get(
+        "object"
+    ) or {}
+
+    metadata = objeto.get(
+        "metadata"
+    ) or {}
+
+    order_id = str(
         metadata.get(
             "order_id"
         )
         or ""
-    )
+    ).strip()
 
+    # Si no tiene order_id, no pertenece
+    # a un pedido de nuestra tienda.
     if not order_id:
+
         return {
-            "ok": False,
-            "msg": (
-                "La sesión de Stripe "
-                "no tiene order_id."
+            "ok": True,
+            "ignorado": True,
+            "motivo": (
+                "El evento no tiene "
+                "metadata.order_id."
             )
         }
 
-    pedido = obtener_pedido(
-        order_id
-    )
 
-    if not pedido:
-        return {
-            "ok": False,
-            "msg": (
-                "No se encontró el pedido "
-                + str(order_id)
-            )
-        }
-
-    payment_status = (
-        session.get(
-            "payment_status"
-        )
-        or ""
-    )
-
-    session_id = (
-        session.get(
-            "id"
-        )
-        or ""
-    )
-
-    payment_intent = (
-        session.get(
-            "payment_intent"
-        )
-    )
-
-    # =====================================================
+    # ========================================================
     # PAGO CONFIRMADO
-    # =====================================================
+    # ========================================================
 
-    if (
-        payment_status == "paid"
-        or evento_tipo
-        == "checkout.session.async_payment_succeeded"
+    if tipo_evento in (
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded"
     ):
 
-        cambios = {
-            "estado": "confirmado",
-            "estado_pago": "pagado",
-            "stripe_session_id": session_id
-        }
-
-        if payment_intent:
-            cambios[
-                "stripe_payment_intent_id"
-            ] = str(
-                payment_intent
+        estado_pago = str(
+            objeto.get(
+                "payment_status"
             )
+            or ""
+        ).lower()
 
-        actualizar_pedido(
+        # Para checkout.session.completed,
+        # si todavía no está pagado, esperamos
+        # el evento async_payment_succeeded.
+        if (
+            tipo_evento
+            == "checkout.session.completed"
+            and estado_pago != "paid"
+        ):
+
+            return {
+                "ok": True,
+                "ignorado": True,
+                "motivo": (
+                    "Checkout completado, "
+                    "pero el pago todavía "
+                    "no está confirmado."
+                ),
+                "order_id": order_id
+            }
+
+        marcar_pedido_pagado(
             order_id,
-            cambios
-        )
-
-        pedido = obtener_pedido(
-            order_id
-        )
-
-        if not pedido:
-            raise RuntimeError(
-                "No se pudo volver a cargar "
-                "el pedido."
-            )
-
-        crear_agenda_desde_pedido(
-            pedido
+            objeto
         )
 
         return {
             "ok": True,
-            "estado": "pagado",
-            "order_id": order_id
+            "procesado": True,
+            "order_id": order_id,
+            "evento": tipo_evento,
+            "payment_status": estado_pago
         }
 
-    # =====================================================
-    # PAGO TODAVÍA PENDIENTE
-    # =====================================================
 
-    actualizar_pedido(
-        order_id,
-        {
-            "stripe_session_id":
-                session_id,
-            "estado_pago":
-                "pendiente"
+    # ========================================================
+    # PAGO ASINCRÓNICO FALLIDO
+    # ========================================================
+
+    if tipo_evento == (
+        "checkout.session.async_payment_failed"
+    ):
+
+        procesado = devolver_inventario(
+            order_id,
+            "fallido",
+            "cancelado"
+        )
+
+        return {
+            "ok": True,
+            "procesado": procesado,
+            "order_id": order_id,
+            "evento": tipo_evento
         }
-    )
+
+
+    # ========================================================
+    # CHECKOUT EXPIRADO
+    # ========================================================
+
+    if tipo_evento == (
+        "checkout.session.expired"
+    ):
+
+        procesado = devolver_inventario(
+            order_id,
+            "expirado",
+            "cancelado"
+        )
+
+        return {
+            "ok": True,
+            "procesado": procesado,
+            "order_id": order_id,
+            "evento": tipo_evento
+        }
+
+
+    # ========================================================
+    # OTROS EVENTOS
+    # ========================================================
 
     return {
         "ok": True,
-        "estado": "pendiente",
-        "order_id": order_id
+        "ignorado": True,
+        "motivo": (
+            "Evento de Stripe no utilizado "
+            "por la tienda."
+        ),
+        "evento": tipo_evento
     }
 
 
-# =========================================================
-# PAGO FALLIDO / SESIÓN EXPIRADA
-# =========================================================
+# ============================================================
+# HANDLER DE VERCEL
+# ============================================================
 
-def procesar_pago_fallido(
-    session,
-    estado
+class handler(
+    BaseHTTPRequestHandler
 ):
-
-    metadata = (
-        session.get(
-            "metadata"
-        )
-        or {}
-    )
-
-    order_id = (
-        metadata.get(
-            "order_id"
-        )
-        or ""
-    )
-
-    if not order_id:
-        return {
-            "ok": True,
-            "ignorado": True
-        }
-
-    pedido = obtener_pedido(
-        order_id
-    )
-
-    if not pedido:
-        return {
-            "ok": True,
-            "ignorado": True
-        }
-
-    actualizar_pedido(
-        order_id,
-        {
-            "estado": estado,
-            "estado_pago": "fallido"
-        }
-    )
-
-    return {
-        "ok": True,
-        "estado": estado,
-        "order_id": order_id
-    }
-
-
-# =========================================================
-# HANDLER
-# =========================================================
-
-class handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
 
@@ -907,22 +931,25 @@ class handler(BaseHTTPRequestHandler):
             }
         )
 
+
     def do_GET(self):
 
         responder(
             self,
             {
                 "ok": True,
-                "servicio":
+                "service": (
                     "stripe-webhook-tienda"
+                )
             }
         )
+
 
     def do_POST(self):
 
         try:
 
-            cuerpo = leer_cuerpo(
+            payload = leer_cuerpo(
                 self
             )
 
@@ -931,140 +958,85 @@ class handler(BaseHTTPRequestHandler):
                 ""
             )
 
-            # =================================================
-            # VERIFICAR FIRMA
-            # =================================================
+            secreto = env(
+                "STRIPE_WEBHOOK_SECRET"
+            )
 
-            if not verificar_firma_stripe(
-                cuerpo,
-                firma
-            ):
+            if not secreto:
 
-                responder(
+                return responder(
                     self,
                     {
                         "ok": False,
-                        "msg":
-                            "Firma de Stripe inválida."
+                        "msg": (
+                            "Falta configurar "
+                            "STRIPE_WEBHOOK_SECRET "
+                            "en Vercel."
+                        )
+                    },
+                    500
+                )
+
+
+            # Verificar que la petición
+            # realmente venga de Stripe.
+            if not verificar_firma_stripe(
+                payload,
+                firma,
+                secreto
+            ):
+
+                return responder(
+                    self,
+                    {
+                        "ok": False,
+                        "msg": (
+                            "La firma de Stripe "
+                            "no es válida."
+                        )
                     },
                     400
                 )
 
-                return
 
-            evento = json.loads(
-                cuerpo.decode("utf-8")
-            )
+            try:
 
-            evento_tipo = (
-                evento.get(
-                    "type"
-                )
-                or ""
-            )
-
-            datos_evento = (
-                evento.get(
-                    "data",
-                    {}
-                )
-            )
-
-            session = (
-                datos_evento.get(
-                    "object",
-                    {}
-                )
-            )
-
-            # =================================================
-            # EVENTOS IMPORTANTES
-            # =================================================
-
-            if evento_tipo in (
-                "checkout.session.completed",
-                "checkout.session.async_payment_succeeded"
-            ):
-
-                resultado = (
-                    procesar_pago_confirmado(
-                        session,
-                        evento_tipo
+                evento = json.loads(
+                    payload.decode(
+                        "utf-8"
                     )
                 )
 
-                responder(
+            except Exception:
+
+                return responder(
                     self,
-                    resultado,
-                    200
+                    {
+                        "ok": False,
+                        "msg": (
+                            "El evento recibido "
+                            "no es JSON válido."
+                        )
+                    },
+                    400
                 )
 
-                return
 
-            if evento_tipo == (
-                "checkout.session.async_payment_failed"
-            ):
+            resultado = procesar_evento(
+                evento
+            )
 
-                resultado = (
-                    procesar_pago_fallido(
-                        session,
-                        "cancelado"
-                    )
-                )
-
-                responder(
-                    self,
-                    resultado,
-                    200
-                )
-
-                return
-
-            if evento_tipo == (
-                "checkout.session.expired"
-            ):
-
-                resultado = (
-                    procesar_pago_fallido(
-                        session,
-                        "expirado"
-                    )
-                )
-
-                responder(
-                    self,
-                    resultado,
-                    200
-                )
-
-                return
-
-            # =================================================
-            # OTROS EVENTOS
-            # =================================================
-
-            responder(
+            return responder(
                 self,
-                {
-                    "ok": True,
-                    "recibido": evento_tipo,
-                    "ignorado": True
-                },
+                resultado,
                 200
             )
 
+
         except Exception as error:
 
-            print(
-                "ERROR WEBHOOK:",
-                str(error)
-            )
-
-            responder(
+            return responder(
                 self,
                 {
                     "ok": False,
-                    "msg": str(error)
-                },
-                500
-  )
+                   
