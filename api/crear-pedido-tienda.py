@@ -3,7 +3,9 @@ import json
 import urllib.parse
 import urllib.request
 import urllib.error
+import base64
 import uuid
+
 from http.server import BaseHTTPRequestHandler
 
 
@@ -12,6 +14,11 @@ from http.server import BaseHTTPRequestHandler
 # ============================================================
 
 def responder(handler, datos, codigo=200):
+
+    cuerpo = json.dumps(
+        datos,
+        ensure_ascii=False
+    ).encode("utf-8")
 
     handler.send_response(codigo)
 
@@ -35,14 +42,14 @@ def responder(handler, datos, codigo=200):
         "application/json; charset=utf-8"
     )
 
+    handler.send_header(
+        "Content-Length",
+        str(len(cuerpo))
+    )
+
     handler.end_headers()
 
-    handler.wfile.write(
-        json.dumps(
-            datos,
-            ensure_ascii=False
-        ).encode("utf-8")
-    )
+    handler.wfile.write(cuerpo)
 
 
 # ============================================================
@@ -95,6 +102,20 @@ SUPABASE_KEY = env(
     "SUPABASE_SERVICE_ROLE_KEY"
 )
 
+STRIPE_SECRET_KEY = env(
+    "STRIPE_SECRET_KEY"
+)
+
+# Si quieres puedes colocar aquí la URL
+# principal de la tienda mediante Vercel.
+#
+# También se acepta success_url enviado
+# desde el frontend.
+
+STORE_URL = env(
+    "STORE_URL"
+)
+
 
 # ============================================================
 # PETICIÓN A SUPABASE
@@ -107,6 +128,18 @@ def supabase_request(
     filtros=None,
     select=None
 ):
+
+    if not SUPABASE_URL:
+
+        raise RuntimeError(
+            "Falta SUPABASE_URL."
+        )
+
+    if not SUPABASE_KEY:
+
+        raise RuntimeError(
+            "Falta SUPABASE_SERVICE_ROLE_KEY."
+        )
 
     url = (
         SUPABASE_URL.rstrip("/")
@@ -179,6 +212,11 @@ def supabase_request(
     )
 
     request.add_header(
+        "Accept",
+        "application/json"
+    )
+
+    request.add_header(
         "Prefer",
         "return=representation"
     )
@@ -197,6 +235,7 @@ def supabase_request(
             )
 
             if not texto:
+
                 return []
 
             return json.loads(
@@ -218,7 +257,8 @@ def supabase_request(
             pass
 
         raise RuntimeError(
-            texto or
+            texto
+            or
             (
                 "Error de Supabase HTTP "
                 + str(error.code)
@@ -238,7 +278,13 @@ def cargar_negocio(negocio_id):
         filtros={
             "id": negocio_id
         },
-        select="id,user_id,nombre_negocio,nombre,whatsapp"
+        select=(
+            "id,"
+            "user_id,"
+            "nombre_negocio,"
+            "nombre,"
+            "whatsapp"
+        )
     )
 
     if not filas:
@@ -248,6 +294,47 @@ def cargar_negocio(negocio_id):
         )
 
     return filas[0]
+
+
+# ============================================================
+# CARGAR DATOS DE STRIPE DEL NEGOCIO
+# ============================================================
+
+def cargar_datos_stripe(
+    user_id
+):
+
+    if not user_id:
+
+        raise RuntimeError(
+            "El negocio no tiene user_id."
+        )
+
+    filas = supabase_request(
+        "GET",
+        "negocio_data",
+        filtros={
+            "user_id": user_id
+        },
+        select="data"
+    )
+
+    if not filas:
+
+        return {}
+
+    data = filas[0].get(
+        "data"
+    )
+
+    if not isinstance(
+        data,
+        dict
+    ):
+
+        return {}
+
+    return data
 
 
 # ============================================================
@@ -274,7 +361,14 @@ def cargar_productos(
                 "id": producto_id,
                 "user_id": user_id
             },
-            select="id,user_id,name,price,stock,category"
+            select=(
+                "id,"
+                "user_id,"
+                "name,"
+                "price,"
+                "stock,"
+                "category"
+            )
         )
 
         if not filas:
@@ -308,7 +402,7 @@ def preparar_items(
 
     resultado = []
 
-    total = 0
+    total = 0.0
 
     for item in items_recibidos:
 
@@ -319,12 +413,18 @@ def preparar_items(
             )
         ).strip()
 
-        cantidad = int(
-            item.get(
-                "cantidad",
-                0
-            ) or 0
-        )
+        try:
+
+            cantidad = int(
+                item.get(
+                    "cantidad",
+                    0
+                ) or 0
+            )
+
+        except Exception:
+
+            cantidad = 0
 
         if not producto_id:
 
@@ -379,12 +479,18 @@ def preparar_items(
                     + "."
                 )
 
-        precio = float(
-            producto.get(
-                "price",
-                0
-            ) or 0
-        )
+        try:
+
+            precio = float(
+                producto.get(
+                    "price",
+                    0
+                ) or 0
+            )
+
+        except Exception:
+
+            precio = 0
 
         if precio <= 0:
 
@@ -400,8 +506,7 @@ def preparar_items(
             )
 
         subtotal = (
-            precio *
-            cantidad
+            precio * cantidad
         )
 
         total += subtotal
@@ -432,192 +537,6 @@ def preparar_items(
 
 
 # ============================================================
-# GUARDAR PEDIDO
-#
-# Esta parte utiliza la tabla:
-#
-# store_orders
-#
-# La tabla se creará con el SQL que te voy a pasar después.
-# ============================================================
-
-def guardar_pedido(
-    negocio_id,
-    cliente,
-    entrega,
-    comentarios,
-    metodo_pago,
-    items,
-    total
-):
-
-    pedido_id = str(
-        uuid.uuid4()
-    )
-
-    pedido = {
-
-        "id":
-            pedido_id,
-
-        "negocio_id":
-            negocio_id,
-
-        "cliente_nombre":
-            cliente.get(
-                "nombre",
-                ""
-            ).strip(),
-
-        "cliente_telefono":
-            cliente.get(
-                "telefono",
-                ""
-            ).strip(),
-
-        "cliente_email":
-            cliente.get(
-                "email",
-                ""
-            ).strip(),
-
-        "tipo_entrega":
-            entrega.get(
-                "tipo",
-                "domicilio"
-            ),
-
-        "direccion":
-            entrega.get(
-                "direccion",
-                ""
-            ).strip(),
-
-        "referencia":
-            entrega.get(
-                "referencia",
-                ""
-            ).strip(),
-
-        "fecha_entrega":
-            entrega.get(
-                "fecha"
-            ),
-
-        "hora_entrega":
-            entrega.get(
-                "hora"
-            ),
-
-        "comentarios":
-            comentarios,
-
-        "metodo_pago":
-            metodo_pago,
-
-        "total":
-            round(
-                total,
-                2
-            ),
-
-        "estado":
-            (
-                "pendiente"
-                if metodo_pago == "stripe"
-                else "pendiente_pago"
-            ),
-
-        "estado_pago":
-            (
-                "pendiente"
-                if metodo_pago == "stripe"
-                else "pendiente"
-            )
-
-    }
-
-    guardado = supabase_request(
-        "POST",
-        "store_orders",
-        datos=pedido
-    )
-
-    if not guardado:
-
-        raise RuntimeError(
-            "No se pudo guardar el pedido."
-        )
-
-    return guardado[0]
-
-
-# ============================================================
-# GUARDAR PRODUCTOS DEL PEDIDO
-# ============================================================
-
-def guardar_items_pedido(
-    pedido_id,
-    items
-):
-
-    filas = []
-
-    for item in items:
-
-        filas.append({
-
-            "order_id":
-                pedido_id,
-
-            "product_id":
-                item["product_id"],
-
-            "nombre":
-                item["nombre"],
-
-            "precio":
-                round(
-                    item["precio"],
-                    2
-                ),
-
-            "cantidad":
-                item["cantidad"],
-
-            "subtotal":
-                round(
-                    item["subtotal"],
-                    2
-                )
-
-        })
-
-    if not filas:
-
-        return
-
-    supabase_request(
-        "POST",
-        "store_order_items",
-        datos=filas
-    )
-
-
-# ============================================================
-# ACTUALIZAR STOCK
-#
-# IMPORTANTE:
-# La actualización definitiva y segura del inventario
-# la terminará haciendo la función SQL que instalaremos.
-#
-# Este archivo NO modifica todavía el stock directamente
-# para evitar vender dos veces el mismo producto si dos
-# clientes compran al mismo tiempo.
-# ============================================================
-
-
-# ============================================================
 # CREAR DESCRIPCIÓN DEL PEDIDO
 # ============================================================
 
@@ -630,489 +549,4 @@ def crear_contenido(
     for item in items:
 
         partes.append(
-            "{} x{} = ${:.2f}".format(
-                item["nombre"],
-                item["cantidad"],
-                item["subtotal"]
-            )
-        )
-
-    return " | ".join(
-        partes
-    )
-
-
-# ============================================================
-# HANDLER
-# ============================================================
-
-class handler(
-    BaseHTTPRequestHandler
-):
-
-    def do_OPTIONS(self):
-
-        responder(
-            self,
-            {}
-        )
-
-    def do_POST(self):
-
-        try:
-
-            datos =
-                leer_json(
-                    self
-                )
-
-            negocio_id = str(
-                datos.get(
-                    "negocio_id",
-                    ""
-                )
-            ).strip()
-
-            if not negocio_id:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta negocio_id."
-                    },
-                    400
-                )
-
-            items_recibidos =
-                datos.get(
-                    "items",
-                    []
-                )
-
-            if not isinstance(
-                items_recibidos,
-                list
-            ) or not items_recibidos:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "El carrito está vacío."
-                    },
-                    400
-                )
-
-            cliente =
-                datos.get(
-                    "cliente",
-                    {}
-                )
-
-            entrega =
-                datos.get(
-                    "entrega",
-                    {}
-                )
-
-            comentarios =
-                str(
-                    datos.get(
-                        "comentarios",
-                        ""
-                    ) or ""
-                ).strip()[:1000]
-
-            metodo_pago =
-                str(
-                    datos.get(
-                        "metodo_pago",
-                        "stripe"
-                    ) or "stripe"
-                ).strip().lower()
-
-            if metodo_pago not in (
-                "stripe",
-                "efectivo"
-            ):
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Forma de pago no válida."
-                    },
-                    400
-                )
-
-
-            # ------------------------------------------------
-            # VALIDAR CLIENTE
-            # ------------------------------------------------
-
-            nombre_cliente =
-                str(
-                    cliente.get(
-                        "nombre",
-                        ""
-                    ) or ""
-                ).strip()
-
-            telefono_cliente =
-                str(
-                    cliente.get(
-                        "telefono",
-                        ""
-                    ) or ""
-                ).strip()
-
-            email_cliente =
-                str(
-                    cliente.get(
-                        "email",
-                        ""
-                    ) or ""
-                ).strip()
-
-            if not nombre_cliente:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta el nombre del cliente."
-                    },
-                    400
-                )
-
-            if not telefono_cliente:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta el teléfono del cliente."
-                    },
-                    400
-                )
-
-            if not email_cliente:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta el correo electrónico."
-                    },
-                    400
-                )
-
-
-            # ------------------------------------------------
-            # VALIDAR ENTREGA
-            # ------------------------------------------------
-
-            tipo_entrega =
-                str(
-                    entrega.get(
-                        "tipo",
-                        "domicilio"
-                    ) or "domicilio"
-                ).strip()
-
-            if tipo_entrega not in (
-                "domicilio",
-                "recoger"
-            ):
-
-                tipo_entrega =
-                    "domicilio"
-
-
-            fecha_entrega =
-                str(
-                    entrega.get(
-                        "fecha",
-                        ""
-                    ) or ""
-                ).strip()
-
-            hora_entrega =
-                entrega.get(
-                    "hora"
-                )
-
-            direccion =
-                str(
-                    entrega.get(
-                        "direccion",
-                        ""
-                    ) or ""
-                ).strip()
-
-            referencia =
-                str(
-                    entrega.get(
-                        "referencia",
-                        ""
-                    ) or ""
-                ).strip()
-
-
-            if not fecha_entrega:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta la fecha del pedido."
-                    },
-                    400
-                )
-
-
-            if (
-                tipo_entrega ==
-                "domicilio"
-                and not direccion
-            ):
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "Falta la dirección de entrega."
-                    },
-                    400
-                )
-
-
-            entrega["tipo"] =
-                tipo_entrega
-
-            entrega["fecha"] =
-                fecha_entrega
-
-            entrega["hora"] =
-                hora_entrega
-
-            entrega["direccion"] =
-                direccion
-
-            entrega["referencia"] =
-                referencia
-
-
-            # ------------------------------------------------
-            # NEGOCIO
-            # ------------------------------------------------
-
-            negocio =
-                cargar_negocio(
-                    negocio_id
-                )
-
-            user_id =
-                negocio.get(
-                    "user_id"
-                )
-
-            if not user_id:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "El negocio no tiene usuario asociado."
-                    },
-                    400
-                )
-
-
-            # ------------------------------------------------
-            # PRODUCTOS
-            # ------------------------------------------------
-
-            ids = []
-
-            for item in items_recibidos:
-
-                pid =
-                    str(
-                        item.get(
-                            "product_id",
-                            ""
-                        )
-                    ).strip()
-
-                if pid and pid not in ids:
-
-                    ids.append(
-                        pid
-                    )
-
-            productos =
-                cargar_productos(
-                    user_id,
-                    ids
-                )
-
-            items,
-            total =
-                preparar_items(
-                    items_recibidos,
-                    productos
-                )
-
-
-            if total <= 0:
-
-                return responder(
-                    self,
-                    {
-                        "ok": False,
-                        "msg":
-                            "El total del pedido no es válido."
-                    },
-                    400
-                )
-
-
-            # ------------------------------------------------
-            # CREAR PEDIDO
-            # ------------------------------------------------
-
-            pedido =
-                guardar_pedido(
-                    negocio_id,
-                    cliente,
-                    entrega,
-                    comentarios,
-                    metodo_pago,
-                    items,
-                    total
-                )
-
-            pedido_id =
-                pedido.get(
-                    "id"
-                )
-
-            # ------------------------------------------------
-            # GUARDAR ITEMS
-            # ------------------------------------------------
-
-            try:
-
-                guardar_items_pedido(
-                    pedido_id,
-                    items
-                )
-
-            except Exception:
-
-                # Si falla la creación de items,
-                # eliminamos el pedido para no dejar
-                # un pedido incompleto.
-
-                try:
-
-                    supabase_request(
-                        "DELETE",
-                        "store_orders",
-                        filtros={
-                            "id":
-                                pedido_id
-                        }
-                    )
-
-                except Exception:
-                    pass
-
-                raise
-
-
-            # ------------------------------------------------
-            # RESPUESTA
-            # ------------------------------------------------
-
-            nombre_negocio =
-                negocio.get(
-                    "nombre_negocio"
-                ) or negocio.get(
-                    "nombre"
-                ) or "Tienda"
-
-
-            contenido =
-                crear_contenido(
-                    items
-                )
-
-
-            responder(
-                self,
-                {
-                    "ok": True,
-
-                    "order_id":
-                        pedido_id,
-
-                    "negocio_id":
-                        negocio_id,
-
-                    "total":
-                        round(
-                            total,
-                            2
-                        ),
-
-                    "metodo_pago":
-                        metodo_pago,
-
-                    "nombre_negocio":
-                        nombre_negocio,
-
-                    "contenido":
-                        contenido,
-
-                    "message":
-                        (
-                            "Pedido creado correctamente."
-                            if metodo_pago == "stripe"
-                            else
-                            "Pedido registrado correctamente."
-                        )
-                }
-            )
-
-
-        except Exception as error:
-
-            print(
-                "ERROR crear-pedido-tienda:",
-                str(error)
-            )
-
-            responder(
-                self,
-                {
-                    "ok": False,
-
-                    "msg":
-                        str(error)
-                        or
-                        "No se pudo crear el pedido."
-                },
-                500
-    )
+            "{} x{} = ${:.
