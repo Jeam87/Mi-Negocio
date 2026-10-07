@@ -838,7 +838,7 @@ async function cargarProductos(){
     throw new Error(result.msg || result.error || "No se pudieron cargar los productos.");
   }
 
-  productos = (result.products || []).map(p => ({
+  productos = (result.productos || []).map(p => ({
     id:p.id,
     nombre:p.nombre || "Producto",
     precio:Number(p.precio || 0),
@@ -2276,3 +2276,4 @@ iniciar();
 
 </body>
    </html>
+ 
