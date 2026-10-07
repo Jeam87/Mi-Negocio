@@ -29,29 +29,64 @@ class handler(BaseHTTPRequestHandler):
         req.add_header("Authorization", f"Bearer {service_key}")
         req.add_header("Accept", "application/json")
         with urllib.request.urlopen(req, timeout=15) as response:
-            return json.loads(response.read().decode("utf-8") or "[]")
+            raw = response.read().decode("utf-8") or "[]"
+            return json.loads(raw)
 
-    def extraer_productos(self, cloud_data, negocio_id):
+    def convertir_data(self, value):
+        """Convierte data de negocio_data a dict aunque Supabase la devuelva como texto JSON."""
+        if isinstance(value, dict):
+            # Algunas instalaciones pueden envolver el contenido como {"data": {...}}.
+            inner = value.get("data")
+            if isinstance(inner, dict):
+                return inner
+            if isinstance(inner, str):
+                try:
+                    parsed = json.loads(inner)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except Exception:
+                    pass
+            return value
+
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    inner = parsed.get("data")
+                    if isinstance(inner, dict):
+                        return inner
+                    return parsed
+            except Exception:
+                return None
+
+        return None
+
+    def extraer_raw_productos(self, cloud_data, negocio_id):
         if not isinstance(cloud_data, dict):
-            return []
+            return None, None
 
-        # La app principal guarda primero la copia específica del negocio.
-        raw = cloud_data.get("productosV2_" + negocio_id)
+        key_especifica = "productosV2_" + negocio_id
+        if key_especifica in cloud_data:
+            return cloud_data.get(key_especifica), key_especifica
 
-        # Compatibilidad con datos anteriores que sólo tienen productosV2.
-        if raw is None:
-            raw = cloud_data.get("productosV2")
+        # Compatibilidad con la copia antigua.
+        if "productosV2" in cloud_data:
+            return cloud_data.get("productosV2"), "productosV2"
 
+        return None, None
+
+    def convertir_lista(self, raw):
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
             except Exception:
-                raw = []
+                return []
+        return raw if isinstance(raw, list) else []
 
-        if not isinstance(raw, list):
-            return []
-
+    def normalizar_productos(self, raw):
+        raw = self.convertir_lista(raw)
         productos = []
+
         for p in raw:
             if not isinstance(p, dict):
                 continue
@@ -90,8 +125,7 @@ class handler(BaseHTTPRequestHandler):
                     "error": "Faltan las variables de Supabase en Vercel"
                 }, 500)
 
-            # 1) Obtenemos el negocio. No suponemos que negocios.user_id
-            # sea el mismo identificador que usa negocio_data.
+            # Confirmamos que el negocio existe.
             negocio_url = (
                 f"{supabase_url}/rest/v1/negocios"
                 f"?id=eq.{urllib.parse.quote(negocio_id, safe='')}"
@@ -107,9 +141,9 @@ class handler(BaseHTTPRequestHandler):
 
             negocio = negocios[0] or {}
             negocio_user_id = str(negocio.get("user_id") or "").strip()
+            key_especifica = "productosV2_" + negocio_id
 
-            # 2) Primero intentamos exactamente con negocios.user_id.
-            # Es la ruta rápida y compatible con la versión anterior.
+            # Primero buscamos por el user_id de negocios.
             rows = []
             if negocio_user_id:
                 data_url = (
@@ -119,59 +153,59 @@ class handler(BaseHTTPRequestHandler):
                 )
                 rows = self.supabase_get(data_url, service_key)
 
-            # 3) Si no encontramos los productos, hacemos una búsqueda de
-            # respaldo dentro de negocio_data. Esto corrige el caso en que
-            # la app guardó negocio_data usando el correo mientras que
-            # negocios.user_id contiene otro identificador.
-            if not rows:
+            # Si no hay fila o no contiene los productos, revisamos las filas
+            # disponibles y soportamos data tanto JSON como texto JSON.
+            candidatos = list(rows or [])
+            if not candidatos:
                 all_data_url = (
                     f"{supabase_url}/rest/v1/negocio_data"
                     f"?select=user_id,data"
                 )
-                all_rows = self.supabase_get(all_data_url, service_key)
+                candidatos = self.supabase_get(all_data_url, service_key)
 
-                key_specifica = "productosV2_" + negocio_id
-                for row in all_rows:
-                    data = row.get("data") if isinstance(row, dict) else None
+            # Primero exigimos la clave específica del negocio.
+            for row in candidatos:
+                if not isinstance(row, dict):
+                    continue
+                data = self.convertir_data(row.get("data"))
+                if not isinstance(data, dict):
+                    continue
+
+                raw, fuente = self.extraer_raw_productos(data, negocio_id)
+                if fuente == key_especifica:
+                    productos = self.normalizar_productos(raw)
+                    return self.send_json({
+                        "ok": True,
+                        "negocio_id": negocio_id,
+                        "productos": productos,
+                        "fuente": fuente
+                    })
+
+            # Compatibilidad: sólo usamos productosV2 genérico si pertenece
+            # a la fila encontrada por negocios.user_id. Así evitamos tomar
+            # accidentalmente productos de otro negocio.
+            if rows:
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    data = self.convertir_data(row.get("data"))
                     if not isinstance(data, dict):
                         continue
-
-                    if key_specifica in data:
-                        rows = [row]
-                        break
-
-            # 4) Extraemos únicamente los productos del negocio solicitado.
-            productos = []
-            fuente = "ninguna"
-
-            for row in rows:
-                data = row.get("data") if isinstance(row, dict) else None
-                encontrados = self.extraer_productos(data, negocio_id)
-                if encontrados:
-                    productos = encontrados
-                    fuente = "productosV2_" + negocio_id
-                    break
-
-                # Si existe sólo la clave antigua productosV2, la usamos como
-                # compatibilidad de respaldo.
-                if isinstance(data, dict) and "productosV2" in data:
                     raw = data.get("productosV2")
-                    if isinstance(raw, str):
-                        try:
-                            raw = json.loads(raw)
-                        except Exception:
-                            raw = []
-                    if isinstance(raw, list) and raw:
-                        productos = self.extraer_productos({"productosV2": raw}, negocio_id)
-                        if productos:
-                            fuente = "productosV2"
-                            break
+                    productos = self.normalizar_productos(raw)
+                    if productos:
+                        return self.send_json({
+                            "ok": True,
+                            "negocio_id": negocio_id,
+                            "productos": productos,
+                            "fuente": "productosV2"
+                        })
 
             return self.send_json({
                 "ok": True,
                 "negocio_id": negocio_id,
-                "productos": productos,
-                "fuente": fuente
+                "productos": [],
+                "fuente": "ninguna"
             })
 
         except Exception as e:
