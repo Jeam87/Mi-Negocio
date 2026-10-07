@@ -816,68 +816,42 @@ async function cargarNegocio(){
 
 async function cargarProductos(){
 
-  if(!negocioUserId){
-
-    throw new Error(
-      "El negocio no tiene user_id."
-    );
-
+  if(!tiendaId){
+    throw new Error("Falta el identificador de la tienda.");
   }
 
-  const {data,error} =
-    await sb
-      .from("products")
-      .select(
-        "id,user_id,name,price,cost,stock,category,barcode,created_at"
-      )
-      .eq("user_id",negocioUserId)
-      .order("category",{ascending:true})
-      .order("name",{ascending:true});
+  const endpoint =
+    "https://mi-negocio-mauve.vercel.app/api/productos-tienda.py?negocio_id="+
+    encodeURIComponent(tiendaId);
 
-  if(error){
+  const res = await fetch(endpoint);
+  const txt = await res.text();
 
-    throw new Error(
-      "No se pudieron cargar los productos: "+
-      error.message
-    );
-
+  let result;
+  try{
+    result = JSON.parse(txt || "{}");
+  }catch(e){
+    throw new Error("La respuesta de productos no es válida.");
   }
 
-  productos =
-    (data || []).map(p => ({
+  if(!res.ok || result.ok === false){
+    throw new Error(result.msg || result.error || "No se pudieron cargar los productos.");
+  }
 
-      id:p.id,
-
-      nombre:
-        p.name ||
-        "Producto",
-
-      precio:
-        Number(p.price || 0),
-
-      costo:
-        Number(p.cost || 0),
-
-      stock:
-        p.stock,
-
-      categoria:
-        p.category ||
-        "Otros",
-
-      barcode:
-        p.barcode ||
-        "",
-
-      created_at:
-        p.created_at
-
-    }));
+  productos = (result.products || []).map(p => ({
+    id:p.id,
+    nombre:p.nombre || "Producto",
+    precio:Number(p.precio || 0),
+    costo:Number(p.costo || 0),
+    stock:p.stock,
+    categoria:p.categoria || "Otros",
+    barcode:p.barcode || "",
+    created_at:p.created_at,
+    foto:p.foto || ""
+  }));
 
   pintarCategorias();
-
   pintarLista(productos);
-
 }
 
 
@@ -2302,4 +2276,3 @@ iniciar();
 
 </body>
    </html>
- 
