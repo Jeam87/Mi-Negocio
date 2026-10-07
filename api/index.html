@@ -1774,7 +1774,7 @@ async function crearPedido(){
 
     const respuesta =
       await fetch(
-        "/api/crear-pedido-tienda",
+        "https://mi-negocio-mauve.vercel.app/api/crear-pedido-tienda",
         {
           method:"POST",
 
@@ -1994,7 +1994,7 @@ async function procesarRegresoStripe(){
 
     const r =
       await fetch(
-        "/api/confirmar-pedido-tienda",
+        "https://mi-negocio-mauve.vercel.app/api/confirmar-pedido-tienda", 
         {
           method:"POST",
 
