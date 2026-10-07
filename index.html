@@ -334,17 +334,17 @@ function actualizarFondo(){ let emp=getEmp(); let logo=logoTemp||emp.logo||''; l
 async function cargarEstadoStripe(){
  let el=document.getElementById('stripeEstado'), btn=document.getElementById('btnDesconectarStripe'), con=document.getElementById('btnConectarStripe');
  if(!el) return;
- try{ let r=await fetch('/api/stripe/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json();
+ try{ let r=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'status',negocio_id:negocioId})}); let j=await r.json();
    if(j.connected){ el.innerHTML='✅ Stripe conectado'+(j.account_id?' <span class="text-gray-500">('+j.account_id+')</span>':''); if(btn) btn.classList.remove('hidden'); if(con) con.innerText='🔄 VOLVER A CONECTAR STRIPE'; }
    else { el.innerText='⚪ Stripe no está conectado'; if(btn) btn.classList.add('hidden'); if(con) con.innerText='🔗 CONECTAR CON STRIPE'; }
  }catch(e){ el.innerText='⚠️ No se pudo revisar la conexión'; }
 }
 async function conectarStripe(){
- try{ let r=await fetch('/api/stripe/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo iniciar la conexión'); window.location.href=j.url; }catch(e){ alert('No se pudo conectar con Stripe.'); }
+ try{ let r=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'connect',negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo iniciar la conexión'); window.location.href=j.url; }catch(e){ alert('No se pudo conectar con Stripe.'); }
 }
 async function desconectarStripe(){
  if(!confirm('¿Desconectar la cuenta Stripe de este negocio?')) return;
- try{ let r=await fetch('/api/stripe/disconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo desconectar'); await cargarEstadoStripe(); alert('Stripe quedó desconectado.'); }catch(e){ alert('No se pudo desconectar Stripe.'); }
+ try{ let r=await fetch('/api/stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'disconnect',negocio_id:negocioId})}); let j=await r.json(); if(!j.ok) return alert(j.msg||'No se pudo desconectar'); await cargarEstadoStripe(); alert('Stripe quedó desconectado.'); }catch(e){ alert('No se pudo desconectar Stripe.'); }
 }
 function revisarRetornoStripe(){
  let p=new URLSearchParams(location.search), s=p.get('stripe');
