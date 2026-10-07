@@ -1,8 +1,12 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/tienda/:userId", "destination": "/api/tienda?user_id=:userId" },
-    { "source": "/tienda/:userId/", "destination": "/api/tienda?user_id=:userId" },
-    { "source": "/(.*)", "destination": "/api/index.py" }
+    {
+      "source": "/tienda/:userId",
+      "destination": "/api/tienda?user_id=:userId"
+    },
+    {
+      "source": "/tienda/:userId/",
+      "destination": "/api/tienda?user_id=:userId"
+    }
   ]
 }
