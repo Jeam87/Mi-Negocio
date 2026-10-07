@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler
 # CONFIGURACIÓN
 # =========================================================
 
-FIXED_APP_URL = "https://mi-negocio-git-main-jeam87.vercel.app"
+FIXED_APP_URL = "https://mi-negocio-mauve.vercel.app/api/stripe/connect"
 
 
 # =========================================================
