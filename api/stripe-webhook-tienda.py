@@ -6,31 +6,12 @@ import time
 import urllib.parse
 import urllib.request
 import urllib.error
-import base64
 from http.server import BaseHTTPRequestHandler
 
 
 # ============================================================
 # STRIPE WEBHOOK - TIENDA EN LINEA
 # ============================================================
-#
-# Archivo:
-# api/stripe-webhook-tienda.py
-#
-# Variables de Vercel:
-# SUPABASE_URL
-# SUPABASE_SERVICE_ROLE_KEY
-# STRIPE_SECRET_KEY
-# STRIPE_WEBHOOK_SECRET
-#
-# Funciones:
-# - Confirma pagos de Stripe.
-# - Crea el pedido en la Agenda.
-# - Evita crear la Agenda dos veces.
-# - Devuelve inventario cuando un pago asincrónico falla.
-# - Devuelve inventario cuando un Checkout expira.
-# ============================================================
-
 
 def env(nombre):
     return os.getenv(nombre, "").strip()
@@ -58,6 +39,10 @@ def responder(handler, datos, codigo=200):
     handler.send_header(
         "Access-Control-Allow-Headers",
         "Content-Type, Stripe-Signature"
+    )
+    handler.send_header(
+        "Content-Length",
+        str(len(cuerpo))
     )
     handler.end_headers()
     handler.wfile.write(cuerpo)
@@ -169,11 +154,10 @@ def supabase_request(
 
     except urllib.error.HTTPError as error:
 
-        texto = (
-            error.read().decode("utf-8")
-            if error.fp
-            else ""
-        )
+        try:
+            texto = error.read().decode("utf-8")
+        except Exception:
+            texto = ""
 
         try:
             detalle = json.loads(texto)
@@ -256,11 +240,10 @@ def supabase_rpc(nombre_funcion, argumentos):
 
     except urllib.error.HTTPError as error:
 
-        texto = (
-            error.read().decode("utf-8")
-            if error.fp
-            else ""
-        )
+        try:
+            texto = error.read().decode("utf-8")
+        except Exception:
+            texto = ""
 
         try:
             detalle = json.loads(texto)
@@ -268,8 +251,7 @@ def supabase_rpc(nombre_funcion, argumentos):
             detalle = texto
 
         raise RuntimeError(
-            f"Supabase RPC {nombre_funcion}: "
-            f"{detalle}"
+            f"Supabase RPC {nombre_funcion}: {detalle}"
         )
 
 
@@ -282,7 +264,6 @@ def verificar_firma_stripe(
     encabezado,
     secreto
 ):
-
     if not encabezado:
         return False
 
@@ -292,9 +273,7 @@ def verificar_firma_stripe(
     timestamp = None
     firmas = []
 
-    partes = encabezado.split(",")
-
-    for parte in partes:
+    for parte in encabezado.split(","):
 
         parte = parte.strip()
 
@@ -417,10 +396,13 @@ def crear_contenido_agenda(
             or "Producto"
         )
 
-        cantidad = int(
-            item.get("cantidad")
-            or 1
-        )
+        try:
+            cantidad = int(
+                item.get("cantidad")
+                or 1
+            )
+        except Exception:
+            cantidad = 1
 
         precio = item.get(
             "precio"
@@ -460,8 +442,7 @@ def crear_agenda_si_no_existe(order_id):
             + str(order_id)
         )
 
-    # Si ya fue creado anteriormente,
-    # no volvemos a crear otro.
+    # Evita crear la misma agenda dos veces.
     if bool(
         pedido.get("agenda_created")
     ):
@@ -549,41 +530,48 @@ def crear_agenda_si_no_existe(order_id):
     ).strip()[:5000]
 
     agenda = {
-        "negocio_id": pedido.get(
-            "negocio_id"
-        ),
 
-        "fecha_venta": fecha_venta,
+        "negocio_id":
+            pedido.get("negocio_id"),
 
-        "fecha_entrega": fecha_entrega,
+        "fecha_venta":
+            fecha_venta,
 
-        "hora_entrega": hora_entrega,
+        "fecha_entrega":
+            fecha_entrega,
 
-        "contenido": contenido,
+        "hora_entrega":
+            hora_entrega,
 
-        "observaciones": observaciones,
+        "contenido":
+            contenido,
 
-        "quien_ordena": str(
-            pedido.get(
-                "cliente_nombre"
-            )
-            or "Cliente tienda"
-        )[:200],
+        "observaciones":
+            observaciones,
 
-        "telefono_ordena": str(
-            pedido.get(
-                "cliente_telefono"
-            )
-            or ""
-        )[:50],
+        "quien_ordena":
+            str(
+                pedido.get(
+                    "cliente_nombre"
+                )
+                or "Cliente tienda"
+            )[:200],
 
-        "entregar_a": entregar_a[:1000],
+        "telefono_ordena":
+            str(
+                pedido.get(
+                    "cliente_telefono"
+                )
+                or ""
+            )[:50],
 
-        "estado": "pendiente"
+        "entregar_a":
+            entregar_a[:1000],
+
+        "estado":
+            "pendiente"
     }
 
-    # Insertamos en la misma tabla que
-    # utiliza la Agenda principal.
     supabase_request(
         "POST",
         "entregas",
@@ -591,9 +579,6 @@ def crear_agenda_si_no_existe(order_id):
         prefer="return=minimal"
     )
 
-    # Marcamos el pedido para que una
-    # segunda notificación de Stripe
-    # no vuelva a crear la Agenda.
     supabase_request(
         "PATCH",
         "store_orders",
@@ -606,7 +591,10 @@ def crear_agenda_si_no_existe(order_id):
         prefer="return=minimal"
     )
 
-    return True # ============================================================
+    return True
+
+
+# ============================================================
 # MARCAR PEDIDO COMO PAGADO
 # ============================================================
 
@@ -638,17 +626,14 @@ def marcar_pedido_pagado(
         {
             "estado": "confirmado",
             "estado_pago": "pagado",
-            "stripe_session_id": session.get(
-                "id"
-            ),
+            "stripe_session_id":
+                session.get("id"),
             "stripe_payment_intent_id":
                 payment_intent
         },
         prefer="return=minimal"
     )
 
-    # Después de confirmar el pago,
-    # creamos la Agenda si todavía no existe.
     crear_agenda_si_no_existe(
         order_id
     )
@@ -679,13 +664,9 @@ def devolver_inventario(
         or ""
     ).lower()
 
-    # Si ya fue pagado, jamás devolvemos
-    # el inventario.
     if estado_pago_actual == "pagado":
         return False
 
-    # Si ya fue procesado anteriormente,
-    # no devolvemos el inventario otra vez.
     if estado_pago_actual in (
         "fallido",
         "expirado",
@@ -697,12 +678,6 @@ def devolver_inventario(
         order_id
     )
 
-    # Cambiamos el estado solamente si
-    # todavía estaba pendiente.
-    #
-    # Esto hace que un webhook repetido
-    # de Stripe no devuelva el inventario
-    # dos veces.
     cambiados = supabase_request(
         "PATCH",
         "store_orders",
@@ -742,20 +717,19 @@ def devolver_inventario(
         if product_id and cantidad > 0:
 
             elementos.append({
-                "product_id": str(
-                    product_id
-                ),
-                "cantidad": cantidad
+                "product_id":
+                    str(product_id),
+                "cantidad":
+                    cantidad
             })
 
     if elementos:
 
-        # Utilizamos la función SQL que
-        # ya creaste en Supabase.
         supabase_rpc(
             "store_devolver_stock",
             {
-                "p_items": elementos
+                "p_items":
+                    elementos
             }
         )
 
@@ -791,19 +765,15 @@ def procesar_evento(evento):
         or ""
     ).strip()
 
-    # Si no tiene order_id, no pertenece
-    # a un pedido de nuestra tienda.
     if not order_id:
 
         return {
             "ok": True,
             "ignorado": True,
-            "motivo": (
+            "motivo":
                 "El evento no tiene "
                 "metadata.order_id."
-            )
         }
-
 
     # ========================================================
     # PAGO CONFIRMADO
@@ -821,9 +791,6 @@ def procesar_evento(evento):
             or ""
         ).lower()
 
-        # Para checkout.session.completed,
-        # si todavía no está pagado, esperamos
-        # el evento async_payment_succeeded.
         if (
             tipo_evento
             == "checkout.session.completed"
@@ -833,12 +800,12 @@ def procesar_evento(evento):
             return {
                 "ok": True,
                 "ignorado": True,
-                "motivo": (
+                "motivo":
                     "Checkout completado, "
                     "pero el pago todavía "
-                    "no está confirmado."
-                ),
-                "order_id": order_id
+                    "no está confirmado.",
+                "order_id":
+                    order_id
             }
 
         marcar_pedido_pagado(
@@ -849,11 +816,13 @@ def procesar_evento(evento):
         return {
             "ok": True,
             "procesado": True,
-            "order_id": order_id,
-            "evento": tipo_evento,
-            "payment_status": estado_pago
+            "order_id":
+                order_id,
+            "evento":
+                tipo_evento,
+            "payment_status":
+                estado_pago
         }
-
 
     # ========================================================
     # PAGO ASINCRÓNICO FALLIDO
@@ -871,11 +840,13 @@ def procesar_evento(evento):
 
         return {
             "ok": True,
-            "procesado": procesado,
-            "order_id": order_id,
-            "evento": tipo_evento
+            "procesado":
+                procesado,
+            "order_id":
+                order_id,
+            "evento":
+                tipo_evento
         }
-
 
     # ========================================================
     # CHECKOUT EXPIRADO
@@ -893,11 +864,13 @@ def procesar_evento(evento):
 
         return {
             "ok": True,
-            "procesado": procesado,
-            "order_id": order_id,
-            "evento": tipo_evento
+            "procesado":
+                procesado,
+            "order_id":
+                order_id,
+            "evento":
+                tipo_evento
         }
-
 
     # ========================================================
     # OTROS EVENTOS
@@ -906,11 +879,11 @@ def procesar_evento(evento):
     return {
         "ok": True,
         "ignorado": True,
-        "motivo": (
+        "motivo":
             "Evento de Stripe no utilizado "
-            "por la tienda."
-        ),
-        "evento": tipo_evento
+            "por la tienda.",
+        "evento":
+            tipo_evento
     }
 
 
@@ -931,19 +904,16 @@ class handler(
             }
         )
 
-
     def do_GET(self):
 
         responder(
             self,
             {
                 "ok": True,
-                "service": (
+                "service":
                     "stripe-webhook-tienda"
-                )
             }
         )
-
 
     def do_POST(self):
 
@@ -968,15 +938,13 @@ class handler(
                     self,
                     {
                         "ok": False,
-                        "msg": (
+                        "msg":
                             "Falta configurar "
                             "STRIPE_WEBHOOK_SECRET "
                             "en Vercel."
-                        )
                     },
                     500
                 )
-
 
             # Verificar que la petición
             # realmente venga de Stripe.
@@ -990,14 +958,12 @@ class handler(
                     self,
                     {
                         "ok": False,
-                        "msg": (
+                        "msg":
                             "La firma de Stripe "
                             "no es válida."
-                        )
                     },
                     400
                 )
-
 
             try:
 
@@ -1013,14 +979,12 @@ class handler(
                     self,
                     {
                         "ok": False,
-                        "msg": (
+                        "msg":
                             "El evento recibido "
                             "no es JSON válido."
-                        )
                     },
                     400
                 )
-
 
             resultado = procesar_evento(
                 evento
@@ -1032,11 +996,18 @@ class handler(
                 200
             )
 
-
         except Exception as error:
+
+            print(
+                "ERROR stripe-webhook-tienda:",
+                str(error)
+            )
 
             return responder(
                 self,
                 {
                     "ok": False,
-                   
+                    "msg": str(error)
+                },
+                500
+            ) 
