@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -98,6 +99,16 @@ def supabase_request(
     filtros=None,
     select=None
 ):
+
+    if not SUPABASE_URL:
+        raise RuntimeError(
+            "Falta SUPABASE_URL."
+        )
+
+    if not SUPABASE_KEY:
+        raise RuntimeError(
+            "Falta SUPABASE_SERVICE_ROLE_KEY."
+        )
 
     url = (
         SUPABASE_URL.rstrip("/")
@@ -219,7 +230,7 @@ def supabase_request(
 
 
 # ============================================================
-# STRIPE
+# STRIPE - SOLICITUD POST
 # ============================================================
 
 def stripe_request(
@@ -243,8 +254,6 @@ def stripe_request(
         data=cuerpo,
         method="POST"
     )
-
-    import base64
 
     credenciales = base64.b64encode(
         (
@@ -341,17 +350,22 @@ def obtener_session(
             "No se encontró la cuenta conectada de Stripe."
         )
 
-    # Stripe permite recuperar una Checkout Session
-    # directamente desde la cuenta conectada.
+    if not STRIPE_SECRET_KEY:
 
-    import base64
+        raise RuntimeError(
+            "Falta STRIPE_SECRET_KEY."
+        )
 
-    request = urllib.request.Request(
+    url = (
         "https://api.stripe.com/v1/checkout/sessions/"
         + urllib.parse.quote(
             session_id,
             safe=""
-        ),
+        )
+    )
+
+    request = urllib.request.Request(
+        url,
         method="GET"
     )
 
@@ -485,18 +499,12 @@ def marcar_pagado(
         "PATCH",
         "store_orders",
         datos={
-            "estado":
-                "confirmado",
-
-            "estado_pago":
-                "pagado",
-
-            "stripe_session_id":
-                session_id
+            "estado": "confirmado",
+            "estado_pago": "pagado",
+            "stripe_session_id": session_id
         },
         filtros={
-            "id":
-                pedido_id
+            "id": pedido_id
         }
     )
 
@@ -517,52 +525,43 @@ def crear_agenda(
     pedido
 ):
 
-    negocio_id =
-        pedido.get(
-            "negocio_id"
-        )
+    negocio_id = pedido.get(
+        "negocio_id"
+    )
 
-    contenido =
-        pedido.get(
-            "contenido",
-            ""
-        )
+    contenido = pedido.get(
+        "contenido",
+        ""
+    )
 
-    observaciones =
-        pedido.get(
-            "comentarios",
-            ""
-        )
+    observaciones = pedido.get(
+        "comentarios",
+        ""
+    )
 
-    quien_ordena =
-        pedido.get(
-            "cliente_nombre",
-            ""
-        )
+    quien_ordena = pedido.get(
+        "cliente_nombre",
+        ""
+    )
 
-    telefono =
-        pedido.get(
-            "cliente_telefono",
-            ""
-        )
+    telefono = pedido.get(
+        "cliente_telefono",
+        ""
+    )
 
-    direccion =
-        pedido.get(
-            "direccion",
-            ""
-        )
+    direccion = pedido.get(
+        "direccion",
+        ""
+    )
 
-    tipo_entrega =
-        pedido.get(
-            "tipo_entrega",
-            "domicilio"
-        )
+    tipo_entrega = pedido.get(
+        "tipo_entrega",
+        "domicilio"
+    )
 
     if tipo_entrega == "recoger":
 
-        entregar_a = (
-            "Recoger en tienda"
-        )
+        entregar_a = "Recoger en tienda"
 
     else:
 
@@ -573,24 +572,17 @@ def crear_agenda(
         )
 
     # --------------------------------------------------------
-    # Evitamos crear la misma agenda dos veces.
+    # EVITAR AGENDA DUPLICADA
     # --------------------------------------------------------
 
     existente = supabase_request(
         "GET",
         "entregas",
         filtros={
-            "negocio_id":
-                negocio_id,
-
-            "contenido":
-                contenido,
-
-            "quien_ordena":
-                quien_ordena,
-
-            "telefono_ordena":
-                telefono
+            "negocio_id": negocio_id,
+            "contenido": contenido,
+            "quien_ordena": quien_ordena,
+            "telefono_ordena": telefono
         },
         select="id"
     )
@@ -599,45 +591,37 @@ def crear_agenda(
 
         return existente[0]
 
+    # --------------------------------------------------------
+    # CREAR ENTREGA
+    # --------------------------------------------------------
 
     entrega = {
 
-        "negocio_id":
-            negocio_id,
+        "negocio_id": negocio_id,
 
-        "fecha_venta":
-            pedido.get(
-                "fecha_venta"
-            ),
+        "fecha_venta": pedido.get(
+            "fecha_venta"
+        ),
 
-        "fecha_entrega":
-            pedido.get(
-                "fecha_entrega"
-            ),
+        "fecha_entrega": pedido.get(
+            "fecha_entrega"
+        ),
 
-        "hora_entrega":
-            pedido.get(
-                "hora_entrega"
-            ),
+        "hora_entrega": pedido.get(
+            "hora_entrega"
+        ),
 
-        "contenido":
-            contenido,
+        "contenido": contenido,
 
-        "observaciones":
-            observaciones,
+        "observaciones": observaciones,
 
-        "quien_ordena":
-            quien_ordena,
+        "quien_ordena": quien_ordena,
 
-        "telefono_ordena":
-            telefono,
+        "telefono_ordena": telefono,
 
-        "entregar_a":
-            entregar_a,
+        "entregar_a": entregar_a,
 
-        "estado":
-            "pendiente"
-
+        "estado": "pendiente"
     }
 
     filas = supabase_request(
@@ -667,7 +651,8 @@ class handler(
 
         responder(
             self,
-            {}
+            {},
+            200
         )
 
 
@@ -675,10 +660,9 @@ class handler(
 
         try:
 
-            datos =
-                leer_json(
-                    self
-                )
+            datos = leer_json(
+                self
+            )
 
             session_id = str(
                 datos.get(
@@ -694,14 +678,17 @@ class handler(
                 )
             ).strip()
 
+            # ------------------------------------------------
+            # VALIDACIONES
+            # ------------------------------------------------
+
             if not session_id:
 
                 return responder(
                     self,
                     {
                         "ok": False,
-                        "msg":
-                            "Falta session_id."
+                        "msg": "Falta session_id."
                     },
                     400
                 )
@@ -712,56 +699,56 @@ class handler(
                     self,
                     {
                         "ok": False,
-                        "msg":
-                            "Falta negocio_id."
+                        "msg": "Falta negocio_id."
                     },
                     400
                 )
 
-
             # ------------------------------------------------
-            # NEGOCIO
-            # ------------------------------------------------
-
-            negocio =
-                obtener_negocio(
-                    negocio_id
-                )
-
-
-            # ------------------------------------------------
-            # CUENTA STRIPE
+            # BUSCAR NEGOCIO
             # ------------------------------------------------
 
-            negocio_data =
-                supabase_request(
-                    "GET",
-                    "negocio_data",
-                    filtros={
-                        "user_id":
-                            negocio.get(
-                                "user_id"
-                            )
-                    },
-                    select="data"
-                )
+            negocio = obtener_negocio(
+                negocio_id
+            )
+
+            # ------------------------------------------------
+            # BUSCAR DATOS DE STRIPE
+            # ------------------------------------------------
+
+            negocio_data = supabase_request(
+                "GET",
+                "negocio_data",
+                filtros={
+                    "user_id": negocio.get(
+                        "user_id"
+                    )
+                },
+                select="data"
+            )
 
             stripe_account = ""
 
             if negocio_data:
 
-                data =
+                data = (
                     negocio_data[0].get(
                         "data"
-                    ) or {}
+                    )
+                    or {}
+                )
 
-                stripe_account =
+                stripe_account = (
                     data.get(
                         "stripe_account_id"
-                    ) or data.get(
+                    )
+                    or
+                    data.get(
                         "stripeAccountId"
-                    ) or ""
-
+                    )
+                    or
+                    ""
+                )
 
             if not stripe_account:
 
@@ -775,47 +762,41 @@ class handler(
                     400
                 )
 
-
             # ------------------------------------------------
-            # CONSULTAR STRIPE
+            # CONSULTAR CHECKOUT SESSION
             # ------------------------------------------------
 
-            session =
-                obtener_session(
-                    session_id,
-                    stripe_account
-                )
+            session = obtener_session(
+                session_id,
+                stripe_account
+            )
 
+            pago = session.get(
+                "payment_status"
+            )
 
-            pago =
-                session.get(
-                    "payment_status"
-                )
-
-            metadata =
+            metadata = (
                 session.get(
                     "metadata"
-                ) or {}
-
-            pedido_id =
-                metadata.get(
-                    "order_id"
                 )
+                or {}
+            )
 
+            pedido_id = metadata.get(
+                "order_id"
+            )
 
             # ------------------------------------------------
-            # TAMBIÉN INTENTAMOS ENCONTRAR EL PEDIDO
+            # BUSCAR PEDIDO
             # ------------------------------------------------
 
             pedido = None
 
             if pedido_id:
 
-                pedido =
-                    obtener_pedido(
-                        pedido_id
-                    )
-
+                pedido = obtener_pedido(
+                    pedido_id
+                )
 
             if not pedido:
 
@@ -829,7 +810,6 @@ class handler(
                     404
                 )
 
-
             # ------------------------------------------------
             # SI YA ESTÁ PAGADO
             # ------------------------------------------------
@@ -837,22 +817,31 @@ class handler(
             if (
                 pedido.get(
                     "estado_pago"
-                ) == "pagado"
+                )
+                == "pagado"
             ):
+
+                # Nos aseguramos de que la agenda exista.
+                try:
+
+                    crear_agenda(
+                        pedido
+                    )
+
+                except Exception:
+
+                    pass
 
                 return responder(
                     self,
                     {
                         "ok": True,
-
-                        "order_id":
-                            pedido_id,
-
+                        "order_id": pedido_id,
                         "message":
                             "El pedido ya estaba confirmado."
-                    }
+                    },
+                    200
                 )
-
 
             # ------------------------------------------------
             # PAGO CONFIRMADO
@@ -860,11 +849,56 @@ class handler(
 
             if pago == "paid":
 
-                pedido_actualizado =
-                    marcar_pagado(
-                        pedido_id,
-                        session_id
-                    )
+                pedido_actualizado = marcar_pagado(
+                    pedido_id,
+                    session_id
+                )
 
+                agenda = crear_agenda(
+                    pedido_actualizado
+                )
 
-                # ------------------------------------------------
+                return responder(
+                    self,
+                    {
+                        "ok": True,
+                        "order_id": pedido_id,
+                        "estado": "confirmado",
+                        "estado_pago": "pagado",
+                        "agenda_created": True,
+                        "agenda_id":
+                            agenda.get("id")
+                            if agenda
+                            else None,
+                        "message":
+                            "Pago confirmado y pedido agregado a la Agenda."
+                    },
+                    200
+                )
+
+            # ------------------------------------------------
+            # PAGO NO CONFIRMADO
+            # ------------------------------------------------
+
+            return responder(
+                self,
+                {
+                    "ok": False,
+                    "order_id": pedido_id,
+                    "payment_status": pago,
+                    "msg":
+                        "El pago todavía no está confirmado en Stripe."
+                },
+                402
+            )
+
+        except Exception as error:
+
+            return responder(
+                self,
+                {
+                    "ok": False,
+                    "msg": str(error)
+                },
+                500
+                ) 
