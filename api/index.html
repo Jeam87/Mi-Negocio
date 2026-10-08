@@ -113,16 +113,8 @@ button{cursor:pointer}
   margin-bottom:11px;
   box-shadow:0 2px 9px rgba(0,0,0,.06)
 }
-.card-photo{
-  width:100%;
-  aspect-ratio:16/10;
-  object-fit:cover;
-  display:block;
-  background:#f2f4f8;
-}
-.card-photo.hidden-photo{
-  display:none;
-}
+.card-photo{width:100%;height:210px;background:#f4f7fb;display:flex;align-items:center;justify-content:center;overflow:hidden}.card-photo img{width:100%;height:100%;object-fit:cover;display:block}.card-photo.no-photo{background:#eaf3ff;color:#8aa1bd;font-size:48px}.detail-photo{width:100%;max-height:360px;background:#f4f7fb;border-radius:16px;overflow:hidden;margin-bottom:16px;display:flex;align-items:center;justify-content:center}.detail-photo img{width:100%;max-height:360px;object-fit:contain;display:block}.detail-photo.no-photo{min-height:180px;color:#8aa1bd;font-size:55px}@media(max-width:520px){.card-photo{height:190px}.detail-photo,.detail-photo img{max-height:300px}}
+
 .card-info{
   padding:14px
 }
@@ -236,17 +228,6 @@ button{cursor:pointer}
 }
 
 /* DETALLE */
-.detail-photo{
-  width:100%;
-  max-height:360px;
-  object-fit:contain;
-  border-radius:14px;
-  background:#f4f6f9;
-  margin-bottom:14px;
-}
-.detail-photo.hidden-photo{
-  display:none;
-}
 .detail-name{
   font-size:25px;
   font-weight:900
@@ -480,7 +461,7 @@ button{cursor:pointer}
 
     <button class="close" onclick="cerrarModal('detailModal')">×</button>
 
-    <img id="detail-photo" class="detail-photo hidden-photo" alt="Foto del producto">
+    <div id="detail-photo" class="detail-photo no-photo">📦</div>
 
     <div id="detail-name" class="detail-name"></div>
     <div id="detail-price" class="detail-price"></div>
@@ -1131,17 +1112,20 @@ function pintarLista(lista){
     card.className =
       "card";
 
+    const foto = document.createElement("div");
+    foto.className = "card-photo";
     if(producto.foto){
-      const foto = document.createElement("img");
-      foto.className = "card-photo";
-      foto.alt = producto.nombre || "Producto";
-      foto.loading = "lazy";
-      foto.src = producto.foto;
-      foto.onerror = function(){
-        this.remove();
-      };
-      card.appendChild(foto);
+      const imagen = document.createElement("img");
+      imagen.src = producto.foto;
+      imagen.alt = producto.nombre;
+      imagen.loading = "lazy";
+      imagen.onerror = function(){ foto.classList.add("no-photo"); foto.innerHTML = "📦"; };
+      foto.appendChild(imagen);
+    }else{
+      foto.classList.add("no-photo");
+      foto.innerText = "📦";
     }
+    card.appendChild(foto);
 
     const info =
       document.createElement("div");
@@ -1260,19 +1244,18 @@ function verProducto(id){
   productoActual =
     p;
 
-  const fotoDetalle =
-    document.getElementById("detail-photo");
-
+  const fotoDetalle = document.getElementById("detail-photo");
+  fotoDetalle.innerHTML = "";
+  fotoDetalle.classList.remove("no-photo");
   if(p.foto){
-    fotoDetalle.src = p.foto;
-    fotoDetalle.alt = p.nombre || "Producto";
-    fotoDetalle.classList.remove("hidden-photo");
-    fotoDetalle.onerror = function(){
-      this.classList.add("hidden-photo");
-    };
+    const imagen = document.createElement("img");
+    imagen.src = p.foto;
+    imagen.alt = p.nombre;
+    imagen.onerror = function(){ fotoDetalle.classList.add("no-photo"); fotoDetalle.innerHTML = "📦"; };
+    fotoDetalle.appendChild(imagen);
   }else{
-    fotoDetalle.removeAttribute("src");
-    fotoDetalle.classList.add("hidden-photo");
+    fotoDetalle.classList.add("no-photo");
+    fotoDetalle.innerText = "📦";
   }
 
   document.getElementById("detail-name")
