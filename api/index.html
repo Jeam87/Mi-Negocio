@@ -1039,6 +1039,78 @@ async function cargarProductos(){
     document.getElementById("store-name").innerText = nombreTienda;
   }
 
+  /*
+    Respaldo directo desde la nube: si el endpoint de productos
+    no trae una foto/descripción o todavía no incluye un producto
+    recién guardado, usamos productosV2 de save.py.
+  */
+  try{
+    if(negocioUserId){
+      const nubeProd = await fetch(
+        "https://mi-negocio-mauve.vercel.app/api/save.py?user_id=" +
+        encodeURIComponent(negocioUserId),
+        {method:"GET",cache:"no-store"}
+      );
+      const nubeTxt = await nubeProd.text();
+      let nubeJson = {};
+      try{ nubeJson = JSON.parse(nubeTxt || "{}"); }catch{}
+      const nubeData = nubeJson.data || nubeJson;
+      let psNube = nubeData.productosV2 || [];
+      if(typeof psNube === "string"){
+        try{ psNube = JSON.parse(psNube); }catch{ psNube = []; }
+      }
+
+      if(Array.isArray(psNube)){
+        const baseProductos = (resultado.productos || [])
+          .map(p => ({
+            id:p.id,
+            nombre:p.nombre || "Producto",
+            precio:Number(p.precio || 0),
+            costo:Number(p.costo || 0),
+            stock:p.stock === undefined ? null : p.stock,
+            categoria:p.categoria || "Otros",
+            barcode:p.barcode || "",
+            foto:p.foto || "",
+            descripcion:p.descripcion || p.descripcion_producto || p.descripcionProducto || p.detalle || "",
+            esBase:!!p.esBase
+          }))
+          .filter(p => !p.esBase);
+
+        const porId = new Map(
+          baseProductos.map(p => [String(p.id), p])
+        );
+
+        psNube.filter(p => p && !p.esBase).forEach(p => {
+          const existente = porId.get(String(p.id));
+          const desc = p.descripcion || p.descripcion_producto || p.descripcionProducto || p.detalle || "";
+          if(existente){
+            if(!existente.foto && p.foto) existente.foto = p.foto;
+            if(!existente.descripcion && desc) existente.descripcion = desc;
+          }else{
+            const nuevo = {
+              id:p.id,
+              nombre:p.nombre || "Producto",
+              precio:Number(p.venta !== undefined ? p.venta : (p.precio || 0)),
+              costo:Number(p.costo || 0),
+              stock:null,
+              categoria:p.categoria || "Otros",
+              barcode:p.barcode || "",
+              foto:p.foto || "",
+              descripcion:desc,
+              esBase:false
+            };
+            baseProductos.push(nuevo);
+            porId.set(String(p.id),nuevo);
+          }
+        });
+
+        resultado.productos = baseProductos;
+      }
+    }
+  }catch(e){
+    console.warn("No se pudo completar productos desde la nube:",e);
+  }
+
   productos =
     (resultado.productos || []).map(p => ({
       id:p.id,
@@ -2533,4 +2605,3 @@ iniciar();
 
 </body>
    </html>
- 
