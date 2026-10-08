@@ -7,150 +7,259 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-*{box-sizing:border-box}
+  <style>
+*{
+  box-sizing:border-box
+}
+
+:root{
+  --azul:#1261c9;
+  --azul-oscuro:#084a9e;
+  --azul-claro:#eaf3ff;
+  --rojo:#e53935;
+  --rojo-oscuro:#c62828;
+  --amarillo:#f7c600;
+  --amarillo-claro:#fff8d6;
+  --blanco:#ffffff;
+  --fondo:#f6f8fc;
+  --texto:#172033;
+  --gris:#687386;
+  --borde:#e4e9f1;
+  --sombra:0 5px 20px rgba(18,61,110,.09);
+}
+
+html{
+  scroll-behavior:smooth
+}
+
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  background:#f5f5f7;
-  color:#222
+  background:var(--fondo);
+  color:var(--texto);
+  padding-bottom:82px;
 }
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
+
+button,
+input,
+select,
+textarea{
+  font:inherit
+}
+
+button{
+  cursor:pointer
+}
+
+/* =========================
+   ENCABEZADO
+========================= */
 
 .header{
   position:sticky;
   top:0;
   z-index:40;
-  background:#fff;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(12px);
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:10px 15px;
-  border-bottom:1px solid #eee
+  padding:12px 15px;
+  min-height:66px;
+  border-bottom:1px solid var(--borde);
+  box-shadow:0 2px 12px rgba(0,0,0,.05)
 }
+
+.header > div:first-child{
+  min-width:0
+}
+
 .logo{
-  height:42px;
+  height:44px;
   max-width:155px;
-  object-fit:contain
-}
-.header-actions{
-  display:flex;
-  align-items:center;
-  gap:8px
-}
-.icon-btn{
-  border:0;
-  background:#f3f3f3;
-  border-radius:50%;
-  width:42px;
-  height:42px;
-  font-size:20px
-}
-.cart-icon{
-  position:relative
-}
-.cart-count{
-  position:absolute;
-  right:-2px;
-  top:-3px;
-  background:#ff3346;
-  color:#fff;
-  border-radius:50%;
-  min-width:19px;
-  height:19px;
-  padding:1px 5px;
-  font-size:11px;
-  font-weight:800;
-  display:none;
-  align-items:center;
-  justify-content:center
+  object-fit:contain;
+  border-radius:10px
 }
 
 .store-name{
-  font-weight:800;
-  font-size:16px;
-  max-width:180px;
+  font-weight:900;
+  font-size:17px;
+  color:var(--azul-oscuro);
+  max-width:190px;
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis
 }
 
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:8px
+}
+
+.icon-btn{
+  border:1px solid #dce6f4;
+  background:var(--azul-claro);
+  color:var(--azul-oscuro);
+  border-radius:12px;
+  width:43px;
+  height:43px;
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.2s
+}
+
+.icon-btn:active{
+  transform:scale(.94)
+}
+
+.cart-icon{
+  position:relative
+}
+
+.cart-count{
+  position:absolute;
+  right:-4px;
+  top:-5px;
+  background:var(--rojo);
+  color:#fff;
+  border:2px solid #fff;
+  border-radius:50%;
+  min-width:20px;
+  height:20px;
+  padding:1px 5px;
+  font-size:11px;
+  font-weight:900;
+  display:none;
+  align-items:center;
+  justify-content:center
+}
+
+/* =========================
+   CATEGORÍAS
+========================= */
+
 .cats{
   position:sticky;
-  top:63px;
+  top:66px;
   z-index:30;
   background:#fff;
   display:flex;
   gap:8px;
-  padding:9px 12px;
+  padding:11px 12px;
   overflow:auto;
-  border-bottom:1px solid #eee
-}
-.cat{
-  white-space:nowrap;
-  padding:8px 17px;
-  border-radius:20px;
-  border:1px solid #ddd;
-  background:#fff;
-  font-size:13px;
-  font-weight:700
-}
-.cat.active{
-  background:#ff3346;
-  color:#fff;
-  border-color:#ff3346
+  border-bottom:1px solid var(--borde);
+  scrollbar-width:none
 }
 
-.list{
-  padding:10px;
-  padding-bottom:95px
+.cats::-webkit-scrollbar{
+  display:none
 }
-.card{
+
+.cat{
+  white-space:nowrap;
+  padding:9px 17px;
+  border-radius:22px;
+  border:1px solid #d7e1ee;
   background:#fff;
-  border-radius:15px;
+  color:#40516a;
+  font-size:12px;
+  font-weight:800;
+  transition:.2s
+}
+
+.cat.active{
+  background:var(--azul);
+  color:#fff;
+  border-color:var(--azul);
+  box-shadow:0 4px 10px rgba(18,97,201,.22)
+}
+
+/* =========================
+   LISTA
+========================= */
+
+.list{
+  padding:14px 12px 100px;
+  max-width:900px;
+  margin:auto
+}
+
+.card{
+  position:relative;
+  background:var(--blanco);
+  border:1px solid #e8edf4;
+  border-radius:18px;
   overflow:hidden;
-  margin-bottom:11px;
-  box-shadow:0 2px 9px rgba(0,0,0,.06)
+  margin-bottom:13px;
+  box-shadow:var(--sombra);
+  transition:.2s
 }
+
+.card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 25px rgba(18,61,110,.13)
+}
+
 .card-info{
-  padding:14px
+  padding:17px
 }
+
 .card-name{
-  font-size:16px;
-  line-height:21px;
-  font-weight:800
+  font-size:17px;
+  line-height:22px;
+  font-weight:900;
+  color:var(--texto)
 }
+
 .card-price{
-  margin-top:7px;
-  color:#ff3346;
-  font-size:19px;
-  font-weight:900
+  margin-top:8px;
+  color:var(--rojo);
+  font-size:21px;
+  font-weight:950
 }
+
 .card-stock{
-  margin-top:5px;
-  color:#777;
-  font-size:12px
+  margin-top:6px;
+  color:var(--gris);
+  font-size:12px;
+  font-weight:600
 }
+
 .card-actions{
   display:flex;
   gap:8px;
-  margin-top:12px
+  margin-top:14px
 }
+
 .add-btn{
   flex:1;
   border:0;
-  background:#111;
+  background:var(--azul);
   color:#fff;
-  padding:11px;
-  border-radius:9px;
-  font-weight:800
+  padding:12px;
+  border-radius:11px;
+  font-weight:900;
+  box-shadow:0 4px 10px rgba(18,97,201,.18);
+  transition:.2s
 }
+
+.add-btn:active{
+  transform:scale(.98)
+}
+
 .add-btn.disabled{
-  background:#ddd;
-  color:#888;
-  cursor:not-allowed
+  background:#d9dee7;
+  color:#8993a3;
+  cursor:not-allowed;
+  box-shadow:none
 }
+
+/* =========================
+   BARRA INFERIOR
+========================= */
 
 .bottom-bar{
   position:fixed;
@@ -158,221 +267,350 @@ button{cursor:pointer}
   right:0;
   bottom:0;
   z-index:35;
-  background:#fff;
-  border-top:1px solid #eee;
+  background:rgba(255,255,255,.98);
+  backdrop-filter:blur(12px);
+  border-top:1px solid var(--borde);
   padding:10px 13px;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px
+  gap:10px;
+  box-shadow:0 -4px 18px rgba(0,0,0,.07)
 }
+
 .bottom-total{
-  font-weight:800;
-  font-size:14px
+  font-weight:900;
+  font-size:13px;
+  color:var(--texto)
 }
+
 .checkout-btn{
   border:0;
-  background:#ff3346;
+  background:var(--azul);
   color:#fff;
   padding:12px 17px;
-  border-radius:10px;
-  font-weight:900
+  border-radius:12px;
+  font-weight:900;
+  box-shadow:0 4px 12px rgba(18,97,201,.22)
 }
+
+.checkout-btn:active{
+  transform:scale(.98)
+}
+
+/* =========================
+   MENSAJES
+========================= */
 
 .empty,
 .error{
   text-align:center;
-  padding:50px 20px;
-  color:#777;
+  padding:55px 20px;
+  color:var(--gris);
   font-weight:700
 }
-.error{color:#b00020}
 
-/* MODALES */
+.error{
+  color:var(--rojo-oscuro);
+  background:#fff;
+  border-radius:16px;
+  margin-top:10px
+}
+
+/* =========================
+   MODALES
+========================= */
+
 .modal{
   position:fixed;
   inset:0;
   z-index:100;
-  background:rgba(0,0,0,.45);
+  background:rgba(8,30,58,.55);
+  backdrop-filter:blur(3px);
   display:none;
   align-items:flex-end;
   justify-content:center
 }
+
 .modal.open{
   display:flex
 }
+
 .modal-box{
   width:100%;
   max-width:650px;
   max-height:94vh;
   overflow:auto;
   background:#fff;
-  border-radius:20px 20px 0 0;
-  padding:18px
+  border-radius:24px 24px 0 0;
+  padding:21px;
+  box-shadow:0 -10px 35px rgba(0,0,0,.18);
+  animation:subirModal .2s ease-out
 }
+
+@keyframes subirModal{
+  from{
+    transform:translateY(25px);
+    opacity:.7
+  }
+  to{
+    transform:translateY(0);
+    opacity:1
+  }
+}
+
 .modal-title{
-  font-size:21px;
-  font-weight:900;
-  margin-bottom:15px
+  font-size:22px;
+  font-weight:950;
+  color:var(--azul-oscuro);
+  margin-bottom:17px
 }
+
 .close{
   float:right;
   border:0;
-  background:#f1f1f1;
+  background:#edf3fb;
+  color:var(--azul-oscuro);
   border-radius:50%;
-  width:35px;
-  height:35px;
-  font-size:18px
+  width:37px;
+  height:37px;
+  font-size:21px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center
 }
 
-/* DETALLE */
+/* =========================
+   DETALLE
+========================= */
+
 .detail-name{
-  font-size:25px;
-  font-weight:900
-}
-.detail-price{
-  color:#ff3346;
-  font-size:27px;
-  font-weight:900;
-  margin:10px 0
-}
-.detail-stock{
-  color:#777;
-  font-size:13px;
-  margin-bottom:18px
+  font-size:26px;
+  line-height:32px;
+  font-weight:950;
+  color:var(--texto);
+  padding-right:42px
 }
 
-/* CARRITO */
+.detail-price{
+  color:var(--rojo);
+  font-size:28px;
+  font-weight:950;
+  margin:11px 0
+}
+
+.detail-stock{
+  color:var(--gris);
+  font-size:13px;
+  margin-bottom:20px;
+  font-weight:600
+}
+
+/* =========================
+   CARRITO
+========================= */
+
 .cart-item{
   display:flex;
   justify-content:space-between;
-  gap:10px;
-  padding:12px 0;
-  border-bottom:1px solid #eee
+  gap:12px;
+  padding:15px 0;
+  border-bottom:1px solid var(--borde)
 }
+
 .cart-item-name{
-  font-weight:800
+  font-weight:900;
+  color:var(--texto)
 }
+
 .cart-item-price{
   font-size:13px;
-  color:#666;
-  margin-top:4px
+  color:var(--gris);
+  margin-top:5px
 }
+
 .qty{
   display:flex;
   align-items:center;
-  gap:7px
+  gap:8px
 }
+
 .qty button{
-  width:30px;
-  height:30px;
-  border:0;
-  background:#eee;
-  border-radius:8px;
-  font-weight:900
+  width:32px;
+  height:32px;
+  border:1px solid #dce5f1;
+  background:var(--azul-claro);
+  color:var(--azul-oscuro);
+  border-radius:9px;
+  font-weight:950
 }
+
 .remove{
   border:0;
   background:none;
-  color:#d00;
+  color:var(--rojo);
   font-size:12px;
-  margin-top:4px
+  font-weight:800;
+  margin-top:5px;
+  padding:0
 }
+
 .cart-total{
   display:flex;
   justify-content:space-between;
-  font-size:20px;
-  font-weight:900;
-  margin:18px 0
+  font-size:21px;
+  font-weight:950;
+  margin:20px 0;
+  color:var(--texto)
 }
 
-/* FORMULARIO */
+/* =========================
+   FORMULARIO
+========================= */
+
 .field{
-  margin-bottom:13px
+  margin-bottom:15px
 }
+
 .field label{
   display:block;
   font-size:12px;
-  font-weight:800;
-  margin-bottom:6px
+  font-weight:900;
+  color:#39465b;
+  margin-bottom:7px
 }
+
 .field input,
 .field select,
 .field textarea{
   width:100%;
-  border:1px solid #ddd;
-  border-radius:10px;
-  padding:12px;
+  border:1px solid #d9e1ec;
+  border-radius:11px;
+  padding:13px;
   background:#fff;
-  outline:none
+  color:var(--texto);
+  outline:none;
+  transition:.2s
 }
-.field textarea{
-  min-height:85px;
-  resize:vertical
+
+.field input::placeholder,
+.field textarea::placeholder{
+  color:#9aa4b3
 }
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus{
-  border-color:#ff3346
+  border-color:var(--azul);
+  box-shadow:0 0 0 3px rgba(18,97,201,.10)
 }
+
+.field textarea{
+  min-height:90px;
+  resize:vertical
+}
+
+/* =========================
+   ENTREGA
+========================= */
 
 .delivery-box{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:8px;
+  gap:9px;
   margin-bottom:15px
 }
+
 .delivery-option{
-  border:1px solid #ddd;
-  border-radius:11px;
-  padding:12px;
+  border:1px solid #d9e1ec;
+  border-radius:12px;
+  padding:13px 9px;
   text-align:center;
-  font-weight:800;
-  font-size:13px
-}
-.delivery-option.active{
-  border-color:#ff3346;
-  background:#fff1f3;
-  color:#d90018
+  font-weight:900;
+  font-size:13px;
+  color:#526078;
+  background:#fff;
+  transition:.2s
 }
 
+.delivery-option.active{
+  border-color:var(--azul);
+  background:var(--azul-claro);
+  color:var(--azul-oscuro);
+  box-shadow:0 3px 9px rgba(18,97,201,.10)
+}
+
+/* =========================
+   PAGO
+========================= */
+
 .payment-option{
-  border:1px solid #ddd;
-  border-radius:11px;
-  padding:13px;
-  margin-bottom:8px;
+  border:1px solid #dce3ed;
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:9px;
   display:flex;
   gap:10px;
-  align-items:flex-start
+  align-items:flex-start;
+  background:#fff;
+  transition:.2s
 }
+
+.payment-option:has(input:checked){
+  border-color:var(--azul);
+  background:var(--azul-claro)
+}
+
 .payment-option input{
-  margin-top:3px
+  margin-top:3px;
+  accent-color:var(--azul)
 }
+
 .payment-option strong{
   display:block;
-  font-size:14px
+  font-size:14px;
+  color:var(--texto)
 }
+
 .payment-option small{
   display:block;
-  color:#777;
-  margin-top:3px;
-  font-size:11px
+  color:var(--gris);
+  margin-top:4px;
+  font-size:11px;
+  line-height:16px
 }
+
+/* =========================
+   BOTÓN PRINCIPAL
+========================= */
 
 .main-action{
   width:100%;
   border:0;
-  background:#ff3346;
+  background:var(--azul);
   color:#fff;
   padding:15px;
-  border-radius:11px;
-  font-weight:900;
-  font-size:16px
+  border-radius:12px;
+  font-weight:950;
+  font-size:16px;
+  box-shadow:0 5px 13px rgba(18,97,201,.20);
+  transition:.2s
 }
+
+.main-action:active{
+  transform:scale(.99)
+}
+
 .main-action:disabled{
   opacity:.6;
-  cursor:not-allowed
+  cursor:not-allowed;
+  box-shadow:none
 }
+
+/* =========================
+   WHATSAPP
+========================= */
 
 .whatsapp{
   width:100%;
@@ -380,1981 +618,127 @@ button{cursor:pointer}
   background:#25d366;
   color:#fff;
   padding:14px;
-  border-radius:11px;
-  font-weight:900;
-  margin-top:8px
+  border-radius:12px;
+  font-weight:950;
+  margin-top:9px;
+  box-shadow:0 4px 10px rgba(37,211,102,.18)
 }
 
+/* =========================
+   NOTAS
+========================= */
+
 .note{
-  background:#f7f7f7;
-  border-radius:10px;
-  padding:11px;
-  color:#666;
+  background:var(--amarillo-claro);
+  border:1px solid #f0d86a;
+  border-radius:11px;
+  padding:12px;
+  color:#685b18;
   font-size:12px;
-  margin:12px 0
+  line-height:17px;
+  margin:13px 0
 }
+
+/* =========================
+   RESULTADO
+========================= */
 
 .success{
   text-align:center;
-  padding:25px 10px
+  padding:28px 10px
 }
+
 .success-icon{
-  font-size:55px;
+  font-size:58px;
   margin-bottom:10px
 }
+
 .success h2{
   margin:8px 0;
-  font-size:23px
+  font-size:24px;
+  font-weight:950;
+  color:var(--azul-oscuro)
 }
+
 .order-number{
-  font-weight:900;
-  color:#ff3346;
-  margin:10px 0
+  font-weight:950;
+  color:var(--rojo);
+  margin:11px 0
 }
 
 .hidden{
   display:none!important
 }
-</style>
-</head>
 
-<body>
+/* =========================
+   CELULAR
+========================= */
 
-<header class="header">
-  <div style="display:flex;align-items:center;gap:10px">
-    <img id="logo" class="logo" src="" alt="Logo" style="display:none" onerror="this.style.display='none'">
-    <div id="store-name" class="store-name">Tienda</div>
-  </div>
+@media(max-width:480px){
 
-  <div class="header-actions">
-    <button class="icon-btn" onclick="contactarWhatsApp()" title="WhatsApp">💬</button>
-
-    <button class="icon-btn cart-icon" onclick="abrirCarrito()" title="Carrito">
-      🛒
-      <span id="cart-count" class="cart-count">0</span>
-    </button>
-  </div>
-</header>
-
-<div id="cats" class="cats"></div>
-
-<main id="list" class="list">
-  <div class="empty">Cargando productos...</div>
-</main>
-
-<div class="bottom-bar">
-  <div id="bottom-total" class="bottom-total">
-    Carrito vacío
-  </div>
-
-  <button class="checkout-btn" onclick="abrirCarrito()">
-    🛒 Ver carrito
-  </button>
-</div>
-
-
-<!-- DETALLE DEL PRODUCTO -->
-<div id="detailModal" class="modal">
-  <div class="modal-box">
-
-    <button class="close" onclick="cerrarModal('detailModal')">×</button>
-
-    <div id="detail-name" class="detail-name"></div>
-    <div id="detail-price" class="detail-price"></div>
-    <div id="detail-stock" class="detail-stock"></div>
-
-    <button id="detail-add" class="main-action">
-      Agregar al carrito
-    </button>
-
-  </div>
-</div>
-
-
-<!-- CARRITO -->
-<div id="cartModal" class="modal">
-  <div class="modal-box">
-
-    <button class="close" onclick="cerrarModal('cartModal')">×</button>
-
-    <div class="modal-title">🛒 Tu carrito</div>
-
-    <div id="cart-list"></div>
-
-    <div id="cart-empty" class="empty hidden">
-      Tu carrito está vacío.
-    </div>
-
-    <div id="cart-footer">
-      <div class="cart-total">
-        <span>Total</span>
-        <span id="cart-total">$0.00</span>
-      </div>
-
-      <button class="main-action" onclick="abrirCheckout()">
-        Continuar con el pedido
-      </button>
-
-      <button class="whatsapp" onclick="enviarCarritoWhatsApp()">
-        💬 Consultar pedido por WhatsApp
-      </button>
-    </div>
-
-  </div>
-</div>
-
-
-<!-- CHECKOUT -->
-<div id="checkoutModal" class="modal">
-  <div class="modal-box">
-
-    <button class="close" onclick="cerrarModal('checkoutModal')">×</button>
-
-    <div class="modal-title">📦 Datos del pedido</div>
-
-    <div class="note">
-      Completa tus datos para preparar correctamente tu pedido.
-    </div>
-
-    <div class="field">
-      <label>Nombre completo *</label>
-      <input id="customer-name" type="text" autocomplete="name" placeholder="Tu nombre">
-    </div>
-
-    <div class="field">
-      <label>Teléfono *</label>
-      <input id="customer-phone" type="tel" autocomplete="tel" placeholder="10 dígitos">
-    </div>
-
-    <div class="field">
-      <label>Correo electrónico *</label>
-      <input id="customer-email" type="email" autocomplete="email" placeholder="correo@ejemplo.com">
-    </div>
-
-    <div class="field">
-      <label>¿Cómo recibirás tu pedido?</label>
-
-      <div class="delivery-box">
-        <div id="delivery-home"
-             class="delivery-option active"
-             onclick="seleccionarEntrega('domicilio')">
-          🏠 Domicilio
-        </div>
-
-        <div id="delivery-pickup"
-             class="delivery-option"
-             onclick="seleccionarEntrega('recoger')">
-          🏪 Recoger en tienda
-        </div>
-      </div>
-    </div>
-
-    <div id="address-fields">
-
-      <div class="field">
-        <label>Dirección *</label>
-        <input id="customer-address"
-               type="text"
-               autocomplete="street-address"
-               placeholder="Calle, número, colonia">
-      </div>
-
-      <div class="field">
-        <label>Referencia</label>
-        <input id="customer-reference"
-               type="text"
-               placeholder="Ej. casa azul, frente al parque">
-      </div>
-
-    </div>
-
-    <div class="field">
-      <label>Fecha que necesitas el pedido *</label>
-      <input id="customer-date" type="date">
-    </div>
-
-    <div class="field">
-      <label>Hora aproximada</label>
-      <input id="customer-time" type="time">
-    </div>
-
-    <div class="field">
-      <label>Comentarios / descripción del pedido</label>
-      <textarea id="customer-comments"
-        placeholder="Alguna indicación especial..."></textarea>
-    </div>
-
-    <div class="field">
-
-      <label>Forma de pago</label>
-
-      <label class="payment-option">
-        <input type="radio"
-               name="payment"
-               value="stripe"
-               checked>
-
-        <span>
-          <strong>💳 Pago en línea con Stripe</strong>
-          <small>
-            Tarjeta y los métodos disponibles para esta cuenta, como OXXO o transferencia cuando estén habilitados.
-          </small>
-        </span>
-      </label>
-
-      <label class="payment-option">
-        <input type="radio"
-               name="payment"
-               value="efectivo">
-
-        <span>
-          <strong>💵 Pago en efectivo</strong>
-          <small>
-            Paga al recibir o recoger tu pedido.
-          </small>
-        </span>
-      </label>
-
-    </div>
-
-    <div class="note">
-      Al continuar con el pago en línea serás enviado a Stripe para completar el pago de forma segura.
-    </div>
-
-    <button id="place-order-btn"
-            class="main-action"
-            onclick="crearPedido()">
-      Continuar
-    </button>
-
-  </div>
-</div>
-
-
-<!-- RESULTADO -->
-<div id="resultModal" class="modal">
-  <div class="modal-box">
-
-    <div class="success">
-
-      <div id="result-icon" class="success-icon">✅</div>
-
-      <h2 id="result-title">Pedido recibido</h2>
-
-      <div id="result-message">
-        Tu pedido fue recibido correctamente.
-      </div>
-
-      <div id="result-order" class="order-number"></div>
-
-      <button class="main-action" onclick="cerrarResultado()">
-        Volver a la tienda
-      </button>
-
-    </div>
-
-  </div>
-</div>
-
-
-<script>
-
-/* =========================================================
-   CONFIGURACIÓN SUPABASE
-   ========================================================= */
-
-const SUPABASE_URL =
-  "https://txuggnfohyevpvdfxpfu.supabase.co";
-
-/*
- IMPORTANTE:
-
- Conserva aquí EXACTAMENTE la misma SUPABASE_ANON_KEY
- PÚBLICA que ya tiene actualmente tu tienda.
-
- NO pongas aquí la SERVICE_ROLE KEY.
-*/
-
-const SUPABASE_ANON_KEY =
-  "sb_publishable_cKnKD52yQyFTiyVeIFNc_A_Jy6O-lEC";
-
-const sb =
-  supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
-
-
-/* =========================================================
-   VARIABLES
-   ========================================================= */
-
-let productos = [];
-let carrito = [];
-let productoActual = null;
-
-let nombreTienda = "Mi Tienda";
-let whatsapp = "";
-
-let tiendaId =
-  new URLSearchParams(location.search).get("id");
-
-let negocioUserId = null;
-
-let tipoEntrega = "domicilio";
-
-
-/* =========================================================
-   UTILIDADES
-   ========================================================= */
-
-function formatoPrecio(valor){
-
-  return Number(valor || 0).toLocaleString(
-    "es-MX",
-    {
-      minimumFractionDigits:2,
-      maximumFractionDigits:2
-    }
-  );
-
-}
-
-
-function fechaHoy(){
-
-  const d = new Date();
-
-  const y = d.getFullYear();
-
-  const m =
-    String(d.getMonth()+1).padStart(2,"0");
-
-  const day =
-    String(d.getDate()).padStart(2,"0");
-
-  return `${y}-${m}-${day}`;
-
-}
-
-
-function escapar(texto){
-
-  return String(texto ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-
-}
-
-
-/* =========================================================
-   CARGAR NEGOCIO
-   ========================================================= */
-
-async function cargarNegocio(){
-
-  const {data,error} =
-    await sb
-      .from("negocios")
-      .select("*")
-      .eq("id",tiendaId)
-      .single();
-
-  if(error){
-
-    throw new Error(
-      "No se pudo cargar el negocio: "+
-      error.message
-    );
-
+  .header{
+    padding:10px 12px
   }
 
-  if(!data){
-
-    throw new Error(
-      "No se encontró el negocio."
-    );
-
+  .store-name{
+    font-size:15px;
+    max-width:145px
   }
 
-  negocioUserId =
-    data.user_id || null;
-
-  nombreTienda =
-    data.nombre_negocio ||
-    data.nombre ||
-    "Mi Tienda";
-
-  whatsapp =
-    data.whatsapp ||
-    "";
-
-  document.title =
-    nombreTienda;
-
-  document.getElementById("store-name")
-    .innerText =
-    nombreTienda;
-
-  // El logo real se carga desde empresaConfig.logo mediante el endpoint
-  // de la tienda. No usamos un logo fijo de GitHub.
-  /*
-    El logo de la tienda NO se toma de GitHub ni de una imagen fija.
-    Se obtiene del mismo empresaConfig.logo que usa la aplicación
-    principal para imprimir los tickets.
-  */
-  const img = document.getElementById("logo");
-  img.style.display = "none";
-
-  try{
-
-    if(negocioUserId){
-
-      const nube = await fetch(
-        "https://mi-negocio-mauve.vercel.app/api/save.py?user_id=" +
-        encodeURIComponent(negocioUserId),
-        { method:"GET", cache:"no-store" }
-      );
-
-      const textoNube = await nube.text();
-      let datosNube = {};
-
-      try{
-        datosNube = JSON.parse(textoNube || "{}");
-      }catch{}
-
-      const datos = datosNube.data || datosNube;
-      let empresa = datos.empresaConfig || null;
-
-      if(typeof empresa === "string"){
-        try{ empresa = JSON.parse(empresa); }catch{}
-      }
-
-      const logo =
-        (empresa && empresa.logo) ||
-        datos.logo ||
-        data.logo_url ||
-        "";
-
-      if(logo){
-        img.src = logo;
-        img.style.display = "block";
-      }
-
-    }
-
-  }catch(e){
-    console.warn("No se pudo cargar el logo de empresaConfig:",e);
-
-    if(data.logo_url){
-      img.src = data.logo_url;
-      img.style.display = "block";
-    }
+  .logo{
+    height:40px;
+    max-width:130px
   }
 
-  img.onerror = function(){
-    img.style.display = "none";
-  };
-
-}
-
-
-/* =========================================================
-   CARGAR PRODUCTOS
-   ========================================================= */
-
-async function cargarProductos(){
-
-  if(!tiendaId){
-    throw new Error("Falta el identificador de la tienda.");
+  .list{
+    padding-left:10px;
+    padding-right:10px
   }
 
-  /*
-    Los productos de la aplicación principal se obtienen
-    desde el endpoint que ya comprobamos que está funcionando.
-  */
-  const endpoint =
-    "https://mi-negocio-mauve.vercel.app/api/productos-tienda.py?negocio_id="+
-    encodeURIComponent(tiendaId);
-
-  const respuesta = await fetch(endpoint, {
-    method:"GET",
-    cache:"no-store"
-  });
-
-  const texto = await respuesta.text();
-
-  let resultado;
-
-  try{
-    resultado = JSON.parse(texto || "{}");
-  }catch{
-    throw new Error(
-      "El servidor de productos no devolvió una respuesta válida."
-    );
+  .card-info{
+    padding:15px
   }
 
-  if(!respuesta.ok || resultado.ok === false){
-    throw new Error(
-      resultado.msg ||
-      resultado.error ||
-      "No se pudieron cargar los productos."
-    );
+  .card-name{
+    font-size:16px
   }
 
-  // Usar exactamente el mismo logo que la app principal guarda para los tickets.
-  if(resultado.logo){
-    const img = document.getElementById("logo");
-    img.src = resultado.logo;
-    img.style.display = "block";
+  .card-price{
+    font-size:20px
   }
 
-  if(resultado.nombre_tienda){
-    nombreTienda = resultado.nombre_tienda;
-    document.title = nombreTienda;
-    document.getElementById("store-name").innerText = nombreTienda;
+  .bottom-total{
+    max-width:150px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis
   }
 
-  productos =
-    (resultado.productos || []).map(p => ({
-      id:p.id,
-      nombre:p.nombre || "Producto",
-      precio:Number(p.precio || 0),
-      costo:Number(p.costo || 0),
-      stock:p.stock === undefined ? null : p.stock,
-      categoria:p.categoria || "Otros",
-      barcode:p.barcode || "",
-      foto:p.foto || "",
-      esBase:!!p.esBase
-    }));
-
-  pintarCategorias();
-  pintarLista(productos);
-
-}
-
-
-/* =========================================================
-   INICIO
-   ========================================================= */
-
-async function iniciar(){
-
-  if(!tiendaId){
-
-    document.getElementById("list")
-      .innerHTML =
-      `<div class="error">
-        Falta el identificador de la tienda en la URL.
-      </div>`;
-
-    return;
-
+  .checkout-btn{
+    padding:11px 14px;
+    font-size:13px
   }
 
-  try{
-
-    await cargarNegocio();
-
-    await cargarProductos();
-
-    establecerFechaMinima();
-
-    procesarRegresoStripe();
-
-    if(!productos.length){
-
-      document.getElementById("list")
-        .innerHTML =
-        `<div class="empty">
-          Todavía no hay productos publicados en esta tienda.
-        </div>`;
-
-    }
-
-  }catch(error){
-
-    console.error(error);
-
-    document.getElementById("list")
-      .innerHTML =
-      `<div class="error">
-        No se pudieron cargar los productos.
-        <br><br>
-        ${escapar(error.message)}
-      </div>`;
-
+  .modal-box{
+    padding:18px;
+    border-radius:22px 22px 0 0
   }
 
 }
 
+/* =========================
+   PANTALLAS GRANDES
+========================= */
 
-/* =========================================================
-   CATEGORÍAS
-   ========================================================= */
+@media(min-width:700px){
 
-function pintarCategorias(){
-
-  const categorias =
-    [...new Set(
-      productos
-        .map(p => p.categoria)
-        .filter(Boolean)
-    )];
-
-  const cont =
-    document.getElementById("cats");
-
-  cont.innerHTML = "";
-
-  const inicio =
-    document.createElement("div");
-
-  inicio.className =
-    "cat active";
-
-  inicio.innerText =
-    "INICIO";
-
-  inicio.onclick =
-    () => filtrarProductos(
-      "todos",
-      inicio
-    );
-
-  cont.appendChild(inicio);
-
-  categorias.forEach(cat => {
-
-    const div =
-      document.createElement("div");
-
-    div.className =
-      "cat";
-
-    div.innerText =
-      String(cat).toUpperCase();
-
-    div.onclick =
-      () => filtrarProductos(
-        cat,
-        div
-      );
-
-    cont.appendChild(div);
-
-  });
-
-}
-
-
-function filtrarProductos(categoria,elemento){
-
-  document
-    .querySelectorAll(".cat")
-    .forEach(x =>
-      x.classList.remove("active")
-    );
-
-  elemento.classList.add("active");
-
-  const lista =
-    categoria === "todos"
-      ? productos
-      : productos.filter(
-          p =>
-            p.categoria === categoria
-        );
-
-  pintarLista(lista);
-
-}
-
-
-/* =========================================================
-   LISTA DE PRODUCTOS
-   ========================================================= */
-
-function pintarLista(lista){
-
-  const cont =
-    document.getElementById("list");
-
-  cont.innerHTML = "";
-
-  if(!lista.length){
-
-    cont.innerHTML =
-      `<div class="empty">
-        No hay productos en esta categoría.
-      </div>`;
-
-    return;
-
+  .list{
+    padding-top:20px
   }
 
-  lista.forEach(producto => {
-
-    const agotado =
-      tieneStockLimitado(producto) &&
-      Number(producto.stock) <= 0;
-
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "card";
-
-    const info =
-      document.createElement("div");
-
-    info.className =
-      "card-info";
-
-    const nombre =
-      document.createElement("div");
-
-    nombre.className =
-      "card-name";
-
-    nombre.innerText =
-      producto.nombre;
-
-    const precio =
-      document.createElement("div");
-
-    precio.className =
-      "card-price";
-
-    precio.innerText =
-      "$"+formatoPrecio(
-        producto.precio
-      );
-
-    const stock =
-      document.createElement("div");
-
-    stock.className =
-      "card-stock";
-
-    if(agotado){
-
-      stock.innerText =
-        "Agotado";
-
-    }else if(tieneStockLimitado(producto)){
-
-      stock.innerText =
-        "Disponibles: "+
-        producto.stock;
-
-    }else{
-
-      stock.innerText =
-        "Disponible";
-
-    }
-
-    const acciones =
-      document.createElement("div");
-
-    acciones.className =
-      "card-actions";
-
-    const ver =
-      document.createElement("button");
-
-    ver.className =
-      "add-btn";
-
-    ver.innerText =
-      "Ver producto";
-
-    ver.onclick =
-      () => verProducto(
-        producto.id
-      );
-
-    acciones.appendChild(ver);
-
-    info.append(
-      nombre,
-      precio,
-      stock,
-      acciones
-    );
-
-    card.appendChild(info);
-
-    cont.appendChild(card);
-
-  });
-
-}
-
-
-function tieneStockLimitado(producto){
-
-  return !(
-    producto.stock === null ||
-    producto.stock === undefined ||
-    producto.stock === ""
-  );
-
-}
-
-
-/* =========================================================
-   DETALLE
-   ========================================================= */
-
-function verProducto(id){
-
-  const p =
-    productos.find(
-      x =>
-        String(x.id) ===
-        String(id)
-    );
-
-  if(!p)return;
-
-  productoActual =
-    p;
-
-  document.getElementById("detail-name")
-    .innerText =
-    p.nombre;
-
-  document.getElementById("detail-price")
-    .innerText =
-    "$"+formatoPrecio(
-      p.precio
-    );
-
-  const agotado =
-    tieneStockLimitado(p) &&
-    Number(p.stock) <= 0;
-
-  document.getElementById("detail-stock")
-    .innerText =
-    agotado
-      ? "Agotado"
-      : tieneStockLimitado(p)
-        ? "Disponibles: "+p.stock
-        : "Disponible";
-
-  const boton =
-    document.getElementById("detail-add");
-
-  boton.disabled =
-    agotado;
-
-  boton.innerText =
-    agotado
-      ? "Agotado"
-      : "Agregar al carrito";
-
-  boton.classList.toggle(
-    "disabled",
-    agotado
-  );
-
-  boton.onclick =
-    () => agregarCarrito(p);
-
-  abrirModal("detailModal");
-
-}
-
-
-/* =========================================================
-   CARRITO
-   ========================================================= */
-
-function agregarCarrito(producto){
-
-  if(
-    tieneStockLimitado(producto) &&
-    Number(producto.stock) <= 0
-  ){
-
-    alert(
-      "Este producto está agotado."
-    );
-
-    return;
-
-  }
-
-  const existente =
-    carrito.find(
-      x =>
-        String(x.id) ===
-        String(producto.id)
-    );
-
-  if(existente){
-
-    if(
-      tieneStockLimitado(producto) &&
-      existente.qty >=
-      Number(producto.stock)
-    ){
-
-      alert(
-        "No hay más unidades disponibles."
-      );
-
-      return;
-
-    }
-
-    existente.qty++;
-
-  }else{
-
-    carrito.push({
-
-      id:producto.id,
-
-      nombre:producto.nombre,
-
-      precio:producto.precio,
-
-      stock:producto.stock,
-
-      qty:1
-
-    });
-
-  }
-
-  actualizarCarrito();
-
-  cerrarModal("detailModal");
-
-}
-
-
-function actualizarCarrito(){
-
-  let unidades =
-    carrito.reduce(
-      (s,p) =>
-        s + p.qty,
-      0
-    );
-
-  let total =
-    carrito.reduce(
-      (s,p) =>
-        s +
-        Number(p.precio || 0) *
-        p.qty,
-      0
-    );
-
-  const count =
-    document.getElementById("cart-count");
-
-  count.innerText =
-    unidades;
-
-  count.style.display =
-    unidades
-      ? "flex"
-      : "none";
-
-  document.getElementById("bottom-total")
-    .innerText =
-    unidades
-      ? `${unidades} producto(s) · $${formatoPrecio(total)}`
-      : "Carrito vacío";
-
-  pintarCarrito();
-
-}
-
-
-function pintarCarrito(){
-
-  const cont =
-    document.getElementById("cart-list");
-
-  const empty =
-    document.getElementById("cart-empty");
-
-  const footer =
-    document.getElementById("cart-footer");
-
-  cont.innerHTML = "";
-
-  if(!carrito.length){
-
-    empty.classList.remove(
-      "hidden"
-    );
-
-    footer.classList.add(
-      "hidden"
-    );
-
-    return;
-
-  }
-
-  empty.classList.add(
-    "hidden"
-  );
-
-  footer.classList.remove(
-    "hidden"
-  );
-
-  carrito.forEach(item => {
-
-    const fila =
-      document.createElement("div");
-
-    fila.className =
-      "cart-item";
-
-    const izquierda =
-      document.createElement("div");
-
-    const nombre =
-      document.createElement("div");
-
-    nombre.className =
-      "cart-item-name";
-
-    nombre.innerText =
-      item.nombre;
-
-    const precio =
-      document.createElement("div");
-
-    precio.className =
-      "cart-item-price";
-
-    precio.innerText =
-      "$"+
-      formatoPrecio(
-        item.precio
-      )+
-      " c/u";
-
-    const quitar =
-      document.createElement("button");
-
-    quitar.className =
-      "remove";
-
-    quitar.innerText =
-      "Eliminar";
-
-    quitar.onclick =
-      () =>
-        eliminarCarrito(item.id);
-
-    izquierda.append(
-      nombre,
-      precio,
-      quitar
-    );
-
-    const derecha =
-      document.createElement("div");
-
-    derecha.className =
-      "qty";
-
-    const menos =
-      document.createElement("button");
-
-    menos.innerText =
-      "−";
-
-    menos.onclick =
-      () =>
-        cambiarCantidad(
-          item.id,
-          -1
-        );
-
-    const numero =
-      document.createElement("strong");
-
-    numero.innerText =
-      item.qty;
-
-    const mas =
-      document.createElement("button");
-
-    mas.innerText =
-      "+";
-
-    mas.onclick =
-      () =>
-        cambiarCantidad(
-          item.id,
-          1
-        );
-
-    derecha.append(
-      menos,
-      numero,
-      mas
-    );
-
-    fila.append(
-      izquierda,
-      derecha
-    );
-
-    cont.appendChild(
-      fila
-    );
-
-  });
-
-  const total =
-    carrito.reduce(
-      (s,p) =>
-        s +
-        Number(p.precio || 0) *
-        p.qty,
-      0
-    );
-
-  document.getElementById("cart-total")
-    .innerText =
-    "$"+formatoPrecio(total);
-
-}
-
-
-function cambiarCantidad(id,cambio){
-
-  const item =
-    carrito.find(
-      x =>
-        String(x.id) ===
-        String(id)
-    );
-
-  if(!item)return;
-
-  const producto =
-    productos.find(
-      x =>
-        String(x.id) ===
-        String(id)
-    );
-
-  if(cambio > 0 &&
-     producto &&
-     tieneStockLimitado(producto) &&
-     item.qty >= Number(producto.stock)
-  ){
-
-    alert(
-      "No hay más unidades disponibles."
-    );
-
-    return;
-
-  }
-
-  item.qty +=
-    cambio;
-
-  if(item.qty <= 0){
-
-    eliminarCarrito(id);
-
-    return;
-
-  }
-
-  actualizarCarrito();
-
-}
-
-
-function eliminarCarrito(id){
-
-  carrito =
-    carrito.filter(
-      x =>
-        String(x.id) !==
-        String(id)
-    );
-
-  actualizarCarrito();
-
-}
-
-
-/* =========================================================
-   CHECKOUT
-   ========================================================= */
-
-function abrirCheckout(){
-
-  if(!carrito.length){
-
-    alert(
-      "Agrega al menos un producto."
-    );
-
-    return;
-
-  }
-
-  cerrarModal("cartModal");
-
-  abrirModal("checkoutModal");
-
-}
-
-
-function seleccionarEntrega(tipo){
-
-  tipoEntrega =
-    tipo;
-
-  document.getElementById(
-    "delivery-home"
-  ).classList.toggle(
-    "active",
-    tipo === "domicilio"
-  );
-
-  document.getElementById(
-    "delivery-pickup"
-  ).classList.toggle(
-    "active",
-    tipo === "recoger"
-  );
-
-  document.getElementById(
-    "address-fields"
-  ).classList.toggle(
-    "hidden",
-    tipo !== "domicilio"
-  );
-
-}
-
-
-function establecerFechaMinima(){
-
-  const campo =
-    document.getElementById(
-      "customer-date"
-    );
-
-  campo.min =
-    fechaHoy();
-
-  if(!campo.value){
-
-    campo.value =
-      fechaHoy();
-
+  .card{
+    margin-bottom:15px
   }
 
 }
-
-
-/* =========================================================
-   CREAR PEDIDO
-   ========================================================= */
-
-async function crearPedido(){
-
-  if(!carrito.length){
-
-    alert(
-      "El carrito está vacío."
-    );
-
-    return;
-
-  }
-
-  const nombre =
-    document.getElementById(
-      "customer-name"
-    ).value.trim();
-
-  const telefono =
-    document.getElementById(
-      "customer-phone"
-    ).value.trim();
-
-  const email =
-    document.getElementById(
-      "customer-email"
-    ).value.trim();
-
-  const direccion =
-    document.getElementById(
-      "customer-address"
-    ).value.trim();
-
-  const referencia =
-    document.getElementById(
-      "customer-reference"
-    ).value.trim();
-
-  const fecha =
-    document.getElementById(
-      "customer-date"
-    ).value;
-
-  const hora =
-    document.getElementById(
-      "customer-time"
-    ).value || null;
-
-  const comentarios =
-    document.getElementById(
-      "customer-comments"
-    ).value.trim();
-
-  const metodo =
-    document.querySelector(
-      'input[name="payment"]:checked'
-    )?.value ||
-    "stripe";
-
-
-  if(!nombre){
-
-    alert(
-      "Escribe tu nombre."
-    );
-
-    return;
-
-  }
-
-  if(!telefono){
-
-    alert(
-      "Escribe tu teléfono."
-    );
-
-    return;
-
-  }
-
-  if(!email){
-
-    alert(
-      "Escribe tu correo electrónico."
-    );
-
-    return;
-
-  }
-
-  if(
-    tipoEntrega === "domicilio" &&
-    !direccion
-  ){
-
-    alert(
-      "Escribe la dirección de entrega."
-    );
-
-    return;
-
-  }
-
-  if(!fecha){
-
-    alert(
-      "Selecciona la fecha que necesitas el pedido."
-    );
-
-    return;
-
-  }
-
-  if(fecha < fechaHoy()){
-
-    alert(
-      "La fecha no puede ser anterior a hoy."
-    );
-
-    return;
-
-  }
-
-  const boton =
-    document.getElementById(
-      "place-order-btn"
-    );
-
-  boton.disabled =
-    true;
-
-  boton.innerText =
-    "Procesando pedido...";
-
-  try{
-
-    const items =
-      carrito.map(item => ({
-
-        product_id:
-          String(item.id),
-
-        nombre:
-          item.nombre,
-
-        precio:
-          Number(item.precio || 0),
-
-        cantidad:
-          Number(item.qty || 0)
-
-      }));
-
-    const respuesta =
-      await fetch(
-        "https://mi-negocio-mauve.vercel.app/api/crear-pedido-tienda",
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-
-              negocio_id:
-                tiendaId,
-
-              items,
-
-              cliente:{
-                nombre,
-                telefono,
-                email
-              },
-
-              entrega:{
-                tipo:
-                  tipoEntrega,
-
-                direccion:
-                  direccion,
-
-                referencia:
-                  referencia,
-
-                fecha:
-                  fecha,
-
-                hora:
-                  hora
-              },
-
-              comentarios,
-
-              metodo_pago:
-                metodo
-
-            })
-        }
-      );
-
-    const texto =
-      await respuesta.text();
-
-    let data;
-
-    try{
-
-      data =
-        JSON.parse(texto);
-
-    }catch{
-
-      throw new Error(
-        "El servidor no devolvió una respuesta válida."
-      );
-
-    }
-
-    if(!respuesta.ok || !data.ok){
-
-      throw new Error(
-        data.msg ||
-        "No se pudo crear el pedido."
-      );
-
-    }
-
-
-    /*
-      STRIPE
-    */
-
-    if(
-      metodo === "stripe" &&
-      data.url
-    ){
-
-      /*
-       Guardamos información mínima para
-       mostrar el resultado cuando Stripe
-       nos devuelva a la tienda.
-      */
-
-      localStorage.setItem(
-        "ultimo_pedido_tienda",
-        JSON.stringify({
-          order_id:
-            data.order_id || "",
-          negocio_id:
-            tiendaId
-        })
-      );
-
-      window.location.href =
-        data.url;
-
-      return;
-
-    }
-
-
-    /*
-      EFECTIVO
-    */
-
-    if(
-      metodo === "efectivo"
-    ){
-
-      carrito = [];
-
-      actualizarCarrito();
-
-      cerrarModal(
-        "checkoutModal"
-      );
-
-      mostrarResultado(
-        "✅",
-        "Pedido recibido",
-        "Tu pedido quedó registrado. Puedes pagar en efectivo al recibirlo o recogerlo.",
-        data.order_id
-          ? "Pedido #"+data.order_id
-          : ""
-      );
-
-      return;
-
-    }
-
-
-    /*
-      RESPUESTA GENERAL
-    */
-
-    carrito = [];
-
-    actualizarCarrito();
-
-    cerrarModal(
-      "checkoutModal"
-    );
-
-    mostrarResultado(
-      "✅",
-      "Pedido recibido",
-      data.message ||
-      "Tu pedido fue registrado correctamente.",
-      data.order_id
-        ? "Pedido #"+data.order_id
-        : ""
-    );
-
-  }catch(error){
-
-    console.error(error);
-
-    alert(
-      error.message ||
-      "No se pudo procesar el pedido."
-    );
-
-  }finally{
-
-    boton.disabled =
-      false;
-
-    boton.innerText =
-      "Continuar";
-
-  }
-
-}
-
-
-/* =========================================================
-   REGRESO DE STRIPE
-   ========================================================= */
-
-async function procesarRegresoStripe(){
-
-  const params =
-    new URLSearchParams(
-      location.search
-    );
-
-  const pago =
-    params.get("pago");
-
-  const sessionId =
-    params.get("session_id");
-
-  if(
-    pago !== "ok" &&
-    !sessionId
-  ){
-
-    return;
-
-  }
-
-  if(!sessionId){
-
-    return;
-
-  }
-
-  try{
-
-    const r =
-      await fetch(
-        "https://mi-negocio-mauve.vercel.app/api/confirmar-pedido-tienda", 
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-
-              session_id:
-                sessionId,
-
-              negocio_id:
-                tiendaId
-
-            })
-        }
-      );
-
-    const texto =
-      await r.text();
-
-    let data;
-
-    try{
-
-      data =
-        JSON.parse(texto);
-
-    }catch{
-
-      return;
-
-    }
-
-    if(data.ok){
-
-      carrito = [];
-
-      actualizarCarrito();
-
-      mostrarResultado(
-        "✅",
-        "¡Pago recibido!",
-        data.message ||
-        "Tu pedido fue confirmado correctamente.",
-        data.order_id
-          ? "Pedido #"+data.order_id
-          : ""
-      );
-
-    }else{
-
-      mostrarResultado(
-        "⏳",
-        "Pago pendiente",
-        data.message ||
-        "Tu pedido fue registrado, pero el pago todavía aparece pendiente.",
-        data.order_id
-          ? "Pedido #"+data.order_id
-          : ""
-      );
-
-    }
-
-    /*
-      Limpiamos únicamente los parámetros
-      de pago de la URL.
-    */
-
-    const nuevaUrl =
-      location.pathname+
-      "?id="+
-      encodeURIComponent(
-        tiendaId
-      );
-
-    history.replaceState(
-      {},
-      document.title,
-      nuevaUrl
-    );
-
-  }catch(error){
-
-    console.error(
-      "Error confirmando Stripe:",
-      error
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   WHATSAPP
-   ========================================================= */
-
-function contactarWhatsApp(){
-
-  const numero =
-    String(whatsapp || "")
-      .replace(/\D/g,"");
-
-  if(!numero){
-
-    alert(
-      "Esta tienda todavía no tiene un número de WhatsApp configurado."
-    );
-
-    return;
-
-  }
-
-  const mensaje =
-    `Hola ${nombreTienda}, tengo una pregunta sobre un producto.`;
-
-  window.open(
-    "https://wa.me/"+
-    numero+
-    "?text="+
-    encodeURIComponent(
-      mensaje
-    ),
-    "_blank"
-  );
-
-}
-
-
-function enviarCarritoWhatsApp(){
-
-  if(!carrito.length){
-
-    alert(
-      "Agrega algún producto primero."
-    );
-
-    return;
-
-  }
-
-  const numero =
-    String(whatsapp || "")
-      .replace(/\D/g,"");
-
-  if(!numero){
-
-    alert(
-      "Esta tienda todavía no tiene un número de WhatsApp configurado."
-    );
-
-    return;
-
-  }
-
-  let total = 0;
-
-  let mensaje =
-    `Hola ${nombreTienda}! Quiero consultar este pedido:%0A%0A`;
-
-  carrito.forEach(item => {
-
-    const subtotal =
-      Number(item.precio || 0) *
-      item.qty;
-
-    total +=
-      subtotal;
-
-    mensaje +=
-      `• ${item.nombre} x${item.qty} = $${formatoPrecio(subtotal)}%0A`;
-
-  });
-
-  mensaje +=
-    `%0ATotal aproximado: $${formatoPrecio(total)}`;
-
-  window.open(
-    "https://wa.me/"+
-    numero+
-    "?text="+
-    mensaje,
-    "_blank"
-  );
-
-}
-
-
-/* =========================================================
-   MODALES
-   ========================================================= */
-
-function abrirModal(id){
-
-  document.getElementById(id)
-    .classList.add(
-      "open"
-    );
-
-}
-
-
-function cerrarModal(id){
-
-  document.getElementById(id)
-    .classList.remove(
-      "open"
-    );
-
-}
-
-
-function abrirCarrito(){
-
-  pintarCarrito();
-
-  abrirModal(
-    "cartModal"
-  );
-
-}
-
-
-function mostrarResultado(
-  icono,
-  titulo,
-  mensaje,
-  pedido
-){
-
-  document.getElementById(
-    "result-icon"
-  ).innerText =
-    icono;
-
-  document.getElementById(
-    "result-title"
-  ).innerText =
-    titulo;
-
-  document.getElementById(
-    "result-message"
-  ).innerText =
-    mensaje;
-
-  document.getElementById(
-    "result-order"
-  ).innerText =
-    pedido || "";
-
-  abrirModal(
-    "resultModal"
-  );
-
-}
-
-
-function cerrarResultado(){
-
-  cerrarModal(
-    "resultModal"
-  );
-
-}
-
-
-/* =========================================================
-   CERRAR MODAL TOCANDO AFUERA
-   ========================================================= */
-
-document.querySelectorAll(".modal")
-.forEach(modal => {
-
-  modal.addEventListener(
-    "click",
-    function(e){
-
-      if(e.target === modal){
-
-        modal.classList.remove(
-          "open"
-        );
-
-      }
-
-    }
-  );
-
-});
-
-
-/* =========================================================
-   INICIAR
-   ========================================================= */
-
-actualizarCarrito();
-
-iniciar();
-
-</script>
-
-</body>
-   </html>
+  </style>
