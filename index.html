@@ -52,7 +52,7 @@
 <div class="bg-white rounded-[20px] p-4"><h3 class="font-black text-[14px] mb-2">Mis recetas</h3><div id="listaInv"></div></div>
 </div>
 <div id="crear-base" class="hidden"><button onclick="cancelarEdicion()" class="mb-3 font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4 shadow-sm"><h2 class="font-black">BASE</h2><input id="nombre" placeholder="Ej: Salsa" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div id="insumos" class="mt-4 space-y-3"></div><button onclick="addInsumo()" class="w-full mt-3 bg-orange-100 border-2 py-3 rounded-2xl font-black text-[12px]">+ Ingrediente</button><div class="mt-3 bg-amber-50 border-2 p-3 rounded-2xl"><div class="flex gap-2"><input id="rendCant" type="number" value="10" class="flex-1 border-2 border-black p-3 rounded-xl font-black" oninput="calc()"><select id="rendUni" class="border-2 border-black p-3 rounded-xl font-bold" onchange="calc()"><option>L</option><option>ml</option><option>kg</option><option>g</option><option>pza</option></select></div></div><div class="mt-3 p-4 bg-[#0F172A] text-white rounded-[16px]"><div class="flex justify-between"><span>Ingredientes</span><b>$<span id="c-ing">0.00</span></b></div><div class="flex justify-between text-amber-300 text-[12px]"><span>+ Fijos</span><b>$<span id="c-fijos">0.00</span></b></div><div class="font-black border-t border-white/20 mt-2 pt-2 flex justify-between"><span>Total costo</span><span>$<span id="costo">0.00</span></span></div><div class="flex justify-between mt-2 text-[#4FD1C5]"><span>Venta</span><span>$<span id="venta">0.00</span></span></div><div class="mt-3 flex gap-2 bg-white/10 p-2 rounded-xl"><input id="margen" type="number" value="50" class="w-16 text-black rounded-lg text-center font-black py-2" oninput="calc()"><input id="ventaManual" type="number" placeholder="$ final" class="flex-1 text-black rounded-lg px-2 py-2 font-black" oninput="calc()"></div></div><button onclick="guardarProd('recetario')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR BASE</button></div></div>
-<div id="crear-producto" class="hidden"><button onclick="cancelarEdicion()" class="mb-3 font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4"><h2 class="font-black">Producto</h2><input id="nombreProd" placeholder="Ej: Alitas" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><div class="mt-3 bg-blue-50 border-2 border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-black">📂 Categoría</p><select id="prodCategoria" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-bold text-[12px]"></select><div class="mt-2 flex gap-2"><input id="quickCat" placeholder="Nueva cat" class="flex-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="addCategoriaVentaDesdeProd()" class="bg-black text-white px-3 rounded-xl text-[11px] font-bold">Crear</button></div></div><div class="mt-3"><input type="file" id="fotoInput" accept="image/*" onchange="previewFoto(this)" class="w-full mt-2 text-[12px]"><div id="fotoPreview" class="mt-2 hidden"><img id="fotoImg" class="w-24 h-24 object-cover rounded-xl border-2 border-black"></div></div><div class="mt-4 bg-amber-50 border-2 p-3 rounded-2xl"><p class="text-[11px] font-black">Bases que lleva:</p><p class="text-[9px] text-gray-600 mt-1">Puedes usar solo una parte de una BASE. Ejemplo: 30 ml de Salsa.</p><div id="basesSel" class="mt-2 space-y-3"></div><button onclick="addBase()" class="w-full mt-2 bg-white border-2 py-2 rounded-xl font-bold text-[11px]">+ Base</button></div><div class="mt-3 p-4 bg-black text-white rounded-[16px]"><div class="flex justify-between"><span>Costo</span><b>$<span id="c-ing2">0.00</span></b></div><div class="flex justify-between font-black text-[16px] mt-1"><span>Venta</span><span class="text-[#4FD1C5]">$<span id="venta2">0.00</span></span></div><div class="mt-2 flex gap-2"><input id="margen2" type="number" value="100" class="w-14 text-black rounded-lg text-center font-black py-1" oninput="calc2()"><input id="ventaManual2" type="number" placeholder="$ final" class="ml-auto w-20 text-black rounded-lg px-2 py-1 font-black" oninput="calc2()"></div></div><button onclick="guardarProd('catalogo')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button></div></div></div>
+<div id="crear-producto" class="hidden"><button onclick="cancelarEdicion()" class="mb-3 font-bold">← Volver</button><div class="bg-white rounded-[28px] p-4"><h2 class="font-black">Producto</h2><input id="nombreProd" placeholder="Ej: Alitas" class="w-full border-2 border-black p-4 rounded-2xl font-bold mt-3"><textarea id="descripcionProd" placeholder="Descripción del producto (opcional)" class="w-full border-2 border-black p-3 rounded-2xl text-[12px] mt-2" rows="3"></textarea><div class="mt-3 bg-blue-50 border-2 border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-black">📂 Categoría</p><select id="prodCategoria" class="w-full border-2 border-black p-3 rounded-xl mt-2 font-bold text-[12px]"></select><div class="mt-2 flex gap-2"><input id="quickCat" placeholder="Nueva cat" class="flex-1 border-2 border-black p-2 rounded-xl text-[11px]"><button onclick="addCategoriaVentaDesdeProd()" class="bg-black text-white px-3 rounded-xl text-[11px] font-bold">Crear</button></div></div><div class="mt-3"><input type="file" id="fotoInput" accept="image/*" onchange="previewFoto(this)" class="w-full mt-2 text-[12px]"><div id="fotoPreview" class="mt-2 hidden"><img id="fotoImg" class="w-24 h-24 object-cover rounded-xl border-2 border-black"></div></div><div class="mt-4 bg-amber-50 border-2 p-3 rounded-2xl"><p class="text-[11px] font-black">Bases que lleva:</p><p class="text-[9px] text-gray-600 mt-1">Puedes usar solo una parte de una BASE. Ejemplo: 30 ml de Salsa.</p><div id="basesSel" class="mt-2 space-y-3"></div><button onclick="addBase()" class="w-full mt-2 bg-white border-2 py-2 rounded-xl font-bold text-[11px]">+ Base</button></div><div class="mt-3 p-4 bg-black text-white rounded-[16px]"><div class="flex justify-between"><span>Costo</span><b>$<span id="c-ing2">0.00</span></b></div><div class="flex justify-between font-black text-[16px] mt-1"><span>Venta</span><span class="text-[#4FD1C5]">$<span id="venta2">0.00</span></span></div><div class="mt-2 flex gap-2"><input id="margen2" type="number" value="100" class="w-14 text-black rounded-lg text-center font-black py-1" oninput="calc2()"><input id="ventaManual2" type="number" placeholder="$ final" class="ml-auto w-20 text-black rounded-lg px-2 py-1 font-black" oninput="calc2()"></div></div><button onclick="guardarProd('catalogo')" class="w-full mt-4 bg-black text-white py-4 rounded-2xl font-black">GUARDAR</button></div></div></div>
 
 <div id="tab-config" class="p-3 hidden"><div class="bg-white rounded-[28px] p-5 shadow-sm"><h2 class="font-black">⚙️ Configuración y Ticket</h2>
 <div class="mt-4 bg-blue-50 border-2 border-blue-200 rounded-[20px] p-4"><p class="font-black text-[13px]">📸 Logo - se verá grande arriba</p><input type="file" id="logoInput" accept="image/*" onchange="previewLogo(this)" class="w-full mt-2 text-[12px]"><div id="logoPreviewBox" class="mt-3 hidden flex gap-3 items-center"><img id="logoPreview" class="w-28 h-28 object-contain rounded-xl border-2 border-black bg-white"><button onclick="quitarLogo()" class="text-[10px] bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold">X</button></div><div class="mt-3 grid grid-cols-2 gap-2"><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarLogo" checked> Logo en ticket</label><label class="text-[11px] font-bold flex items-center gap-1"><input type="checkbox" id="empMostrarFondo" checked> Fondo grande app</label></div><div class="mt-3"><p class="text-[11px] font-bold">Tamaño y opacidad fondo</p><input type="range" id="empOpacidad" min="2" max="30" value="18" class="w-full" oninput="document.getElementById('opacidadVal').innerText=this.value+'%'; actualizarFondo();"><span id="opacidadVal" class="text-[10px]">18%</span></div></div>
@@ -142,7 +142,49 @@ async function cargarDeNube(){
   }
   if(negocioId) await cargarEntregas();
 }
- async function guardarEnNubeAuto(mostrarMensaje=false){
+async function comprimirFotoParaNube(dataUrl){
+ try{
+  if(!dataUrl || typeof dataUrl!=='string' || !dataUrl.startsWith('data:image/') || dataUrl.length<250000) return dataUrl;
+  return await new Promise(resolve=>{
+   let img=new Image();
+   img.onload=function(){
+    let max=800, w=img.width, h=img.height;
+    if(w>max || h>max){
+      if(w>=h){ h=Math.round(h*max/w); w=max; }
+      else { w=Math.round(w*max/h); h=max; }
+    }
+    let canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    let ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    resolve(canvas.toDataURL('image/jpeg',0.68));
+   };
+   img.onerror=function(){ resolve(dataUrl); };
+   img.src=dataUrl;
+  });
+ }catch(e){ return dataUrl; }
+}
+async function prepararProductosParaNube(payload){
+ try{
+  if(!payload.productosV2) return;
+  let ps=JSON.parse(payload.productosV2);
+  if(!Array.isArray(ps)) return;
+  let cambio=false;
+  for(let p of ps){
+   if(p && p.foto && typeof p.foto==='string' && p.foto.startsWith('data:image/') && p.foto.length>250000){
+    let nueva=await comprimirFotoParaNube(p.foto);
+    if(nueva && nueva!==p.foto){ p.foto=nueva; cambio=true; }
+   }
+  }
+  if(cambio){
+   let txt=JSON.stringify(ps);
+   payload.productosV2=txt;
+   localStorage.setItem('productosV2',txt);
+   if(negocioId) localStorage.setItem('productosV2_'+negocioId,txt);
+  }
+ }catch(e){ console.log('No se pudieron compactar fotos:',e); }
+}
+async function guardarEnNubeAuto(mostrarMensaje=false){
  try{
   if(!currentUser){ if(mostrarMensaje) alert('No hay una sesión iniciada.'); return false; }
   const payload = {};
@@ -150,6 +192,7 @@ async function cargarDeNube(){
    const k=localStorage.key(i);
    if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
   }
+  await prepararProductosParaNube(payload);
   const res = await fetch('/api/save.py?user_id='+encodeURIComponent(currentUser),{
    method:'POST',
    headers:{'Content-Type':'application/json'},
@@ -325,9 +368,58 @@ function renderClientes(){ let cli=getCli(); let deudas=getDeudas(); let totalPo
 function addFijo(){ let n=document.getElementById('fijoNombre').value.trim(), m=parseFloat(document.getElementById('fijoMonto').value); if(!n||!m) return; let f=getFijos(); f.push({id:Date.now().toString(), nombre:n, monto:m}); setItem('gastosFijos',f); document.getElementById('fijoNombre').value=''; document.getElementById('fijoMonto').value=''; renderFijos(); calc(); calc2(); }
 function renderFijos(){ let f=getFijos(); let total=f.reduce((s,x)=>s+x.monto,0); document.getElementById('totalFijos').innerText=total.toFixed(0); let lotes=parseInt(localStorage.getItem('lotesMes_'+negocioId)||'30')||30; document.getElementById('lotesMes').value=lotes; window._costoFijoPorLote=lotes>0? total/lotes : 0; document.getElementById('listaFijos').innerHTML=f.map(x=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl border"><div><b class="text-[12px]">${x.nombre}</b><br><span class="text-[10px]">$${x.monto}/mes</span></div><button onclick="if(confirm('Borrar?')){setItem('gastosFijos',getFijos().filter(y=>y.id!='${x.id}')); renderFijos(); calc(); calc2();}" class="text-red-500 font-black">X</button></div>`).join(''); }
 function showTab(t){ ['costos','vender','entregas','inventario','finanzas','clientes','config','proveedores'].forEach(x=>{ let el=document.getElementById('tab-'+x); if(el) el.classList.toggle('hidden',x!=t); }); if(t=='costos'){ renderFijos(); renderInventario(); } if(t=='vender'){ renderVenta(); renderCarrito(); renderClientes(); renderInventarioMaster(); renderCategoriasVenta(); renderPresupuestos(); let fe=document.getElementById('ventaFechaEntrega'); if(fe) fe.min=fechaLocalISO(0); } if(t=='entregas'){ cargarEntregas(); } if(t=='inventario') renderInventarioMaster(); if(t=='clientes') renderClientes(); if(t=='finanzas') renderCalendario(); if(t=='config') cargarEmpresa(); if(t=='proveedores') renderProveedores(); actualizarFondo(); }
-function setCrear(v){ document.getElementById('crear-menu').classList.toggle('hidden',v!='menu'); document.getElementById('crear-base').classList.toggle('hidden',v!='base'); document.getElementById('crear-producto').classList.toggle('hidden',v!='producto'); if(v=='menu'){ editId=null; renderInventario(); } if(v=='base' &&!editId){ document.getElementById('insumos').innerHTML=''; document.getElementById('nombre').value=''; document.getElementById('rendCant').value='10'; document.getElementById('margen').value='50'; document.getElementById('ventaManual').value=''; addInsumo({}); calc(); } if(v=='producto' &&!editId){ document.getElementById('basesSel').innerHTML=''; document.getElementById('nombreProd').value=''; renderProdCategoriaSelect(); addBase(); calc2(); } }
+function setCrear(v){
+ document.getElementById('crear-menu').classList.toggle('hidden',v!='menu');
+ document.getElementById('crear-base').classList.toggle('hidden',v!='base');
+ document.getElementById('crear-producto').classList.toggle('hidden',v!='producto');
+ if(v=='menu'){ editId=null; fotoTemp=''; renderInventario(); }
+ if(v=='base' &&!editId){
+  document.getElementById('insumos').innerHTML='';
+  document.getElementById('nombre').value='';
+  document.getElementById('rendCant').value='10';
+  document.getElementById('margen').value='50';
+  document.getElementById('ventaManual').value='';
+  addInsumo({});
+  calc();
+ }
+ if(v=='producto' &&!editId){
+  document.getElementById('basesSel').innerHTML='';
+  document.getElementById('nombreProd').value='';
+  let d=document.getElementById('descripcionProd'); if(d) d.value='';
+  let fi=document.getElementById('fotoInput'); if(fi) fi.value='';
+  let fp=document.getElementById('fotoPreview'); if(fp) fp.classList.add('hidden');
+  fotoTemp='';
+  renderProdCategoriaSelect();
+  addBase();
+  calc2();
+ }
+}
 function cancelarEdicion(){ editId=null; fotoTemp=''; setCrear('menu'); }
-function previewFoto(i){ if(i.files&&i.files[0]){ let r=new FileReader(); r.onload=function(e){ fotoTemp=e.target.result; document.getElementById('fotoImg').src=fotoTemp; document.getElementById('fotoPreview').classList.remove('hidden'); }; r.readAsDataURL(i.files[0]); } }
+function previewFoto(i){
+ if(i.files&&i.files[0]){
+  let archivo=i.files[0];
+  let r=new FileReader();
+  r.onload=function(e){
+   let img=new Image();
+   img.onload=function(){
+    let max=800, w=img.width, h=img.height;
+    if(w>max || h>max){
+      if(w>=h){ h=Math.round(h*max/w); w=max; }
+      else { w=Math.round(w*max/h); h=max; }
+    }
+    let canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    let ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    fotoTemp=canvas.toDataURL('image/jpeg',0.72);
+    document.getElementById('fotoImg').src=fotoTemp;
+    document.getElementById('fotoPreview').classList.remove('hidden');
+   };
+   img.src=e.target.result;
+  };
+  r.readAsDataURL(archivo);
+ }
+}
 function previewLogo(input){ if(input.files&&input.files[0]){ let reader=new FileReader(); reader.onload=function(e){ logoTemp=e.target.result; document.getElementById('logoPreview').src=logoTemp; document.getElementById('logoPreviewBox').classList.remove('hidden'); actualizarFondo(); actualizarVistaTicket(); }; reader.readAsDataURL(input.files[0]); } }
 function quitarLogo(){ logoTemp=''; document.getElementById('logoPreviewBox').classList.add('hidden'); actualizarFondo(); actualizarVistaTicket(); }
 function actualizarFondo(){ let emp=getEmp(); let logo=logoTemp||emp.logo||''; let mostrarFondo=document.getElementById('empMostrarFondo')?.checked?? emp.mostrarFondo; let op=parseInt(document.getElementById('empOpacidad')?.value || emp.opacidad || 18); let bg=document.getElementById('logoBg'); let header=document.getElementById('logoHeader'); if(logo && mostrarFondo){ bg.src=logo; bg.classList.remove('hidden'); bg.style.opacity=(op/100); } else { bg.classList.add('hidden'); } if(logo){ header.src=logo; header.classList.remove('hidden'); } else { header.classList.add('hidden'); } }
@@ -466,8 +558,7 @@ function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTick
 
 function sincronizarProveedorInventario(invItem, proveedorNuevoId, proveedorAnteriorId){ let provs=getProveedores(); provs.forEach(p=>{ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; p.inventarioIds=p.inventarioIds.filter(x=>String(x)!=String(invItem.id)); }); if(proveedorNuevoId){ let p=provs.find(x=>String(x.id)==String(proveedorNuevoId)); if(p){ if(!Array.isArray(p.inventarioIds)) p.inventarioIds=[]; if(!p.inventarioIds.some(x=>String(x)==String(invItem.id))) p.inventarioIds.push(invItem.id); } } setItem('proveedores',provs); renderProveedores(); }
 function poblarSelectProveedores(id, valor=''){ let sel=document.getElementById(id); if(!sel) return; let provs=getProveedores(); sel.innerHTML='<option value="">Sin proveedor</option>'+provs.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join(''); if(valor) sel.value=valor; }
-function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stockTxt=document.getElementById('inv-stock').value.trim()||'0', u=document.getElementById('inv-unidad').value, proveedorId=document.getElementById('inv-proveedor')?.value||''; if(!n) return; let stock = parseCantidadTexto(stockTxt, u); if(isNaN(stock)) stock=0; let inv=getInv(); let item={id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u,proveedorId:proveedorId}; inv.push(item); setItem('inventarioMaestro',inv); sincronizarProveedorInventario(item,proveedorId,''); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; if(document.getElementById('inv-proveedor')) document.getElementById('inv-proveedor').value=''; renderInventarioMaster(); renderInventario(); }
-function abrirInvEdit(id){ let it=getInv().find(x=>x.id==id); if(!it) return; document.getElementById('ie-id').value=it.id; document.getElementById('ie-nombre').value=it.nombre||''; document.getElementById('ie-precio').value=it.precio??0; document.getElementById('ie-stock').value=it.stock??0; document.getElementById('ie-unidad').value=it.unidad||'kg'; poblarSelectProveedores('ie-proveedor',it.proveedorId||''); document.getElementById('modalInv').classList.remove('hidden'); }
+function addInventario(){ let n=document.getElementById('inv-nombre').value.trim(), p=parseFloat(document.getElementById('inv-precio').value)||0, stockTxt=document.getElementById('inv-stock').value.trim()||'0', u=document.getElementById('inv-unidad').value, proveedorId=document.getElementById('inv-proveedor')?.value||''; if(!n) return; let stock = parseCantidadTexto(stockTxt, u); if(isNaN(stock)) stock=0; let inv=getInv(); let item={id:Date.now().toString(),nombre:n,precio:p,stock:stock,unidad:u,proveedorId:proveedorId}; inv.push(item); setItem('inventarioMaestro',inv); sincronizarProveedorInventario(item,proveedorId,''); document.getElementById('inv-nombre').value=''; document.getElementById('inv-precio').value=''; document.getElementById('inv-stock').value=''; if(document.getElementById('inv-proveedor')) document.getElementById('inv-proveedor').value=''; renderInventarioMaster(); renderInventario(); }function abrirInvEdit(id){ let it=getInv().find(x=>x.id==id); if(!it) return; document.getElementById('ie-id').value=it.id; document.getElementById('ie-nombre').value=it.nombre||''; document.getElementById('ie-precio').value=it.precio??0; document.getElementById('ie-stock').value=it.stock??0; document.getElementById('ie-unidad').value=it.unidad||'kg'; poblarSelectProveedores('ie-proveedor',it.proveedorId||''); document.getElementById('modalInv').classList.remove('hidden'); }
 function cerrarInvEdit(){ document.getElementById('modalInv').classList.add('hidden'); }
 function guardarInvEdit(){ let id=document.getElementById('ie-id').value; let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let proveedorAnterior=it.proveedorId||''; let n=document.getElementById('ie-nombre').value.trim(); if(!n) return alert('Pon un nombre'); let u=document.getElementById('ie-unidad').value; let proveedorNuevo=document.getElementById('ie-proveedor')?.value||''; it.nombre=n; it.precio=parseFloat(document.getElementById('ie-precio').value)||0; it.stock=parseFloat(document.getElementById('ie-stock').value)||0; if(it.stock<0) it.stock=0; it.unidad=u; it.proveedorId=proveedorNuevo; setItem('inventarioMaestro',inv); sincronizarProveedorInventario(it,proveedorNuevo,proveedorAnterior); renderInventarioMaster(); renderInventario(); cerrarInvEdit(); }
 function registrarMerma(id){ let inv=getInv(); let it=inv.find(x=>x.id==id); if(!it) return; let txt=prompt(`Merma de ${it.nombre} Actual: ${it.stock} ${it.unidad} Cuánto se tiró? Ej: 200 g`); if(!txt) return; let cant=parseCantidadTexto(txt, it.unidad); it.stock=(parseFloat(it.stock)||0)-cant; if(it.stock<0) it.stock=0; setItem('inventarioMaestro',inv); let facts=getFacts(); facts.push({id:Date.now(),concepto:`Merma: ${it.nombre}`,monto:0,fecha:getFechaSoloLocal(),fechaHora:getFechaLocal(),tipo:'salida',vendedor:currentUser, observaciones:txt}); setItem('facturas',facts); renderInventarioMaster(); }function renderInventarioMaster(){ let inv=getInv(); let el=document.getElementById('listaInvMaster'); let busc=document.getElementById('buscInv')?.value.toLowerCase().trim()||''; let alerta=document.getElementById('alertaStock'); let bajos=inv.filter(i=> (parseFloat(i.stock)||0) <=1); if(bajos.length && alerta){ alerta.classList.remove('hidden'); alerta.innerHTML='⚠️ Stock bajo: '+bajos.map(b=>`${b.nombre} (${b.stock} ${b.unidad})`).join(', '); } else if(alerta){ alerta.classList.add('hidden'); } let filtrado=inv; if(busc){ filtrado=inv.filter(it=> (it.nombre||'').toLowerCase().includes(busc)); } if(el){ if(!filtrado.length && busc){ el.innerHTML=`<p class="text-center text-gray-500 text-[12px] py-6">No se encontró "${busc}"</p>`; return; } el.innerHTML=filtrado.map(it=>{ let stockVal= (it.stock!==undefined && it.stock!==null &&!isNaN(parseFloat(it.stock)))? parseFloat(it.stock) : 0; return `<div class="flex gap-2 items-center bg-gray-50 p-3 rounded-xl border"><div class="flex-1"><b class="text-[13px]">${it.nombre}</b> <span class="text-[10px]">Stock ${stockVal} ${it.unidad||''} - $${it.precio}/${it.unidad||''}</span></div><div class="flex gap-1"><button onclick="abrirInvEdit('${it.id}')" class="bg-blue-500 text-white px-2 py-1 rounded-full text-[10px]">✏️ Editar</button><button onclick="registrarMerma('${it.id}')" class="bg-orange-500 text-white px-2 py-1 rounded-full text-[10px]">Merma</button><button onclick="if(confirm('Borrar?')){setItem('inventarioMaestro',getInv().filter(x=>x.id!='${it.id}')); renderInventarioMaster(); renderInventario();}" class="text-red-400 px-1">X</button></div></div>`; }).join('')||'<p class="text-center text-gray-400 text-[11px]">Sin inventario</p>'; } }
@@ -485,6 +576,7 @@ function guardarProd(tipo){
  let costo=parseFloat((isBase?document.getElementById('costo'):document.getElementById('c-ing2')).innerText)||0;
  let venta=parseFloat((isBase?document.getElementById('venta'):document.getElementById('venta2')).innerText)||0;
  let catId=isBase?'base':(document.getElementById('prodCategoria')?.value||'todas');
+ let descripcion=isBase?'':(document.getElementById('descripcionProd')?.value.trim()||'');
  let ps=getProd();
  let idx=editId?ps.findIndex(p=>String(p.id)==String(editId)):-1;
  let existente=idx>=0?ps[idx]:null;
@@ -527,9 +619,10 @@ function guardarProd(tipo){
    ps[idx].margen=margen;
    ps[idx].rendimiento={cant:rendCant,uni:rendUni};
    ps[idx].esBase=isBase || ps[idx].esBase===true;
+   ps[idx].descripcion=descripcion;
    if(fotoTemp) ps[idx].foto=fotoTemp;
  } else {
-   ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,categoria:catId,receta,margen,rendimiento:{cant:rendCant,uni:rendUni},esBase:isBase});
+   ps.push({id:Date.now(),nombre:nom,costo,venta,foto:fotoTemp,descripcion,categoria:catId,receta,margen,rendimiento:{cant:rendCant,uni:rendUni},esBase:isBase});
  }
  setItem('productosV2',ps);
  alert('✅ Guardado: '+nom);
@@ -565,6 +658,7 @@ function editarProd(id){
    document.getElementById('crear-base').classList.add('hidden');
    document.getElementById('crear-producto').classList.remove('hidden');
    document.getElementById('nombreProd').value=p.nombre;
+   let d=document.getElementById('descripcionProd'); if(d) d.value=p.descripcion||p.descripcion_producto||p.descripcionProducto||'';
    renderProdCategoriaSelect();
    document.getElementById('prodCategoria').value=p.categoria||'todas';
    if(p.margen!==undefined) document.getElementById('margen2').value=p.margen;
