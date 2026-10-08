@@ -422,7 +422,7 @@ button{cursor:pointer}
 
 <header class="header">
   <div style="display:flex;align-items:center;gap:10px">
-    <img id="logo" class="logo" src="" alt="Logo">
+    <img id="logo" class="logo" src="" alt="Logo" style="display:none" onerror="this.style.display='none'">
     <div id="store-name" class="store-name">Tienda</div>
   </div>
 
@@ -799,13 +799,65 @@ async function cargarNegocio(){
     .innerText =
     nombreTienda;
 
-  if(data.logo_url){
+  // El logo real se carga desde empresaConfig.logo mediante el endpoint
+  // de la tienda. No usamos un logo fijo de GitHub.
+  /*
+    El logo de la tienda NO se toma de GitHub ni de una imagen fija.
+    Se obtiene del mismo empresaConfig.logo que usa la aplicación
+    principal para imprimir los tickets.
+  */
+  const img = document.getElementById("logo");
+  img.style.display = "none";
 
-    document.getElementById("logo")
-      .src =
-      data.logo_url;
+  try{
 
+    if(negocioUserId){
+
+      const nube = await fetch(
+        "https://mi-negocio-mauve.vercel.app/api/save.py?user_id=" +
+        encodeURIComponent(negocioUserId),
+        { method:"GET", cache:"no-store" }
+      );
+
+      const textoNube = await nube.text();
+      let datosNube = {};
+
+      try{
+        datosNube = JSON.parse(textoNube || "{}");
+      }catch{}
+
+      const datos = datosNube.data || datosNube;
+      let empresa = datos.empresaConfig || null;
+
+      if(typeof empresa === "string"){
+        try{ empresa = JSON.parse(empresa); }catch{}
+      }
+
+      const logo =
+        (empresa && empresa.logo) ||
+        datos.logo ||
+        data.logo_url ||
+        "";
+
+      if(logo){
+        img.src = logo;
+        img.style.display = "block";
+      }
+
+    }
+
+  }catch(e){
+    console.warn("No se pudo cargar el logo de empresaConfig:",e);
+
+    if(data.logo_url){
+      img.src = data.logo_url;
+      img.style.display = "block";
+    }
   }
+
+  img.onerror = function(){
+    img.style.display = "none";
+  };
 
 }
 
@@ -820,38 +872,68 @@ async function cargarProductos(){
     throw new Error("Falta el identificador de la tienda.");
   }
 
+  /*
+    Los productos de la aplicación principal se obtienen
+    desde el endpoint que ya comprobamos que está funcionando.
+  */
   const endpoint =
     "https://mi-negocio-mauve.vercel.app/api/productos-tienda.py?negocio_id="+
     encodeURIComponent(tiendaId);
 
-  const res = await fetch(endpoint);
-  const txt = await res.text();
+  const respuesta = await fetch(endpoint, {
+    method:"GET",
+    cache:"no-store"
+  });
 
-  let result;
+  const texto = await respuesta.text();
+
+  let resultado;
+
   try{
-    result = JSON.parse(txt || "{}");
-  }catch(e){
-    throw new Error("La respuesta de productos no es válida.");
+    resultado = JSON.parse(texto || "{}");
+  }catch{
+    throw new Error(
+      "El servidor de productos no devolvió una respuesta válida."
+    );
   }
 
-  if(!res.ok || result.ok === false){
-    throw new Error(result.msg || result.error || "No se pudieron cargar los productos.");
+  if(!respuesta.ok || resultado.ok === false){
+    throw new Error(
+      resultado.msg ||
+      resultado.error ||
+      "No se pudieron cargar los productos."
+    );
   }
 
-  productos = (result.productos || []).map(p => ({
-    id:p.id,
-    nombre:p.nombre || "Producto",
-    precio:Number(p.precio || 0),
-    costo:Number(p.costo || 0),
-    stock:p.stock,
-    categoria:p.categoria || "Otros",
-    barcode:p.barcode || "",
-    created_at:p.created_at,
-    foto:p.foto || ""
-  }));
+  // Usar exactamente el mismo logo que la app principal guarda para los tickets.
+  if(resultado.logo){
+    const img = document.getElementById("logo");
+    img.src = resultado.logo;
+    img.style.display = "block";
+  }
+
+  if(resultado.nombre_tienda){
+    nombreTienda = resultado.nombre_tienda;
+    document.title = nombreTienda;
+    document.getElementById("store-name").innerText = nombreTienda;
+  }
+
+  productos =
+    (resultado.productos || []).map(p => ({
+      id:p.id,
+      nombre:p.nombre || "Producto",
+      precio:Number(p.precio || 0),
+      costo:Number(p.costo || 0),
+      stock:p.stock === undefined ? null : p.stock,
+      categoria:p.categoria || "Otros",
+      barcode:p.barcode || "",
+      foto:p.foto || "",
+      esBase:!!p.esBase
+    }));
 
   pintarCategorias();
   pintarLista(productos);
+
 }
 
 
@@ -2276,4 +2358,3 @@ iniciar();
 
 </body>
    </html>
- 
