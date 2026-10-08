@@ -12,8 +12,8 @@
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  background:#f5f5f7;
-  color:#222
+  background:#f6f8fc;
+  color:#172033
 }
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
@@ -27,7 +27,7 @@ button{cursor:pointer}
   justify-content:space-between;
   align-items:center;
   padding:10px 15px;
-  border-bottom:1px solid #eee
+  border-bottom:1px solid #e4e9f1
 }
 .logo{
   height:42px;
@@ -41,7 +41,7 @@ button{cursor:pointer}
 }
 .icon-btn{
   border:0;
-  background:#f3f3f3;
+  background:#eaf3ff;
   border-radius:50%;
   width:42px;
   height:42px;
@@ -54,7 +54,7 @@ button{cursor:pointer}
   position:absolute;
   right:-2px;
   top:-3px;
-  background:#ff3346;
+  background:#1261c9;
   color:#fff;
   border-radius:50%;
   min-width:19px;
@@ -85,21 +85,21 @@ button{cursor:pointer}
   gap:8px;
   padding:9px 12px;
   overflow:auto;
-  border-bottom:1px solid #eee
+  border-bottom:1px solid #e4e9f1
 }
 .cat{
   white-space:nowrap;
   padding:8px 17px;
   border-radius:20px;
-  border:1px solid #ddd;
+  border:1px solid #d7deea;
   background:#fff;
   font-size:13px;
   font-weight:700
 }
 .cat.active{
-  background:#ff3346;
+  background:#1261c9;
   color:#fff;
-  border-color:#ff3346
+  border-color:#1261c9
 }
 
 .list{
@@ -123,15 +123,25 @@ button{cursor:pointer}
   line-height:21px;
   font-weight:800
 }
+.card-description{
+  margin-top:6px;
+  color:#687386;
+  font-size:13px;
+  line-height:19px;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden
+}
 .card-price{
   margin-top:7px;
-  color:#ff3346;
+  color:#1261c9;
   font-size:19px;
   font-weight:900
 }
 .card-stock{
   margin-top:5px;
-  color:#777;
+  color:#687386;
   font-size:12px
 }
 .card-actions{
@@ -142,14 +152,14 @@ button{cursor:pointer}
 .add-btn{
   flex:1;
   border:0;
-  background:#111;
+  background:#084a9e;
   color:#fff;
   padding:11px;
   border-radius:9px;
   font-weight:800
 }
 .add-btn.disabled{
-  background:#ddd;
+  background:#d7deea;
   color:#888;
   cursor:not-allowed
 }
@@ -161,7 +171,7 @@ button{cursor:pointer}
   bottom:0;
   z-index:35;
   background:#fff;
-  border-top:1px solid #eee;
+  border-top:1px solid #e4e9f1;
   padding:10px 13px;
   display:flex;
   align-items:center;
@@ -174,7 +184,7 @@ button{cursor:pointer}
 }
 .checkout-btn{
   border:0;
-  background:#ff3346;
+  background:#1261c9;
   color:#fff;
   padding:12px 17px;
   border-radius:10px;
@@ -185,7 +195,7 @@ button{cursor:pointer}
 .error{
   text-align:center;
   padding:50px 20px;
-  color:#777;
+  color:#687386;
   font-weight:700
 }
 .error{color:#b00020}
@@ -232,14 +242,21 @@ button{cursor:pointer}
   font-size:25px;
   font-weight:900
 }
+.detail-description{
+  margin-top:8px;
+  color:#687386;
+  font-size:14px;
+  line-height:21px;
+  white-space:pre-wrap
+}
 .detail-price{
-  color:#ff3346;
+  color:#1261c9;
   font-size:27px;
   font-weight:900;
   margin:10px 0
 }
 .detail-stock{
-  color:#777;
+  color:#687386;
   font-size:13px;
   margin-bottom:18px
 }
@@ -250,7 +267,7 @@ button{cursor:pointer}
   justify-content:space-between;
   gap:10px;
   padding:12px 0;
-  border-bottom:1px solid #eee
+  border-bottom:1px solid #e4e9f1
 }
 .cart-item-name{
   font-weight:800
@@ -269,14 +286,14 @@ button{cursor:pointer}
   width:30px;
   height:30px;
   border:0;
-  background:#eee;
+  background:#e4e9f1;
   border-radius:8px;
   font-weight:900
 }
 .remove{
   border:0;
   background:none;
-  color:#d00;
+  color:#c62828;
   font-size:12px;
   margin-top:4px
 }
@@ -302,7 +319,7 @@ button{cursor:pointer}
 .field select,
 .field textarea{
   width:100%;
-  border:1px solid #ddd;
+  border:1px solid #d7deea;
   border-radius:10px;
   padding:12px;
   background:#fff;
@@ -315,7 +332,7 @@ button{cursor:pointer}
 .field input:focus,
 .field select:focus,
 .field textarea:focus{
-  border-color:#ff3346
+  border-color:#1261c9
 }
 
 .delivery-box{
@@ -325,7 +342,7 @@ button{cursor:pointer}
   margin-bottom:15px
 }
 .delivery-option{
-  border:1px solid #ddd;
+  border:1px solid #d7deea;
   border-radius:11px;
   padding:12px;
   text-align:center;
@@ -333,13 +350,13 @@ button{cursor:pointer}
   font-size:13px
 }
 .delivery-option.active{
-  border-color:#ff3346;
+  border-color:#1261c9;
   background:#fff1f3;
   color:#d90018
 }
 
 .payment-option{
-  border:1px solid #ddd;
+  border:1px solid #d7deea;
   border-radius:11px;
   padding:13px;
   margin-bottom:8px;
@@ -356,7 +373,7 @@ button{cursor:pointer}
 }
 .payment-option small{
   display:block;
-  color:#777;
+  color:#687386;
   margin-top:3px;
   font-size:11px
 }
@@ -364,7 +381,7 @@ button{cursor:pointer}
 .main-action{
   width:100%;
   border:0;
-  background:#ff3346;
+  background:#1261c9;
   color:#fff;
   padding:15px;
   border-radius:11px;
@@ -410,7 +427,7 @@ button{cursor:pointer}
 }
 .order-number{
   font-weight:900;
-  color:#ff3346;
+  color:#1261c9;
   margin:10px 0
 }
 
@@ -464,6 +481,7 @@ button{cursor:pointer}
     <div id="detail-photo" class="detail-photo no-photo">📦</div>
 
     <div id="detail-name" class="detail-name"></div>
+<div id="detail-description" class="detail-description" style="display:none"></div>
     <div id="detail-price" class="detail-price"></div>
     <div id="detail-stock" class="detail-stock"></div>
 
@@ -837,6 +855,10 @@ async function cargarNegocio(){
         try{ empresa = JSON.parse(empresa); }catch{}
       }
 
+      if(empresa && empresa.whatsapp){
+        whatsapp = empresa.whatsapp;
+      }
+
       const logo =
         (empresa && empresa.logo) ||
         datos.logo ||
@@ -932,6 +954,7 @@ async function cargarProductos(){
       categoria:p.categoria || "Otros",
       barcode:p.barcode || "",
       foto:p.foto || "",
+      descripcion:p.descripcion || p.descripcion_producto || p.descripcionProducto || p.detalle || "",
       esBase:!!p.esBase
     }));
 
@@ -1142,6 +1165,19 @@ function pintarLista(lista){
     nombre.innerText =
       producto.nombre;
 
+    const descripcion =
+      document.createElement("div");
+
+    descripcion.className =
+      "card-description";
+
+    descripcion.innerText =
+      producto.descripcion || "";
+
+    if(!producto.descripcion){
+      descripcion.style.display = "none";
+    }
+
     const precio =
       document.createElement("div");
 
@@ -1201,6 +1237,7 @@ function pintarLista(lista){
 
     info.append(
       nombre,
+      descripcion,
       precio,
       stock,
       acciones
@@ -1261,6 +1298,16 @@ function verProducto(id){
   document.getElementById("detail-name")
     .innerText =
     p.nombre;
+
+  const detalleDescripcion =
+    document.getElementById("detail-description");
+
+  if(detalleDescripcion){
+    detalleDescripcion.innerText =
+      p.descripcion || "";
+    detalleDescripcion.style.display =
+      p.descripcion ? "block" : "none";
+  }
 
   document.getElementById("detail-price")
     .innerText =
