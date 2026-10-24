@@ -331,41 +331,6 @@ async function prepararProductosParaNube(payload){
   }
  }catch(e){ console.log('No se pudieron compactar fotos:',e); }
 }
-// --- SUBIR LOGO A SUPABASE STORAGE (para 20 celulares) ---
-async function comprimirBase64(b64){
-  return new Promise((resolve)=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const max = 512;
-      let w = img.width, h = img.height;
-      if(w > h){ if(w > max){ h *= max/w; w = max; } }
-      else { if(h > max){ w *= max/h; h = max; } }
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/png'));
-    };
-    img.onerror = ()=> resolve(b64);
-    img.src = b64;
-  });
-}
-async function subirLogoANube(base64Logo){
-  try{
-    let chico = base64Logo;
-    if(base64Logo.startsWith('data:')){
-      chico = await comprimirBase64(base64Logo);
-    }
-    const res = await fetch('/api/upload_logo', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ logo: chico, negocio_id: negocioId, user_id: currentUser })
-    });
-    const j = await res.json();
-    if(j.ok && j.url) return j.url;
-    console.log('Upload respuesta:', j);
-  }catch(e){ console.log('Error upload, sigo con URL local', e); }
-  return null;
-}
 async function guardarEnNubeAuto(mostrarMensaje=false){
  try{
   if(!currentUser){ if(mostrarMensaje) alert('No hay una sesión iniciada.'); return false; }
@@ -374,6 +339,8 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
    const k=localStorage.key(i);
    if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
   }
+  // La tienda consulta la clave específica del negocio. Aseguramos que
+  // la lista buena de productos se envíe tanto en la clave general como en la específica.
   let prodGeneral=[], prodNegocio=[];
   try { prodGeneral=JSON.parse(payload.productosV2||'[]'); if(!Array.isArray(prodGeneral))prodGeneral=[]; } catch(e){}
   try { prodNegocio=JSON.parse(payload['productosV2_'+negocioId]||'[]'); if(!Array.isArray(prodNegocio))prodNegocio=[]; } catch(e){}
@@ -383,34 +350,8 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
    payload.productosV2=prodTexto;
    payload['productosV2_'+negocioId]=prodTexto;
   }
-
-  // FIX LOGO DEFINITIVO: si el logo es base64, súbelo primero y reemplaza por URL
-  try{
-    const empRaw = localStorage.getItem('empresaConfig_'+negocioId) || localStorage.getItem('empresaConfig') || '{}';
-    const emp = JSON.parse(empRaw);
-    if(emp && emp.logo){
-      let logoFinal = emp.logo;
-      if(logoFinal.startsWith('data:')){
-        const url = await subirLogoANube(logoFinal);
-        if(url){
-          logoFinal = url;
-          emp.logo = url;
-          const nuevo = JSON.stringify(emp);
-          if(negocioId) localStorage.setItem('empresaConfig_'+negocioId, nuevo);
-          localStorage.setItem('empresaConfig', nuevo);
-        }
-      }
-      // Ahora sí guardamos solo URL chiquita, no base64
-      if(!logoFinal.startsWith('data:')){
-        payload.logo_url = logoFinal;
-        payload.logoUrl = logoFinal;
-        localStorage.setItem('logo_url', logoFinal);
-        if(negocioId) localStorage.setItem('logo_url_'+negocioId, logoFinal);
-      }
-    }
-  }catch(e){}
   await prepararProductosParaNube(payload);
-  const res = await fetch('/api/save?user_id='+encodeURIComponent(currentUser),{
+  const res = await fetch('/api/save.py?user_id='+encodeURIComponent(currentUser),{
    method:'POST',
    headers:{'Content-Type':'application/json'},
    body: JSON.stringify({user_id:currentUser,data:payload})
@@ -426,35 +367,62 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
   if(mostrarMensaje) alert('No se pudo guardar en la nube: '+(e.message||e));
   return false;
  }
+ } 
+window.addEventListener('load', async ()=>{
+  let e=localStorage.getItem('session_email');
+  let n=localStorage.getItem('session_negocio');
+  if(e&&n){
+    document.getElementById('loginEmail').value=e;
+    currentUser=e;
+    negocioId=n;
+    try{
+      await cargarDeNube();
+      document.getElementById('userLabel').innerText=e;
+      document.getElementById('loginScreen').classList.add('hidden');
+      showTab('inventario');
+    }catch(err){
+      console.log('Error cargando nube:', err);
+      // No borres sesión si es solo error de JSON/red
+      if(String(err.message).includes('not valid JSON') || String(err).includes('The page')){
+        document.getElementById('userLabel').innerText=e;
+        document.getElementById('loginScreen').classList.add('hidden');
+        showTab('inventario');
+        return;
+      }
+      localStorage.removeItem('session_email');
+      localStorage.removeItem('session_negocio');
+      currentUser=null; negocioId=null;
+      msgLogin('Tu sesión guardada no pudo cargarse: '+(err.message||err),false);
+    }
+  }
+});
+async function invitarColab(){let colab=document.getElementById('colabEmail').value.trim().toLowerCase(); let pass=document.getElementById('colabPass').value.trim()||'1234'; if(!colab) return alert('Pon correo'); let ownerPass=prompt('Confirma TU contraseña:'); if(!ownerPass) return; let r=await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_email:currentUser,owner_password:ownerPass,colab_email:colab,colab_password:pass})}); let j=await r.json(); if(!j.ok) return alert(j.msg); alert('✅ Agregado');}
+function getFijos(){ return JSON.parse(localStorage.getItem('gastosFijos_'+negocioId)||localStorage.getItem('gastosFijos')||'[]'); }
+function getProd(){ return JSON.parse(localStorage.getItem('productosV2_'+negocioId)||localStorage.getItem('productosV2')||'[]'); }
+function getInv(){
+  const leer=(k)=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}};
+  const especifica=negocioId?leer('inventarioMaestro_'+negocioId):[];
+  const general=leer('inventarioMaestro');
+  // Una clave específica vacía no debe ocultar materias primas que sí existen en la general.
+  if(especifica.length) return especifica;
+  if(general.length) return general;
+  return especifica;
 }
+function getCli(){ return JSON.parse(localStorage.getItem('clientesV2_'+negocioId)||localStorage.getItem('clientesV2')||'[]'); }
+function getFacts(){ return JSON.parse(localStorage.getItem('facturas_'+negocioId)||localStorage.getItem('facturas')||'[]'); }
+function getDeudas(){ return JSON.parse(localStorage.getItem('deudas_'+negocioId)||localStorage.getItem('deudas')||'[]'); }
+function getProveedores(){ return JSON.parse(localStorage.getItem('proveedores_'+negocioId)||localStorage.getItem('proveedores')||'[]'); }
+function getEmp(){ return JSON.parse(localStorage.getItem('empresaConfig_'+negocioId)||localStorage.getItem('empresaConfig')||'{"nombre":"Mi s receta","logo":"","whatsapp":"","mostrarLogo":true,"mostrarFondo":true,"opacidad":18,"mensaje":"¡Gracias por tu compra! 😊"}'); }
+function getEntregas(){ try{return JSON.parse(localStorage.getItem('entregas_'+negocioId)||localStorage.getItem('entregas')||'[]');}catch(e){return [];} }
+function getCategoriasVenta(){ let cats=JSON.parse(localStorage.getItem('categoriasVenta_'+negocioId)||localStorage.getItem('categoriasVenta')||'[]'); if(!cats.length){ cats=[{id:'todas',nombre:'Todas'}]; localStorage.setItem('categoriasVenta_'+negocioId,JSON.stringify(cats)); } return cats; }
 function setItem(k,v){
   const valor=typeof v==='string'? v: JSON.stringify(v);
+  // Guardar ambas claves para que la pantalla lea el mismo inventario en ambos dispositivos.
   if(negocioId) localStorage.setItem(k+'_'+negocioId,valor);
   localStorage.setItem(k,valor);
   if(k==='inventarioMaestro'){
     const marca=String(Date.now());
     localStorage.setItem('inventarioMaestro_updatedAt',marca);
-  }
-  // Si guardas empresaConfig con base64, súbelo y no guardes el gigante
-
-  if(k==='empresaConfig' || k.startsWith('empresaConfig_')){
-    try{
-      const obj = typeof v==='string' ? JSON.parse(v) : v;
-      if(obj && obj.logo && obj.logo.startsWith('data:')){
-        subirLogoANube(obj.logo).then(url=>{
-          if(url){
-            obj.logo = url;
-            const nuevoValor = JSON.stringify(obj);
-            if(negocioId) localStorage.setItem(k+'_'+negocioId, nuevoValor);
-            localStorage.setItem(k, nuevoValor);
-            localStorage.setItem('logo_url', url);
-            if(negocioId) localStorage.setItem('logo_url_'+negocioId, url);
-            guardarEnNubeAuto();
-          }
-        });
-        return; // no llames guardarEnNubeAuto todavía con el base64 gigante
-      }
-    }catch(e){}
   }
   guardarEnNubeAuto();
 }
