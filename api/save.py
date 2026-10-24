@@ -27,7 +27,7 @@ class handler(BaseHTTPRequestHandler):
         url, key = self.supabase()
         if not url or not key:
             raise RuntimeError("Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel")
-        target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(user_id, safe='')}&select=user_id,data,updated_at&order=updated_at.desc"
+        target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(user_id, safe='')}&select=user_id,data"
         req = urllib.request.Request(target, method="GET")
         req.add_header("apikey", key)
         req.add_header("Authorization", "Bearer " + key)
@@ -82,8 +82,7 @@ class handler(BaseHTTPRequestHandler):
                 key = str(ident) if ident is not None else None
                 if key is not None and key in pos:
                     current = out[pos[key]]
-                    for field, value in item.items(): 
-                        # el nuevo dato actualiza, pero no borra lo viejo vacio
+                    for field, value in item.items():
                         if value not in (None, "", []):
                             current[field] = value
                         else:
@@ -114,49 +113,42 @@ class handler(BaseHTTPRequestHandler):
             for row in rows: old.update(self.as_dict(row.get("data")))
             merged = dict(old)
 
-            # PROTECCION LOGO
+            # FIX LOGO - no borrar logo si viene vacio
             old_logo = old.get("logo_url") or old.get("logoUrl") or ""
             new_logo = incoming.get("logo_url") or incoming.get("logoUrl") or ""
-            if new_logo: merged["logo_url"] = new_logo
-            elif old_logo: merged["logo_url"] = old_logo
+            if new_logo:
+                merged["logo_url"] = new_logo
+            elif old_logo and not new_logo:
+                merged["logo_url"] = old_logo
 
-            # LISTAS QUE YA HACEN UNION SEGURA
-            listas_union = ["inventarioMaestro", "productosV2", "proveedores", "clientes", "comandas", "ventas", "merma", "gastos", "entregas"]
+            listas_union = ["inventarioMaestro", "productosV2", "proveedores", "clientes", "comandas", "ventas"]
 
             for k, v in incoming.items():
-                if any(k == base or k.startswith(base + "_") for base in listas_union):
+                if any(k == b or k.startswith(b + "_") for b in listas_union):
                     continue
                 if k in ("logo_url", "logoUrl") and not v:
                     continue
                 merged[k] = v
 
-            # Funcion para fusionar cualquier lista por id
-            def fusionar_lista(base_name):
-                old_lists = []
-                new_lists = []
+            def fusionar(base_name):
+                old_l = []
+                new_l = []
                 for kk, vv in old.items():
                     if kk == base_name or kk.startswith(base_name + "_"):
                         a = self.as_list(vv)
-                        if a is not None: old_lists.append(a)
+                        if a is not None: old_l.append(a)
                 for kk, vv in incoming.items():
                     if kk == base_name or kk.startswith(base_name + "_"):
                         a = self.as_list(vv)
-                        if a is not None: new_lists.append(a)
-                if old_lists or new_lists:
-                    combinado = self.merge_lists(old_lists + new_lists)
-                    merged[base_name] = combinado
-                    # replicar en todas las variantes _negocioId
-                    all_keys = set([x for x in old if x.startswith(base_name)] + [x for x in incoming if x.startswith(base_name)])
-                    for kk in all_keys:
-                        merged[kk] = combinado
-                    return combinado
-                return None
+                        if a is not None: new_l.append(a)
+                if old_l or new_l:
+                    comb = self.merge_lists(old_l + new_l)
+                    merged[base_name] = comb
+                    for kk in set([x for x in old if x.startswith(base_name)] + [x for x in incoming if x.startswith(base_name)]):
+                        merged[kk] = comb
 
             for base in listas_union:
-                fusionar_lista(base)
-
-            if "negocio_config" in merged and isinstance(merged["negocio_config"], dict) and merged.get("logo_url"):
-                merged["negocio_config"]["logo_url"] = merged["logo_url"]
+                fusionar(base)
 
             payload = json.dumps({"user_id": uid, "data": merged}, ensure_ascii=False).encode("utf-8")
             if rows:
@@ -169,7 +161,7 @@ class handler(BaseHTTPRequestHandler):
             req.add_header("Content-Type", "application/json")
             req.add_header("Prefer", "return=minimal")
             with urllib.request.urlopen(req, timeout=30) as r: r.read()
-            return self.send({"ok": True, "user_id": uid, "logo_url": merged.get("logo_url",""), "data": merged})
+            return self.send({"ok": True, "user_id": uid, "logo_url": merged.get("logo_url","")})
         except Exception as e:
             return self.send({"ok": False, "msg": str(e)}, 500)
 
