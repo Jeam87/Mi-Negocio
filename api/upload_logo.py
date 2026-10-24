@@ -1,75 +1,82 @@
 from http.server import BaseHTTPRequestHandler
-import json, os, base64, urllib.request, urllib.parse, time, urllib.error
+import json, os, base64
 
 class handler(BaseHTTPRequestHandler):
-    def send(self, obj, code=200):
-        self.send_response(code)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(json.dumps(obj).encode("utf-8"))
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
     def do_POST(self):
         try:
-            length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(length).decode("utf-8") if length else "{}")
-            b64 = body.get("logo") or ""
-            negocio_id = (body.get("negocio_id") or "default").strip()
-            user_id = (body.get("user_id") or "").strip().lower()
-            if not b64: return self.send({"ok": False, "msg": "falta logo"}, 400)
-            url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
-            key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
-            if "," in b64: b64 = b64.split(",", 1)[1]
-            img_bytes = base64.b64decode(b64)
-            bucket = "logos"
+            length = int(self.headers.get('content-length', 0))
+            body = self.rfile.read(length)
+            data = json.loads(body)
+
+            logo_b64 = data.get('logo', '')
+            negocio_id = data.get('negocio_id', 'default')
+
+            if not logo_b64:
+                self.send_response(400)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "msg": "No logo"}).encode())
+                return
+
+            # Limpiar base64
+            if ',' in logo_b64:
+                logo_b64 = logo_b64.split(',', 1)[1]
+
+            logo_bytes = base64.b64decode(logo_b64)
+
+            # Subir a Supabase
+            SUPABASE_URL = os.environ.get('SUPABASE_URL') or os.environ.get('NEXT_PUBLIC_SUPABASE_URL')
+            SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_KEY')
+
+            if not SUPABASE_URL or not SUPABASE_KEY:
+                # Si no hay keys, devolvemos error pero no truena
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "msg": "Falta config Supabase"}).encode())
+                return
+
+            import urllib.request
+
+            # URL del storage
             path = f"{negocio_id}/logo.png"
-            target = f"{url}/storage/v1/object/{bucket}/{path}"
-            req = urllib.request.Request(target, data=img_bytes, method="POST")
-            req.add_header("apikey", key)
-            req.add_header("Authorization", f"Bearer {key}")
-            req.add_header("Content-Type", "image/png")
-            req.add_header("x-upsert", "true")
+            url_storage = f"{SUPABASE_URL}/storage/v1/object/logos/{path}"
+
+            req = urllib.request.Request(url_storage, data=logo_bytes, method='POST')
+            req.add_header('apikey', SUPABASE_KEY)
+            req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
+            req.add_header('Content-Type', 'image/png')
+            req.add_header('x-upsert', 'true')
+
             try:
-                with urllib.request.urlopen(req, timeout=30) as r: r.read()
-            except urllib.error.HTTPError as e:
-                if e.code in (400, 409, 404):
-                    req2 = urllib.request.Request(target, data=img_bytes, method="PUT")
-                    req2.add_header("apikey", key)
-                    req2.add_header("Authorization", f"Bearer {key}")
-                    req2.add_header("Content-Type", "image/png")
-                    req2.add_header("x-upsert", "true")
-                    with urllib.request.urlopen(req2, timeout=30) as r2: r2.read()
-            public_url = f"{url}/storage/v1/object/public/{bucket}/{path}?t={int(time.time())}"
-            if user_id:
-                get_target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(user_id, safe='')}&select=data"
-                greq = urllib.request.Request(get_target, method="GET")
-                greq.add_header("apikey", key)
-                greq.add_header("Authorization", f"Bearer {key}")
-                with urllib.request.urlopen(greq, timeout=15) as gr:
-                    rows = json.loads(gr.read().decode("utf-8") or "[]")
-                old_data = {}
-                for row in rows:
-                    d = row.get("data")
-                    if isinstance(d, str):
-                        try: d = json.loads(d)
-                        except: d = {}
-                    if isinstance(d, dict): old_data.update(d)
-                old_data["logo_url"] = public_url
-                payload = json.dumps({"user_id": user_id, "data": old_data}).encode("utf-8")
-                up_target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(user_id, safe='')}" if rows else f"{url}/rest/v1/negocio_data"
-                ureq = urllib.request.Request(up_target, data=payload, method="PATCH" if rows else "POST")
-                ureq.add_header("apikey", key)
-                ureq.add_header("Authorization", f"Bearer {key}")
-                ureq.add_header("Content-Type", "application/json")
-                ureq.add_header("Prefer", "return=minimal")
-                with urllib.request.urlopen(ureq, timeout=15) as ur: ur.read()
-            return self.send({"ok": True, "url": public_url})
+                urllib.request.urlopen(req)
+            except Exception as e:
+                # Si ya existe, intenta PUT
+                req2 = urllib.request.Request(url_storage, data=logo_bytes, method='PUT')
+                req2.add_header('apikey', SUPABASE_KEY)
+                req2.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
+                req2.add_header('Content-Type', 'image/png')
+                req2.add_header('x-upsert', 'true')
+                urllib.request.urlopen(req2)
+
+            public_url = f"{SUPABASE_URL}/storage/v1/object/public/logos/{path}?t={path}"
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"ok": True, "url": public_url}).encode())
+
         except Exception as e:
-            return self.send({"ok": False, "msg": str(e)}, 500)
+            print("ERROR upload_logo:", str(e))
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"ok": False, "msg": str(e)}).encode())
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
