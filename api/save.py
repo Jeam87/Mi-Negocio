@@ -92,11 +92,6 @@ class handler(BaseHTTPRequestHandler):
                     if key is not None: pos[key] = len(out) - 1
         return out
 
-    @staticmethod
-    def stamp(data):
-        try: return int(float(data.get("inventarioMaestro_updatedAt") or 0))
-        except Exception: return 0
-
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
@@ -113,13 +108,31 @@ class handler(BaseHTTPRequestHandler):
             for row in rows: old.update(self.as_dict(row.get("data")))
             merged = dict(old)
 
-            # FIX LOGO - no borrar logo si viene vacio
-            old_logo = old.get("logo_url") or old.get("logoUrl") or ""
-            new_logo = incoming.get("logo_url") or incoming.get("logoUrl") or ""
+            # FIX LOGO - extraer de empresaConfig si viene ahi
+            def sacar_logo(d):
+                try:
+                    v = d.get("logo_url") or d.get("logoUrl") or ""
+                    if v: return v
+                    ec = d.get("empresaConfig") or d.get("empresaConfig_"+self.business_id(d)) or ""
+                    if isinstance(ec, str):
+                        try: ec = json.loads(ec)
+                        except: ec = {}
+                    if isinstance(ec, dict) and ec.get("logo"): return ec.get("logo")
+                    for k2,v2 in d.items():
+                        if k2.startswith("empresaConfig"):
+                            vv = self.as_dict(v2)
+                            if vv.get("logo"): return vv.get("logo")
+                except: pass
+                return ""
+
+            old_logo = sacar_logo(old)
+            new_logo = sacar_logo(incoming)
             if new_logo:
                 merged["logo_url"] = new_logo
-            elif old_logo and not new_logo:
+                merged["logoUrl"] = new_logo
+            elif old_logo:
                 merged["logo_url"] = old_logo
+                merged["logoUrl"] = old_logo
 
             listas_union = ["inventarioMaestro", "productosV2", "proveedores", "clientes", "comandas", "ventas"]
 
@@ -128,11 +141,12 @@ class handler(BaseHTTPRequestHandler):
                     continue
                 if k in ("logo_url", "logoUrl") and not v:
                     continue
+                if k.startswith("empresaConfig") and not v:
+                    continue
                 merged[k] = v
 
             def fusionar(base_name):
-                old_l = []
-                new_l = []
+                old_l, new_l = [], []
                 for kk, vv in old.items():
                     if kk == base_name or kk.startswith(base_name + "_"):
                         a = self.as_list(vv)
@@ -144,7 +158,7 @@ class handler(BaseHTTPRequestHandler):
                 if old_l or new_l:
                     comb = self.merge_lists(old_l + new_l)
                     merged[base_name] = comb
-                    for kk in set([x for x in old if x.startswith(base_name)] + [x for x in incoming if x.startswith(base_name)]):
+                    for kk in set([x for x in old if x==base_name or x.startswith(base_name+"_")] + [x for x in incoming if x==base_name or x.startswith(base_name+"_")] ):
                         merged[kk] = comb
 
             for base in listas_union:
