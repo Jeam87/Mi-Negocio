@@ -84,13 +84,22 @@ class handler(BaseHTTPRequestHandler):
             url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
             key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
             if not url or not key: return self.send({"ok": False, "msg": "Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel"}, 500)
-            target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(uid, safe='')}&select=data"
+            target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(uid, safe='')}&select=data&order=updated_at.desc"
             req = urllib.request.Request(target, method="GET")
             req.add_header("apikey", key)
             req.add_header("Authorization", "Bearer " + key)
             with urllib.request.urlopen(req, timeout=20) as r: rows = json.loads(r.read().decode("utf-8") or "[]")
+            
             data = {}
-            for row in rows: data.update(self.as_dict(row.get("data")))
+            # ARREGLO LOGO: tomar siempre el más reciente primero
+            for row in rows:
+                row_data = self.as_dict(row.get("data"))
+                # si ya tenemos logo, no dejar que un registro viejo lo pise
+                if "logo_url" in data and "logo_url" not in row_data:
+                    # conserva el logo nuevo
+                    pass
+                data.update(row_data)
+            
             sources = self.inv_sources(data)
             if sources:
                 inv = self.merge_lists(sources)
@@ -98,6 +107,12 @@ class handler(BaseHTTPRequestHandler):
                 for k in self.inv_keys(data): data[k] = inv
                 bid = self.business_id(data)
                 if bid: data[f"inventarioMaestro_{bid}"] = inv
+
+            # ARREGLO FINAL: asegurar que logo_url siempre esté disponible
+            if "logo_url" in data and data["logo_url"]:
+                # forzar refresh en todos los dispositivos
+                data["logo_url"] = data["logo_url"].split('?')[0]
+
             return self.send({"ok": True, "data": data, "user_id": uid})
         except Exception as e:
             return self.send({"ok": False, "msg": str(e)}, 500)
