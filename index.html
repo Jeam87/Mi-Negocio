@@ -331,6 +331,7 @@ async function prepararProductosParaNube(payload){
   }
  }catch(e){ console.log('No se pudieron compactar fotos:',e); }
 }
+  
 // --- SUBIR LOGO A SUPABASE STORAGE (para 20 celulares) ---
 
 async function comprimirBase64(b64){
@@ -350,8 +351,6 @@ async function comprimirBase64(b64){
     img.src = b64;
   });
 }
-
-
 async function subirLogoANube(base64Logo){
   try{
     let chico = base64Logo;
@@ -377,7 +376,6 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
   for(let i=0;i<localStorage.length;i++){
    const k=localStorage.key(i);
    if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
-
   }
   let prodGeneral=[], prodNegocio=[];
   try { prodGeneral=JSON.parse(payload.productosV2||'[]'); if(!Array.isArray(prodGeneral))prodGeneral=[]; } catch(e){}
@@ -406,7 +404,6 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
           localStorage.setItem('empresaConfig', nuevo);
         }
       }
-
       // Ahora sí guardamos solo URL chiquita, no base64
       if(!logoFinal.startsWith('data:')){
         payload.logo_url = logoFinal;
@@ -416,7 +413,6 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
       }
     }
   }catch(e){}
-
   await prepararProductosParaNube(payload);
   const res = await fetch('/api/save?user_id='+encodeURIComponent(currentUser),{
    method:'POST',
@@ -435,7 +431,6 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
   return false;
  }
 }
-
 function setItem(k,v){
   const valor=typeof v==='string'? v: JSON.stringify(v);
   if(negocioId) localStorage.setItem(k+'_'+negocioId,valor);
@@ -444,7 +439,6 @@ function setItem(k,v){
     const marca=String(Date.now());
     localStorage.setItem('inventarioMaestro_updatedAt',marca);
   }
-
   // Si guardas empresaConfig con base64, súbelo y no guardes el gigante
 
   if(k==='empresaConfig' || k.startsWith('empresaConfig_')){
