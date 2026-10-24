@@ -19,6 +19,21 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
+    def supabase(self):
+        return ((os.environ.get("SUPABASE_URL") or "").strip().rstrip("/"),
+                (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip())
+
+    def get_rows(self, user_id):
+        url, key = self.supabase()
+        if not url or not key:
+            raise RuntimeError("Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel")
+        target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(user_id, safe='')}&select=user_id,data"
+        req = urllib.request.Request(target, method="GET")
+        req.add_header("apikey", key)
+        req.add_header("Authorization", "Bearer " + key)
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read().decode("utf-8") or "[]")
+
     @staticmethod
     def as_dict(value):
         if isinstance(value, str):
@@ -52,13 +67,10 @@ class handler(BaseHTTPRequestHandler):
         bid = self.business_id(data)
         preferred = f"inventarioMaestro_{bid}" if bid else ""
         ordered = ([preferred] if preferred in keys else [])
-        if "inventarioMaestro" in keys and "inventarioMaestro" not in ordered: ordered.append("inventarioMaestro")
+        if "inventarioMaestro" in keys and "inventarioMaestro" not in ordered:
+            ordered.append("inventarioMaestro")
         ordered += [k for k in keys if k not in ordered]
-        result = []
-        for k in ordered:
-            arr = self.as_list(data.get(k))
-            if arr is not None: result.append(arr)
-        return result
+        return [a for k in ordered if (a := self.as_list(data.get(k))) is not None]
 
     @staticmethod
     def merge_lists(sources):
@@ -76,19 +88,17 @@ class handler(BaseHTTPRequestHandler):
                     if key is not None: pos[key] = len(out) - 1
         return out
 
+    @staticmethod
+    def stamp(data):
+        try: return int(float(data.get("inventarioMaestro_updatedAt") or 0))
+        except Exception: return 0
+
     def do_GET(self):
         try:
             qs = parse_qs(urlparse(self.path).query)
             uid = (qs.get("user_id", [None])[0] or qs.get("email", [None])[0] or "").strip().lower()
             if not uid: return self.send({"ok": False, "msg": "falta user_id"}, 400)
-            url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
-            key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
-            if not url or not key: return self.send({"ok": False, "msg": "Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel"}, 500)
-            target = f"{url}/rest/v1/negocio_data?user_id=eq.{urllib.parse.quote(uid, safe='')}&select=data"
-            req = urllib.request.Request(target, method="GET")
-            req.add_header("apikey", key)
-            req.add_header("Authorization", "Bearer " + key)
-            with urllib.request.urlopen(req, timeout=20) as r: rows = json.loads(r.read().decode("utf-8") or "[]")
+            rows = self.get_rows(uid)
             data = {}
             for row in rows: data.update(self.as_dict(row.get("data")))
             sources = self.inv_sources(data)
@@ -96,8 +106,6 @@ class handler(BaseHTTPRequestHandler):
                 inv = self.merge_lists(sources)
                 data["inventarioMaestro"] = inv
                 for k in self.inv_keys(data): data[k] = inv
-                bid = self.business_id(data)
-                if bid: data[f"inventarioMaestro_{bid}"] = inv
             return self.send({"ok": True, "data": data, "user_id": uid})
         except Exception as e:
             return self.send({"ok": False, "msg": str(e)}, 500)
