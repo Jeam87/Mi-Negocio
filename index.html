@@ -222,7 +222,7 @@ async function hacerLogin(){try{let e=document.getElementById('loginEmail').valu
 function cerrarSesion(){localStorage.removeItem('session_email'); localStorage.removeItem('session_negocio'); location.reload();}
 async function cargarDeNube(){
   if(!currentUser) return;
-  const res = await fetch('/api/load.py?user_id='+encodeURIComponent(currentUser));
+  const res = await fetch('/api/load?user_id='+encodeURIComponent(currentUser));
   const txt = await res.text();
   let data;
   try{ data = JSON.parse(txt); }catch{ console.log('Respuesta load.py:', txt.slice(0,200)); return; }
@@ -351,7 +351,7 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
    payload['productosV2_'+negocioId]=prodTexto;
   }
   await prepararProductosParaNube(payload);
-  const res = await fetch('/api/save.py?user_id='+encodeURIComponent(currentUser),{
+  const res = await fetch('/api/save?user_id='+encodeURIComponent(currentUser),{
    method:'POST',
    headers:{'Content-Type':'application/json'},
    body: JSON.stringify({user_id:currentUser,data:payload})
@@ -1055,7 +1055,7 @@ async function cargarNubeAuto(){
   if(!email){ alert('No hay email de sesión'); return; }
   const btn = document.getElementById('btn-recargar-nube');
   if(btn){ btn.innerText='⏳ Cargando de la nube...'; }
-  const r = await fetch('/api/load.py?user_id='+encodeURIComponent(email));
+  const r = await fetch('/api/load?user_id='+encodeURIComponent(email));
   const txt = await r.text();
   let data;
   try{ data = JSON.parse(txt); }catch{ console.log(txt); alert('Error cargando nube: '+txt.slice(0,150)); if(btn){ btn.innerText='Recargar de la nube'; } return; }
