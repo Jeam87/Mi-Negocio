@@ -1184,12 +1184,182 @@ function guardarPedidoPendiente(imprimir=false){
 function escaparPedido(v){
  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
-function imprimirComandaPedido(p){
- if(!p) return;
- const emp=getEmp(), items=(p.items||[]).map(i=>`<tr><td>${escaparPedido(i.nombre)}</td><td style="text-align:center;font-weight:bold">${Number(i.qty)||1}</td><td>${escaparPedido(i.descripcion||'')}</td></tr>`).join('');
- const w=window.open('','_blank','width=420,height=700');
- if(!w) return alert('Permite las ventanas emergentes para imprimir la comanda.');
- w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Comanda ${escaparPedido(p.id)}</title><style>body{font-family:Arial,sans-serif;padding:18px;color:#111}h1{font-size:20px;text-align:center;margin:0 0 4px}h2{text-align:center;font-size:16px;border:2px dashed #111;padding:8px;margin:8px 0}p{font-size:12px;margin:5px 0}.alert{font-weight:bold;text-align:center;border:2px solid #111;padding:8px;margin:10px 0}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border-bottom:1px solid #bbb;padding:8px 3px;text-align:left;font-size:13px}th{font-size:11px}.notes{white-space:pre-wrap;border:1px solid #111;padding:9px;margin-top:12px;font-size:13px}@media print{button{display:none}}</style></head><body><h1>${escaparPedido(emp.nombre||'Mi Negocio')}</h1><h2>COMANDA · PEDIDO PENDIENTE</h2><div class="alert">NO ES TICKET DE PAGO</div><p><b>Pedido:</b> ${escaparPedido(p.id)}</p><p><b>Fecha:</b> ${escaparPedido(p.fechaStr||'')}</p><p><b>Cliente:</b> ${escaparPedido(p.cliente||'Mostrador')}</p><table><thead><tr><th>Producto</th><th>Cant.</th><th>Detalle</th></tr></thead><tbody>${items}</tbody></table>${p.notas?`<div class="notes"><b>NOTAS DE PREPARACIÓN</b><br>${escaparPedido(p.notas)}</div>`:''}${p.fechaEntrega?`<p><b>Entrega:</b> ${escaparPedido(p.fechaEntrega)} ${escaparPedido(p.horaEntrega||'')}</p>`:''}${p.entregarA?`<p><b>Entregar a:</b> ${escaparPedido(p.entregarA)}</p>`:''}${p.observacionesEntrega?`<div class="notes"><b>Observaciones de entrega</b><br>${escaparPedido(p.observacionesEntrega)}</div>`:''}<p style="text-align:center;margin-top:22px;font-weight:bold">Preparar pedido · No cobrar desde esta hoja</p><button onclick="window.print()">Imprimir</button><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+function imprimirComandaPedido(p, anchoImpresora = 58) {
+ if (!p) return;
+
+ // Ancho configurable: 58 u 80 mm
+ const ancho = Number(anchoImpresora) === 80 ? 80 : 58;
+ const contenido = ancho === 58 ? 54 : 76;
+
+ const emp = getEmp();
+ const items = (p.items || []).map(i =>
+   `<tr>
+      <td>${escaparPedido(i.nombre)}</td>
+      <td class="cantidad">${Number(i.qty) || 1}</td>
+      <td>${escaparPedido(i.descripcion || '')}</td>
+    </tr>`
+ ).join('');
+
+ const w = window.open('', '_blank', 'width=420,height=700');
+ if (!w) return alert('Permite las ventanas emergentes para imprimir la comanda.');
+
+ w.document.write(`<!doctype html>
+ <html lang="es">
+ <head>
+ <meta charset="utf-8">
+ <title>Comanda ${escaparPedido(p.id)}</title>
+ <style>
+ @page {
+   size: ${ancho}mm auto;
+   margin: 0;
+ }
+
+ * {
+   box-sizing: border-box;
+ }
+
+ html, body {
+   width: ${contenido}mm;
+   margin: 0;
+   padding: 0;
+   font-family: Arial, sans-serif;
+   color: #000;
+   font-size: 11px;
+ }
+
+ body {
+   padding: 2mm;
+ }
+
+ h1 {
+   font-size: 16px;
+   text-align: center;
+   margin: 0 0 4px;
+   font-weight: 900;
+   overflow-wrap: anywhere;
+ }
+
+ h2 {
+   text-align: center;
+   font-size: 13px;
+   border: 2px dashed #000;
+   padding: 5px;
+   margin: 5px 0;
+ }
+
+ p {
+   font-size: 10px;
+   margin: 4px 0;
+   overflow-wrap: anywhere;
+ }
+
+ .alert {
+   font-weight: 900;
+   text-align: center;
+   border: 2px solid #000;
+   padding: 5px;
+   margin: 6px 0;
+ }
+
+ table {
+   width: 100%;
+   border-collapse: collapse;
+   margin-top: 7px;
+   table-layout: fixed;
+ }
+
+ th, td {
+   border-bottom: 1px solid #000;
+   padding: 4px 2px;
+   text-align: left;
+   font-size: 10px;
+   overflow-wrap: anywhere;
+ }
+
+ th {
+   font-size: 9px;
+   font-weight: 900;
+ }
+
+ th:nth-child(1), td:nth-child(1) { width: 44%; }
+ th:nth-child(2), td:nth-child(2) { width: 15%; }
+ th:nth-child(3), td:nth-child(3) { width: 41%; }
+
+ .cantidad {
+   text-align: center;
+   font-weight: bold;
+ }
+
+ .notes {
+   white-space: pre-wrap;
+   overflow-wrap: anywhere;
+   border: 1px solid #000;
+   padding: 6px;
+   margin-top: 7px;
+   font-size: 10px;
+ }
+
+ .final {
+   text-align: center;
+   margin-top: 9px;
+   font-weight: 900;
+   font-size: 10px;
+   border-top: 1px dashed #000;
+   padding-top: 6px;
+ }
+
+ button {
+   margin-top: 10px;
+   padding: 8px;
+ }
+
+ @media print {
+   button {
+     display: none !important;
+   }
+
+   html, body {
+     width: ${contenido}mm;
+     margin: 0;
+     padding: 0;
+   }
+
+   body {
+     padding: 2mm;
+   }
+ }
+ </style>
+ </head>
+ <body>
+ <h1>${escaparPedido(emp.nombre || 'Mi Negocio')}</h1>
+ <h2>COMANDA · PEDIDO PENDIENTE</h2>
+ <div class="alert">NO ES TICKET DE PAGO</div>
+
+ <p><b>Pedido:</b> ${escaparPedido(p.id)}</p>
+ <p><b>Fecha:</b> ${escaparPedido(p.fechaStr || '')}</p>
+ <p><b>Cliente:</b> ${escaparPedido(p.cliente || 'Mostrador')}</p>
+
+ <table>
+ <thead>
+ <tr><th>Producto</th><th>Cant.</th><th>Detalle</th></tr>
+ </thead>
+ <tbody>${items}</tbody>
+ </table>
+
+ ${p.notas ? `<div class="notes"><b>NOTAS DE PREPARACIÓN</b><br>${escaparPedido(p.notas)}</div>` : ''}
+ ${p.fechaEntrega ? `<p><b>Entrega:</b> ${escaparPedido(p.fechaEntrega)} ${escaparPedido(p.horaEntrega || '')}</p>` : ''}
+ ${p.entregarA ? `<p><b>Entregar a:</b> ${escaparPedido(p.entregarA)}</p>` : ''}
+ ${p.observacionesEntrega ? `<div class="notes"><b>Observaciones de entrega</b><br>${escaparPedido(p.observacionesEntrega)}</div>` : ''}
+
+ <div class="final">Preparar pedido · No cobrar desde esta hoja</div>
+
+ <button onclick="window.print()">Imprimir</button>
+ <script>
+ window.onload = () => setTimeout(() => window.print(), 300);
+ <\/script>
+ </body>
+ </html>`);
+
  w.document.close();
 }
 function renderPedidosPendientes(){
