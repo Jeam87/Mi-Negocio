@@ -892,21 +892,32 @@ function borrarPresupuesto(id){
 }
 function borrarPresupuestoCancelado(id){borrarPresupuesto(id);}
 function imprimirTicket(){ 
-  let contenido = document.getElementById('ticketContenido').innerText;
-  let contenidoHTML = document.getElementById('ticketContenido').innerHTML;
-  // Si el cel puede compartir, lo manda a Quick Printer
-  if(navigator.share){
-    navigator.share({ text: contenido }).catch(()=>{
-      // si cancela, imprime normal
-      let w=window.open('','','width=300,height=600'); 
-      w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenidoHTML+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); 
-      w.document.close();
+  const contenido = document.getElementById('ticketContenido')?.innerText || '';
+  const contenidoHTML = document.getElementById('ticketContenido')?.innerHTML || '';
+  if(!contenido.trim()){ alert('No hay contenido para imprimir.'); return; }
+
+  // Android conserva el envío a la aplicación de tickets (Quick Printer u otra compatible).
+  const esAndroid = /Android/i.test(navigator.userAgent || '');
+  if(esAndroid && navigator.share){
+    navigator.share({ text: contenido }).catch((error)=>{
+      if(error && error.name === 'AbortError') return;
+      abrirVentanaImpresionTicket(contenidoHTML);
     });
-  } else {
-    let w=window.open('','','width=300,height=600'); 
-    w.document.write('<html><head><style>body{font-family:monospace; width:58mm; margin:0 auto;}</style></head><body>'+contenidoHTML+'<script>window.onload=function(){window.print(); setTimeout(()=>window.close(),500);}<\\/script></body></html>'); 
-    w.document.close();
+    return;
   }
+
+  // En Windows y otros equipos de escritorio se abre directamente la impresión del navegador.
+  abrirVentanaImpresionTicket(contenidoHTML);
+}
+function abrirVentanaImpresionTicket(contenidoHTML){
+  const w = window.open('', '_blank', 'width=420,height=700');
+  if(!w){
+    alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para Mi Negocio e inténtalo de nuevo.');
+    return;
+  }
+  w.document.open();
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Imprimir ticket</title><style>@page{size:58mm auto;margin:2mm}html,body{width:58mm;margin:0;padding:0}body{font-family:Arial, sans-serif;font-size:11px;color:#000}#ticketPrint{width:54mm;margin:0 auto;overflow-wrap:anywhere}img{max-width:48mm;height:auto}@media print{html,body{width:58mm}#ticketPrint{width:54mm}}</style></head><body><main id="ticketPrint">'+contenidoHTML+'</main><script>window.onload=function(){setTimeout(function(){window.focus();window.print();},250);};<\\/script></body></html>');
+  w.document.close();
 }
 function enviarWhatsAppTicket(esPrueba){ if(!ultimoTicket && esPrueba){ actualizarVistaTicket(); ultimoTicket={fechaStr:getFechaLocal(),items:[{nombre:'Ejemplo',qty:2,venta:57}],total:114,cliente:'Mostrador',vendedor:currentUser, metodoPago:'Efectivo'}; } if(!ultimoTicket) return; let texto=generarTextoWhatsApp(ultimoTicket); let tel=prompt('WhatsApp cliente:'); if(!tel) return; tel=tel.replace(/\\D/g,''); if(tel.length==10) tel='52'+tel; window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`,'_blank'); }
 function probarTicket(){ guardarEmpresa(); actualizarVistaTicket(); imprimirTicket(); }
