@@ -808,36 +808,48 @@ function cargarEmpresa(){ let emp=getEmp(); document.getElementById('empNombre')
 function guardarEmpresa(){ let emp={nombre:document.getElementById('empNombre').value.trim()||'Mi Negocio',direccion:document.getElementById('empDireccion').value.trim(),cp:document.getElementById('empCP').value.trim(),tel:document.getElementById('empTel').value.trim(),whatsapp:document.getElementById('empWhatsapp').value.trim(),rfc:document.getElementById('empRFC').value.trim(),mensaje:document.getElementById('empMensaje').value.trim()||'¡Gracias por tu compra! 😊',mostrarLogo:document.getElementById('empMostrarLogo').checked,mostrarFondo:document.getElementById('empMostrarFondo').checked,opacidad:parseInt(document.getElementById('empOpacidad').value)||18,logo:logoTemp||getEmp().logo||''}; setItem('empresaConfig',emp); alert('✅ Guardada'); actualizarFondo(); actualizarVistaTicket(); }
 function generarTicket(data){
  let emp=getEmp();
+
  let logoHtml=emp.mostrarLogo && emp.logo
-   ? `<div style="text-align:center;"><img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px; max-height:90px; border-radius:12px;"></div>`
+   ? `<div style="text-align:center;">
+        <img src="${emp.logo}" style="display:block; margin:0 auto; max-width:90px; max-height:90px; border-radius:8px; filter:contrast(1.5) brightness(0.85);">
+      </div>`
    : '';
 
  let fechaHora = data.fechaStr || getFechaLocal();
 
  let html=`${logoHtml}
- <div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-top:8px;">
-   <b style="font-size:14px;">${emp.nombre}</b><br>
-   <span style="font-size:9px">${emp.direccion||''} ${emp.cp||''} ${emp.tel||''}<br>${emp.rfc||''}</span>
+ <div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-top:8px; color:#000;">
+   <b style="font-size:14px; font-weight:900;">${emp.nombre}</b><br>
+   <span style="font-size:9px; font-weight:700;">${emp.direccion||''} ${emp.cp||''} ${emp.tel||''}<br>${emp.rfc||''}</span>
  </div>
- <div style="font-size:10px; margin-top:6px;">
+
+ <div style="font-size:10px; font-weight:600; margin-top:6px; color:#000;">
    Fecha: ${fechaHora}<br>
    Cliente: ${data.cliente}<br>
    Pago: ${data.metodoPago||'Efectivo'}<br>
    Vendedor: ${data.vendedor||currentUser||''}
  </div>
- <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0;">
+
+ <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0; margin:6px 0; color:#000; font-weight:600;">
    ${data.items.map(i=>`<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.qty}</span><span>$${(i.venta*i.qty).toFixed(2)}</span></div>`).join('')}
  </div>
- <div style="display:flex; justify-content:space-between; font-weight:bold;">
+
+ <div style="display:flex; justify-content:space-between; font-weight:900; color:#000;">
    <span>TOTAL</span><span>$${data.total.toFixed(2)}</span>
  </div>
- <div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px;">
+
+ <div style="text-align:center; margin-top:12px; border-top:1px dashed #000; padding-top:8px; color:#000; font-weight:900;">
    ${emp.mensaje||''}
  </div>
- <div style="text-align:center; margin-top:10px; padding-top:6px;">
-   <img src="${location.origin}/logo.png" alt="Mi Negocio Tecnología" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">
-   <span style="font-size:8px;color:#777;">Desarrollado por Mi Negocio Tecnología</span>
-   <div style="font-size:7px;color:#999;">Aplicación de gestión comercial</div>
+
+ <div style="text-align:center; margin-top:10px; padding-top:6px; color:#000;">
+   <img src="${location.origin}/logo.png" alt="Mi Negocio Tecnología" style="width:25px;height:25px;object-fit:contain;vertical-align:middle;filter:contrast(1.8) brightness(0.8);">
+   <div style="font-size:9px; font-weight:900; color:#000;">
+     Desarrollado por Mi Negocio Tecnología
+   </div>
+   <div style="font-size:8px; font-weight:700; color:#000;">
+     Aplicación de gestión comercial
+   </div>
  </div>`;
 
  document.getElementById('ticketContenido').innerHTML=html;
