@@ -1,5 +1,4 @@
 <!DOCTYPE html><html><head><link rel="manifest" href="/manifest.json"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mi Negocio 11.5</title><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>input,select,textarea{color:#000!important;background:#fff!important}button,.button-like{transition:transform .08s ease,filter .08s ease}button:active,.button-like:active{transform:scale(.96);filter:brightness(.82)}.logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:650px;height:650px;pointer-events:none;z-index:0;opacity:0.18;object-fit:contain;}#appContent{position:relative;z-index:1;}#splashInicio{position:fixed;inset:0;background:white;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}#splashInicio img{width:85vw;max-width:380px;height:auto;animation:pop 0.8s ease}@keyframes pop{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
-/* Mi Negocio 11.5: diseño adaptable, sin cambiar la lógica de ventas ni los datos */
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; min-width: 320px; overflow-x: hidden; background: #FFF8F0; }
 #mainAppShell { width: 100%; min-height: 100vh; overflow-x: clip; }
@@ -71,8 +70,6 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
-
-
 .mn-help {
   display: inline-flex; align-items: center; justify-content: center;
   width: 19px; height: 19px; margin-left: 5px; border-radius: 50%;
@@ -81,7 +78,6 @@ img { max-width: 100%; }
   cursor: help;
 }
 .mn-help:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-
 </style></head><body class="bg-[#FFF8F0] min-h-screen"><div id="splashInicio"><img src="/logo.png" onerror="this.src='/api/logo.png'"><p style="margin-top:20px;font-weight:900;font-size:22px">Mi Negocio 11.5</p><p style="font-size:12px;color:#888">Cargando...</p></div><div id="modalMasFunciones" class="hidden fixed inset-0 bg-black/60 z-[90] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5">
 <h2 class="font-black text-[16px]">☰ Más funciones</h2>
 <div class="grid grid-cols-2 gap-2 mt-4">
@@ -104,7 +100,7 @@ img { max-width: 100%; }
  <div class="grid grid-cols-2 gap-3 mt-3">
   <button onclick="abrirSeccionVender('nueva')" class="bg-white border border-orange-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-cart-shopping"></i></span><b class="block mt-3 text-[13px]">Nueva venta</b><small class="text-gray-500 text-[10px]">Productos y carrito</small></button>
   <button onclick="abrirSeccionVender('apartados')" class="bg-white border border-purple-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-box"></i></span><b class="block mt-3 text-[13px]">Apartados</b><small class="text-gray-500 text-[10px]">Consultar apartados</small></button>
-  <button onclick="abrirSeccionVender('comandas')" class="bg-white border border-emerald-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-clipboard-list"></i></span><b class="block mt-3 text-[13px]">Comandas</b><small class="text-gray-500 text-[10px]">Pedidos por preparar</small></button>
+  <button onclick="abrirSeccionVender('comandas')" class="bg-white border border-emerald-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-clipboard-list"></i></span><b class="block mt-3 text-[13px]">Comandas</b><small class="text-gray-500 text-[10px]">Múltiples comandas</small></button>
   <button onclick="imprimirUltimoTicketDesdeVender()" class="bg-white border border-blue-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-print"></i></span><b class="block mt-3 text-[13px]">Imprimir tickets</b><small class="text-gray-500 text-[10px]">Último ticket generado</small></button>
   <button onclick="abrirSeccionVender('historial')" class="bg-white border border-sky-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-receipt"></i></span><b class="block mt-3 text-[13px]">Ventas realizadas</b><small class="text-gray-500 text-[10px]">Consulta los movimientos registrados</small></button>
   <button onclick="abrirSeccionVender('presupuestos')" class="bg-white border border-amber-200 rounded-2xl p-4 text-left shadow-sm min-h-[112px]"><span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-file-invoice-dollar"></i></span><b class="block mt-3 text-[13px]">Presupuestos</b><small class="text-gray-500 text-[10px]">Guardados y pendientes</small></button>
@@ -125,9 +121,13 @@ img { max-width: 100%; }
 <div id="boxNuevaCat" class="hidden mt-3 bg-amber-50 border-2 p-3 rounded-xl"><div class="font-black text-[11px] mb-2">➕ Nueva categoría</div><div class="grid grid-cols-5 gap-2"><input id="nuevaCatNombre" placeholder="Ej: Alitas" class="col-span-4 border-2 border-black p-2 rounded-xl text-[12px] font-bold"><button onclick="addCategoriaVenta()" class="bg-black text-white rounded-xl font-black">+</button></div></div></div>
 <div id="venderPresupuestos" class="hidden bg-white rounded-[20px] p-3 shadow-sm mb-3 border-2 border-purple-100"><div class="flex justify-between items-center"><h3 class="font-black text-[13px]">📋 Presupuestos guardados</h3><button onclick="renderPresupuestos()" class="text-[10px] bg-gray-100 px-3 py-1 rounded-full font-bold">↻</button></div><div id="listaPresupuestos" class="mt-3 space-y-2"></div></div>
 <div id="venderComandas" class="hidden bg-white rounded-[20px] p-3 shadow-sm mb-3 border-2 border-emerald-200">
- <div class="flex justify-between items-center gap-2"><div><h3 class="font-black text-[13px]">🧾 Pedidos pendientes</h3><p class="text-[10px] text-gray-500">Guarda sin cobrar; prepara e imprime la comanda.</p></div><button onclick="renderPedidosPendientes()" class="text-[10px] bg-emerald-50 px-3 py-2 rounded-full font-bold">↻ Actualizar</button></div>
- <textarea id="pedidoNotasPreparacion" rows="2" placeholder="Notas para preparar (sin cebolla, extra salsa...)" class="w-full border-2 border-emerald-100 p-2 rounded-xl text-[11px] mt-3"></textarea>
- <div class="grid grid-cols-2 gap-2 mt-2"><button onclick="guardarPedidoPendiente(false)" class="bg-emerald-700 text-white py-3 rounded-xl font-black text-[11px]">💾 GUARDAR PEDIDO</button><button onclick="guardarPedidoPendiente(true)" class="bg-amber-400 text-black py-3 rounded-xl font-black text-[11px]">🖨️ GUARDAR + COMANDA</button></div>
+ <div class="flex justify-between items-center gap-2"><div><h3 class="font-black text-[13px]">🧾 Comandas abiertas</h3><p class="text-[10px] text-gray-500">Múltiples comandas simultáneas con ubicación propia.</p></div><button onclick="renderPedidosPendientes()" class="text-[10px] bg-emerald-50 px-3 py-2 rounded-full font-bold">↻ Actualizar</button></div>
+ <div class="mt-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+  <label class="block text-[10px] font-black text-emerald-900 mb-1">📍 Ubicación / Mesa / Para llevar</label>
+  <input id="pedidoUbicacion" placeholder="Ej: Mesa 1, Mesa 2, Para llevar" class="w-full border-2 border-emerald-200 p-2 rounded-xl text-[12px] font-bold bg-white">
+  <textarea id="pedidoNotasPreparacion" rows="2" placeholder="Notas para preparar (sin cebolla, extra salsa...)" class="w-full border-2 border-emerald-100 p-2 rounded-xl text-[11px] mt-2 bg-white"></textarea>
+ </div>
+ <div class="grid grid-cols-2 gap-2 mt-2"><button onclick="guardarPedidoPendiente(false)" class="bg-emerald-700 text-white py-3 rounded-xl font-black text-[11px]">💾 NUEVA COMANDA</button><button onclick="guardarPedidoPendiente(true)" class="bg-amber-400 text-black py-3 rounded-xl font-black text-[11px]">🖨️ COMANDA + TICKET</button></div>
  <div id="listaPedidosPendientes" class="mt-3 space-y-2"></div>
 </div>
 <div id="alertaStock" class="hidden bg-red-100 border-2 border-red-300 rounded-xl p-2 mb-3 text-[11px] font-bold text-red-700"></div>
@@ -224,7 +224,7 @@ img { max-width: 100%; }
 <div id="modalInv" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5"><h2 class="font-black text-[15px]">📦 Editar producto de inventario</h2><input type="hidden" id="ie-id"><input id="ie-nombre" placeholder="Nombre" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="ie-precio" type="number" step="0.01" placeholder="Precio" class="border-2 border-black p-3 rounded-xl font-black text-[13px]"><input id="ie-stock" type="number" step="0.01" placeholder="Stock" class="border-2 border-black p-3 rounded-xl font-black text-[13px]"></div><select id="ie-unidad" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px] font-bold"><option>kg</option><option>g</option><option>L</option><option>ml</option><option>m</option><option>cm</option><option>mm</option><option>yd</option><option>ft</option><option>in</option><option>pza</option></select><div class="mt-2"><label class="text-[10px] font-black">🏭 Proveedor donde se compra</label><select id="ie-proveedor" class="w-full border-2 border-black p-3 rounded-xl mt-1 text-[12px] font-bold"><option value="">Sin proveedor</option></select></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarInvEdit()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">Guardar cambios</button><button onclick="cerrarInvEdit()" class="bg-gray-100 py-3 rounded-xl font-bold">Cancelar</button></div></div></div>
 <div id="modalProv" class="hidden fixed inset-0 bg-black/70 z-[70] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 class="font-black text-[15px]">🏭 Editar Proveedor</h2><input type="hidden" id="pe-id"><input id="pe-nombre" placeholder="Nombre" class="w-full border-2 border-black p-3 rounded-xl mt-3 font-bold text-[13px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-tel" placeholder="Tel" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-que" placeholder="Qué surte" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="pe-direccion" placeholder="Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><div class="grid grid-cols-2 gap-2 mt-2"><input id="pe-horario" placeholder="Horario 8am-6pm" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="pe-dias" placeholder="Días Lun-Sab" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><textarea id="pe-notas" placeholder="Notas, crédito, mínimo, etc" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarProvEdit()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">Guardar</button><button onclick="cerrarProvEdit()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div>
 <div id="modalCliente" class="hidden fixed inset-0 bg-black/70 z-[75] flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[90vh] overflow-y-auto"><h2 id="clienteModalTitulo" class="font-black text-[16px]">👤 Nuevo cliente</h2><input type="hidden" id="cliEditId"><input id="cliFormNombre" placeholder="Nombre completo *" class="w-full border-2 border-black p-3 rounded-xl mt-3 text-[13px] font-bold"><div class="grid grid-cols-2 gap-2 mt-2"><input id="cliFormTel" placeholder="📞 Teléfono" class="border-2 border-black p-3 rounded-xl text-[12px]"><input id="cliFormWhatsapp" placeholder="📲 WhatsApp" class="border-2 border-black p-3 rounded-xl text-[12px]"></div><input id="cliFormDireccion" placeholder="📍 Dirección" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><input id="cliFormCorreo" type="email" placeholder="✉️ Correo (opcional)" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]"><textarea id="cliFormObs" placeholder="📝 Observaciones / preferencias / pedido habitual" class="w-full border-2 border-black p-3 rounded-xl mt-2 text-[12px]" rows="3"></textarea><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="guardarClienteForm()" class="bg-black text-white py-3 rounded-xl font-black text-[13px]">💾 Guardar</button><button onclick="cerrarClienteForm()" class="bg-gray-100 py-3 rounded-xl font-bold text-[13px]">Cancelar</button></div></div></div><div id="modalDeuda" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black">💰 <span id="deudaClienteNombre"></span></h2><p class="text-[11px] text-gray-500" id="deudaClienteTel"></p><div class="mt-3 bg-red-50 border-2 border-red-200 p-3 rounded-xl text-center"><p class="text-[11px]">Debe</p><p class="font-black text-[22px] text-red-600" id="deudaTotal">$0</p><button onclick="recordarDeuda()" class="mt-2 bg-[#25D366] text-white px-4 py-2 rounded-full text-[11px] font-black">📲 Recordar</button></div><div id="deudaLista" class="mt-3 space-y-2"></div><div class="mt-4 bg-green-50 border-2 border-green-200 p-3 rounded-xl"><input id="abonoMonto" type="number" placeholder="$ Monto" class="w-full border-2 border-black p-2 rounded-xl mt-2"><button onclick="hacerAbono()" class="w-full mt-3 bg-black text-white py-3 rounded-xl font-black">ABONAR</button></div><button onclick="cerrarDeuda()" class="w-full mt-3 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
-<div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre <span id="cierreFechaLabel"></span> - <span id="cierreUserLabel" class="text-blue-600"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy (tu turno)</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
+<div id="modalCierre" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center"><div class="bg-white w-full max-w-md rounded-t-[28px] p-5 max-h-[85vh] overflow-y-auto"><h2 class="font-black text-[16px]">📦 Cierre <span id="cierreFechaLabel"></span> - <span id="cierreUserLabel" class="text-blue-600"></span></h2><p class="text-[11px] text-gray-500" id="cierreHoraLabel"></p><div class="mt-4 space-y-3"><div class="bg-black text-white p-4 rounded-2xl"><div class="flex justify-between"><span>Ventas hoy (tu turno)</span><b id="cierreTotal">$0</b></div><div class="flex justify-between mt-2 text-green-300"><span>💵 Efectivo</span><b id="cierreEfectivo">$0</b></div><div class="flex justify-between mt-2 text-blue-300"><span>💳 Tarjeta</span><b id="cierreTarjeta">$0</b></div><div class="flex justify-between text-yellow-300"><span>🏦 Transfer</span><b id="cierreTransf">$0</b></div></div><div id="cierreDetalle" class="bg-gray-50 p-3 rounded-xl text-[11px]"></div></div><div class="grid grid-cols-2 gap-2 mt-4"><button onclick="imprimirCierre()" class="bg-black text-white py-3 rounded-xl font-black text-[12px]">🖨️ Imprimir</button><button onclick="enviarCierreWhatsApp()" class="bg-[#25D366] text-white py-3 rounded-xl font-black text-[12px]">📲 WhatsApp</button></div><button onclick="cerrarCierre()" class="w-full mt-2 bg-gray-100 py-3 rounded-xl font-bold">Cerrar</button></div></div>
 <div id="mainNav" class="fixed bottom-0 left-0 right-0 bg-white border-t py-2 max-w-md mx-auto z-30">
 <div class="flex justify-around items-center">
 <button onclick="showTab('vender')" class="flex flex-col items-center text-black min-w-[70px]"><i class="fa-solid fa-store"></i><span class="text-[8px] font-black">VENDER</span></button>
@@ -262,22 +262,16 @@ async function cargarDeNube(){
             try { const valor=localStorage.getItem(clave); const lista=valor?JSON.parse(valor):[]; return Array.isArray(lista)&&lista.length>0; }
             catch(e){ return false; }
           });
-          // Nunca sustituir una lista local con productos por una lista remota vacía,
-          // aunque los productos estén guardados en la otra clave (general/específica).
           if(Array.isArray(listaNueva)&&listaNueva.length===0&&hayProductosLocales)continue;
         }
         localStorage.setItem(k, typeof nuevo==='string'?nuevo:JSON.stringify(nuevo));
       }catch(e){}
     }
   }
-
-  // Sincroniza las claves generales y las específicas del negocio.
-  // Las pantallas leen primero la clave con sufijo _negocioId; si solo
-  // se actualizaba la clave general, podían seguir mostrando inventario viejo.
   if(negocioId && data && data.data){
     const clavesCompartidas=[
       'inventarioMaestro','productosV2','clientesV2','facturas','deudas',
-      'proveedores','gastosFijos','empresaConfig','entregas','categoriasVenta'
+      'proveedores','gastosFijos','empresaConfig','entregas','categoriasVenta','pedidosPendientes'
     ];
     for(const base of clavesCompartidas){
       const general=base;
@@ -285,14 +279,12 @@ async function cargarDeNube(){
       const existeEspecifica=Object.prototype.hasOwnProperty.call(data.data,especifica);
       const existeGeneral=Object.prototype.hasOwnProperty.call(data.data,general);
       if(!existeEspecifica && !existeGeneral) continue;
-      // La clave específica del negocio tiene prioridad si vino de la nube.
       let valorElegido=localStorage.getItem(existeEspecifica?especifica:general);
       if(valorElegido===null) continue;
       localStorage.setItem(general,valorElegido);
       localStorage.setItem(especifica,valorElegido);
     }
   }
-  // Alinear las dos claves del inventario de materias primas con la versión de la nube.
   if(negocioId && data && data.data){
     const remoto=data.data;
     const parseInv=(v)=>{try{if(typeof v==='string')v=JSON.parse(v||'[]');return Array.isArray(v)?v:null;}catch(e){return null;}};
@@ -364,8 +356,6 @@ async function guardarEnNubeAuto(mostrarMensaje=false){
    const k=localStorage.key(i);
    if(k &&!k.includes('@') &&!k.includes('userEmail')) payload[k]=localStorage.getItem(k);
   }
-  // La tienda consulta la clave específica del negocio. Aseguramos que
-  // la lista buena de productos se envíe tanto en la clave general como en la específica.
   let prodGeneral=[], prodNegocio=[];
   try { prodGeneral=JSON.parse(payload.productosV2||'[]'); if(!Array.isArray(prodGeneral))prodGeneral=[]; } catch(e){}
   try { prodNegocio=JSON.parse(payload['productosV2_'+negocioId]||'[]'); if(!Array.isArray(prodNegocio))prodNegocio=[]; } catch(e){}
@@ -407,7 +397,6 @@ window.addEventListener('load', async ()=>{
       showTab('inventario');
     }catch(err){
       console.log('Error cargando nube:', err);
-      // No borres sesión si es solo error de JSON/red
       if(String(err.message).includes('not valid JSON') || String(err).includes('The page')){
         document.getElementById('userLabel').innerText=e;
         document.getElementById('loginScreen').classList.add('hidden');
@@ -428,7 +417,6 @@ function getInv(){
   const leer=(k)=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}};
   const especifica=negocioId?leer('inventarioMaestro_'+negocioId):[];
   const general=leer('inventarioMaestro');
-  // Una clave específica vacía no debe ocultar materias primas que sí existen en la general.
   if(especifica.length) return especifica;
   if(general.length) return general;
   return especifica;
@@ -442,7 +430,6 @@ function getEntregas(){ try{return JSON.parse(localStorage.getItem('entregas_'+n
 function getCategoriasVenta(){ let cats=JSON.parse(localStorage.getItem('categoriasVenta_'+negocioId)||localStorage.getItem('categoriasVenta')||'[]'); if(!cats.length){ cats=[{id:'todas',nombre:'Todas'}]; localStorage.setItem('categoriasVenta_'+negocioId,JSON.stringify(cats)); } return cats; }
 function setItem(k,v){
   const valor=typeof v==='string'? v: JSON.stringify(v);
-  // Guardar ambas claves para que la pantalla lea el mismo inventario en ambos dispositivos.
   if(negocioId) localStorage.setItem(k+'_'+negocioId,valor);
   localStorage.setItem(k,valor);
   if(k==='inventarioMaestro'){
@@ -520,8 +507,6 @@ function renderProveedores(){ let provs=getProveedores(); let inv=getInv(); let 
   {id:'bebidas',nombre:'Bebidas',parentId:null,sistema:true},
   {id:'otros',nombre:'Otros',parentId:null,sistema:true}
  ];
- // Las categorías anteriores a esta versión se conservan con el mismo ID
- // y se colocan dentro de "Otros" para no perder la asignación de productos.
  raiz.forEach(r=>{if(!cats.some(c=>String(c.id)===r.id))cats.push(r);});
  cats.forEach(c=>{
   if(String(c.id)==='todas'){c.parentId=null;c.sistema=true;return;}
@@ -530,7 +515,6 @@ function renderProveedores(){ let provs=getProveedores(); let inv=getInv(); let 
    else c.parentId='otros';
   }
  });
- // Corregir referencias a padres inexistentes sin modificar productos.
  const ids=new Set(cats.map(c=>String(c.id)));
  cats.forEach(c=>{if(c.parentId && !ids.has(String(c.parentId)))c.parentId='otros';});
  const texto=JSON.stringify(cats);
@@ -923,7 +907,7 @@ function cancelarPresupuesto(id){
 function borrarPresupuesto(id){
  let ps=getPresupuestos(),p=ps.find(x=>String(x.id)===String(id));if(!p)return;
  const estado=p.status||'pendiente';
- if(!confirm(`¿Borrar definitivamente el presupuesto de ${p.cliente||'Sin nombre'} por $${(Number(p.total)||0).toFixed(2)}? Estado: ${estado}. Si ya fue cobrado, la venta registrada no se eliminará.`))return;
+ if(!confirm(`¿Borrar definitivamente el presupuesto de ${p.cliente||'Sin nombre'} por $${(Number(p.total||0).toFixed(2)}? Estado: ${estado}. Si ya fue cobrado, la venta registrada no se eliminará.`))return;
  setItem('presupuestos',ps.filter(x=>String(x.id)!==String(id)));renderPresupuestos();
 }
 function borrarPresupuestoCancelado(id){borrarPresupuesto(id);}
@@ -931,8 +915,6 @@ function imprimirTicket(){
   const contenido = document.getElementById('ticketContenido')?.innerText || '';
   const contenidoHTML = document.getElementById('ticketContenido')?.innerHTML || '';
   if(!contenido.trim()){ alert('No hay contenido para imprimir.'); return; }
-
-  // Android conserva el envío a la aplicación de tickets (Quick Printer u otra compatible).
   const esAndroid = /Android/i.test(navigator.userAgent || '');
   if(esAndroid && navigator.share){
     navigator.share({ text: contenido }).catch((error)=>{
@@ -941,8 +923,6 @@ function imprimirTicket(){
     });
     return;
   }
-
-  // En Windows y otros equipos de escritorio se abre directamente la impresión del navegador.
   abrirVentanaImpresionTicket(contenidoHTML);
 }
 function abrirVentanaImpresionTicket(contenidoHTML){
@@ -990,9 +970,6 @@ function guardarProd(tipo){
      let uu=row.querySelector('.in-uu')?.value;
      if(invId && cu && parseFloat(cu)>0) receta.push({invId,cu:parseFloat(cu),uu});
    });
-   // PROTECCIÓN: al editar una BASE nunca se reemplaza accidentalmente
-   // una receta existente por una receta vacía. Si por alguna razón el
-   // formulario no pudo reconstruir los ingredientes, conservamos los originales.
    if(isBase && existente && existente.receta && existente.receta.length && !receta.length){
      receta=existente.receta.map(r=>({
        invId:r.invId!==undefined?r.invId:(r.inventarioId!==undefined?r.inventarioId:r.id),
@@ -1012,7 +989,6 @@ function guardarProd(tipo){
  let rendCant=parseFloat(document.getElementById('rendCant')?.value)||1;
  let rendUni=document.getElementById('rendUni')?.value||'L';
  if(idx>=0){
-   // Conservamos todos los datos que no deben desaparecer al editar.
    ps[idx].nombre=nom;
    ps[idx].costo=costo;
    ps[idx].venta=venta;
@@ -1043,7 +1019,6 @@ function editarProd(id){
    document.getElementById('rendCant').value=p.rendimiento?.cant??10;
    document.getElementById('rendUni').value=p.rendimiento?.uni||'L';
    document.getElementById('margen').value=p.margen??50;
-   // Cargamos TODOS los ingredientes guardados antes de permitir guardar.
    let recetaOriginal=Array.isArray(p.receta)?p.receta:[];
    if(recetaOriginal.length){
      recetaOriginal.forEach(r=>addInsumo({
@@ -1142,21 +1117,17 @@ function datosPedidoActual(){
  const subtotal=items.reduce((sum,x)=>sum+x.venta*x.qty,0);
  const descuento=Math.max(0,Math.min(100,parseFloat(document.getElementById('descPorc')?.value)||0));
  const cliente=clienteVentaActual();
+ const ubicacion=(document.getElementById('pedidoUbicacion')?.value||'Mesa General').trim();
  return {items,subtotal,descuento,total:subtotal*(1-descuento/100),cliente:cliente.nombre,clienteId:cliente.id,telefono:cliente.telefono,
+   ubicacion:ubicacion||'Mesa General',
    notas:(document.getElementById('pedidoNotasPreparacion')?.value||'').trim(),
    fechaEntrega:document.getElementById('ventaFechaEntrega')?.value||'',horaEntrega:document.getElementById('ventaHoraEntrega')?.value||'',
    entregarA:document.getElementById('ventaEntregarA')?.value||'',observacionesEntrega:document.getElementById('ventaObsEntrega')?.value||''};
 }
-function normalizarNombreCuenta(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ').toLocaleLowerCase('es-MX');}
 function guardarPedidoPendiente(imprimir=false){
- if(!carrito.length) return alert('Agrega productos antes de guardar el pedido.');
+ if(!carrito.length) return alert('Agrega productos antes de guardar la comanda.');
  const data=datosPedidoActual(),pedidos=getPedidosPendientes();
- const nombreClave=normalizarNombreCuenta(data.cliente);
  const existenteId=pedidoPendienteCobroId?pedidos.find(p=>String(p.id)===String(pedidoPendienteCobroId)&&p.estado==='pendiente'):null;
- if(nombreClave&&nombreClave!=='mostrador'){
-  const duplicado=pedidos.find(p=>p.estado==='pendiente'&&String(p.id)!==String(existenteId?.id||'')&&normalizarNombreCuenta(p.cliente)===nombreClave);
-  if(duplicado)return alert('⚠️ YA EXISTE UNA CUENTA ABIERTA CON ESE NOMBRE.\n\nCliente: '+data.cliente+'\n\nNo se puede abrir otra cuenta con el mismo nombre hasta finalizar o cancelar la cuenta pendiente. Puedes entrar a la cuenta existente desde Pedidos pendientes y cobrarla.');
- }
  let pedido;
  if(existenteId){Object.assign(existenteId,data,{actualizadoEn:getFechaLocal()});pedido=existenteId;}
  else{pedido={id:String(Date.now()),fechaStr:getFechaLocal(),fechaISO:getFechaSoloLocal(),estado:'pendiente',...data};pedidos.push(pedido);}
@@ -1164,10 +1135,11 @@ function guardarPedidoPendiente(imprimir=false){
  if(imprimir) imprimirComandaPedido(pedido);
  carrito=[]; pedidoPendienteCobroId=null;
  const notas=document.getElementById('pedidoNotasPreparacion'); if(notas) notas.value='';
+ const ubi=document.getElementById('pedidoUbicacion'); if(ubi) ubi.value='';
  document.getElementById('descPorc').value=0;
  document.getElementById('descMotivo').value='';
  renderCarrito(); renderPedidosPendientes();
- alert(existenteId?'Cuenta actualizada. No se registró ningún cobro.':'Pedido guardado como pendiente. No se registró ningún cobro.');
+ alert(existenteId?'Comanda actualizada con éxito.':'Nueva comanda abierta guardada con éxito.');
 }
 function escaparPedido(v){
  return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -1177,43 +1149,44 @@ function imprimirComandaPedido(p){
  const emp=getEmp(), items=(p.items||[]).map(i=>`<tr><td>${escaparPedido(i.nombre)}</td><td style="text-align:center;font-weight:bold">${Number(i.qty)||1}</td><td>${escaparPedido(i.descripcion||'')}</td></tr>`).join('');
  const w=window.open('','_blank','width=420,height=700');
  if(!w) return alert('Permite las ventanas emergentes para imprimir la comanda.');
- w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Comanda ${escaparPedido(p.id)}</title><style>body{font-family:Arial,sans-serif;padding:18px;color:#111}h1{font-size:20px;text-align:center;margin:0 0 4px}h2{text-align:center;font-size:16px;border:2px dashed #111;padding:8px;margin:8px 0}p{font-size:12px;margin:5px 0}.alert{font-weight:bold;text-align:center;border:2px solid #111;padding:8px;margin:10px 0}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border-bottom:1px solid #bbb;padding:8px 3px;text-align:left;font-size:13px}th{font-size:11px}.notes{white-space:pre-wrap;border:1px solid #111;padding:9px;margin-top:12px;font-size:13px}@media print{button{display:none}}</style></head><body><h1>${escaparPedido(emp.nombre||'Mi Negocio')}</h1><h2>COMANDA · PEDIDO PENDIENTE</h2><div class="alert">NO ES TICKET DE PAGO</div><p><b>Pedido:</b> ${escaparPedido(p.id)}</p><p><b>Fecha:</b> ${escaparPedido(p.fechaStr||'')}</p><p><b>Cliente:</b> ${escaparPedido(p.cliente||'Mostrador')}</p><table><thead><tr><th>Producto</th><th>Cant.</th><th>Detalle</th></tr></thead><tbody>${items}</tbody></table>${p.notas?`<div class="notes"><b>NOTAS DE PREPARACIÓN</b><br>${escaparPedido(p.notas)}</div>`:''}${p.fechaEntrega?`<p><b>Entrega:</b> ${escaparPedido(p.fechaEntrega)} ${escaparPedido(p.horaEntrega||'')}</p>`:''}${p.entregarA?`<p><b>Entregar a:</b> ${escaparPedido(p.entregarA)}</p>`:''}${p.observacionesEntrega?`<div class="notes"><b>Observaciones de entrega</b><br>${escaparPedido(p.observacionesEntrega)}</div>`:''}<p style="text-align:center;margin-top:22px;font-weight:bold">Preparar pedido · No cobrar desde esta hoja</p><button onclick="window.print()">Imprimir</button><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+ w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Comanda ${escaparPedido(p.id)}</title><style>body{font-family:Arial,sans-serif;padding:18px;color:#111}h1{font-size:20px;text-align:center;margin:0 0 4px}h2{text-align:center;font-size:16px;border:2px dashed #111;padding:8px;margin:8px 0}p{font-size:12px;margin:5px 0}.alert{font-weight:bold;text-align:center;border:2px solid #111;padding:8px;margin:10px 0}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border-bottom:1px solid #bbb;padding:8px 3px;text-align:left;font-size:13px}th{font-size:11px}.notes{white-space:pre-wrap;border:1px solid #111;padding:9px;margin-top:12px;font-size:13px}@media print{button{display:none}}</style></head><body><h1>${escaparPedido(emp.nombre||'Mi Negocio')}</h1><h2>COMANDA · ${escaparPedido(p.ubicacion||'Mesa')}</h2><div class="alert">NO ES TICKET DE PAGO</div><p><b>ID Comanda:</b> ${escaparPedido(p.id)}</p><p><b>Fecha:</b> ${escaparPedido(p.fechaStr||'')}</p><p><b>Cliente:</b> ${escaparPedido(p.cliente||'Mostrador')}</p><p><b>Ubicación:</b> ${escaparPedido(p.ubicacion||'—')}</p><table><thead><tr><th>Producto</th><th>Cant.</th><th>Detalle</th></tr></thead><tbody>${items}</tbody></table>${p.notas?`<div class="notes"><b>NOTAS DE PREPARACIÓN</b><br>${escaparPedido(p.notas)}</div>`:''}${p.fechaEntrega?`<p><b>Entrega:</b> ${escaparPedido(p.fechaEntrega)} ${escaparPedido(p.horaEntrega||'')}</p>`:''}${p.entregarA?`<p><b>Entregar a:</b> ${escaparPedido(p.entregarA)}</p>`:''}${p.observacionesEntrega?`<div class="notes"><b>Observaciones de entrega</b><br>${escaparPedido(p.observacionesEntrega)}</div>`:''}<p style="text-align:center;margin-top:22px;font-weight:bold">Comanda de cocina · No cobrar desde esta hoja</p><button onclick="window.print()">Imprimir</button><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
  w.document.close();
 }
 function renderPedidosPendientes(){
  const el=document.getElementById('listaPedidosPendientes'); if(!el) return;
  const pedidos=getPedidosPendientes().slice().reverse();
- if(!pedidos.length){el.innerHTML='<p class="text-center text-gray-400 text-[11px] py-3">No hay pedidos pendientes.</p>';return;}
+ if(!pedidos.length){el.innerHTML='<p class="text-center text-gray-400 text-[11px] py-3">No hay comandas abiertas.</p>';return;}
  el.innerHTML=pedidos.map(p=>{
   const pendiente=p.estado==='pendiente';
-  const estado=pendiente?'PENDIENTE':p.estado==='pagado'?'COBRADO':'CANCELADO';
+  const estado=pendiente?'ABIERTA':p.estado==='pagado'?'COBRADA':'CANCELADA';
   const botones=pendiente?`<div class="grid grid-cols-3 gap-1 mt-2"><button onclick="reabrirPedidoPendiente('${p.id}')" class="bg-black text-white py-2 rounded-lg text-[9px] font-black">💰 COBRAR</button><button onclick="imprimirComandaPorId('${p.id}')" class="bg-amber-300 py-2 rounded-lg text-[9px] font-black">🖨️ COMANDA</button><button onclick="cancelarPedidoPendiente('${p.id}')" class="bg-red-100 text-red-600 py-2 rounded-lg text-[9px] font-black">CANCELAR</button></div>`:'';
-  return `<div class="border rounded-xl p-3 bg-gray-50"><div class="flex justify-between gap-2"><div><b class="text-[11px]">${escaparPedido(p.cliente||'Mostrador')}</b><p class="text-[9px] text-gray-500">${escaparPedido(p.fechaStr||'')}</p></div><div class="text-right"><span class="text-[9px] font-black ${pendiente?'text-amber-700':'text-emerald-700'}">${estado}</span><p class="font-black text-[14px]">$${(Number(p.total)||0).toFixed(2)}</p></div></div><p class="text-[10px] mt-2">${(p.items||[]).map(i=>`${escaparPedido(i.nombre)} ×${Number(i.qty)||1}`).join(' · ')}</p>${p.notas?`<p class="text-[10px] mt-1"><b>Notas:</b> ${escaparPedido(p.notas)}</p>`:''}${botones}</div>`;
+  return `<div class="border rounded-xl p-3 bg-gray-50"><div class="flex justify-between gap-2"><div><b class="text-[11px]">${escaparPedido(p.cliente||'Mostrador')}</b> <span class="bg-emerald-100 text-emerald-800 text-[9px] px-2 py-0.5 rounded font-black">${escaparPedido(p.ubicacion||'Mesa')}</span><p class="text-[9px] text-gray-500">${escaparPedido(p.fechaStr||'')}</p></div><div class="text-right"><span class="text-[9px] font-black ${pendiente?'text-amber-700':'text-emerald-700'}">${estado}</span><p class="font-black text-[14px]">$${(Number(p.total||0).toFixed(2)}</p></div></div><p class="text-[10px] mt-2">${(p.items||[]).map(i=>`${escaparPedido(i.nombre)} ×${Number(i.qty)||1}`).join(' · ')}</p>${p.notas?`<p class="text-[10px] mt-1"><b>Notas:</b> ${escaparPedido(p.notas)}</p>`:''}${botones}</div>`;
  }).join('');
 }
 function imprimirComandaPorId(id){const p=getPedidosPendientes().find(x=>String(x.id)===String(id));if(p)imprimirComandaPedido(p);}
 function cancelarPedidoPendiente(id){
  const ps=getPedidosPendientes(),p=ps.find(x=>String(x.id)===String(id));
  if(!p||p.estado!=='pendiente')return;
- if(!confirm('¿Cancelar este pedido pendiente?'))return;
+ if(!confirm('¿Cancelar esta comanda conservando su registro?'))return;
  p.estado='cancelado';p.canceladoEn=getFechaLocal();setItem('pedidosPendientes',ps);renderPedidosPendientes();
 }
 function reabrirPedidoPendiente(id){
  const ps=getPedidosPendientes(),p=ps.find(x=>String(x.id)===String(id));
  if(!p||p.estado!=='pendiente')return;
- if(carrito.length&&!confirm('El carrito actual se reemplazará por este pedido. ¿Continuar?'))return;
+ if(carrito.length&&!confirm('El carrito actual se reemplazará por esta comanda. ¿Continuar?'))return;
  carrito=(p.items||[]).map(i=>({...i,qty:Number(i.qty)||1,venta:Number(i.venta)||0}));
  pedidoPendienteCobroId=String(p.id);
  document.getElementById('descPorc').value=Number(p.descuento)||0;
  const sel=document.getElementById('selCliente');
  if(sel&&p.clienteId){sel.value=p.clienteId;actualizarClienteTicket();}
  const nt=document.getElementById('pedidoNotasPreparacion');if(nt)nt.value=p.notas||'';
+ const ubi=document.getElementById('pedidoUbicacion');if(ubi)ubi.value=p.ubicacion||'';
  if(document.getElementById('ventaFechaEntrega'))document.getElementById('ventaFechaEntrega').value=p.fechaEntrega||'';
  if(document.getElementById('ventaHoraEntrega'))document.getElementById('ventaHoraEntrega').value=p.horaEntrega||'';
  if(document.getElementById('ventaEntregarA'))document.getElementById('ventaEntregarA').value=p.entregarA||'';
  if(document.getElementById('ventaObsEntrega'))document.getElementById('ventaObsEntrega').value=p.observacionesEntrega||'';
  renderCarrito();document.getElementById('listaVenta')?.scrollIntoView({behavior:'smooth',block:'start'});
- alert('Pedido recuperado. Revisa el total y pulsa COBRAR para registrar el pago.');
+ alert('Comanda cargada para cobro individual. Elige el método de pago y confirma.');
 }
 function completarPedidoPendiente(id, metodo, facturaId){
  if(!id)return;
@@ -1291,7 +1264,7 @@ async function confirmarCobro(tipo){
   let entregaProgramada=false;
   try{let fechaEntrega=document.getElementById('ventaFechaEntrega')?.value||'';if(fechaEntrega&&fechaEntrega>fechaSolo){await guardarEntregaDesdeVenta(fechaSolo);entregaProgramada=true;}}catch(e){alert('La venta se guardó, pero no se pudo crear la entrega programada: '+(e.message||e));}
   ultimoTicket={fechaStr,items:[...carrito],total,cliente:clienteNombre,vendedor:currentUser,metodoPago:metodo,entregaProgramada};generarTicket(ultimoTicket);cerrarCobro();carrito=[];pedidoPendienteCobroId=null;
-  if(document.getElementById('pedidoNotasPreparacion'))document.getElementById('pedidoNotasPreparacion').value='';limpiarCamposEntregaVenta();document.getElementById('descPorc').value=0;document.getElementById('descMotivo').value='';renderCarrito();renderCalendario();renderClientes();if(tipo==='print')imprimirTicket();if(tipo==='whatsapp')enviarWhatsAppTicket(false);
+  if(document.getElementById('pedidoNotasPreparacion'))document.getElementById('pedidoNotasPreparacion').value='';if(document.getElementById('pedidoUbicacion'))document.getElementById('pedidoUbicacion').value='';limpiarCamposEntregaVenta();document.getElementById('descPorc').value=0;document.getElementById('descMotivo').value='';renderCarrito();renderCalendario();renderClientes();if(tipo==='print')imprimirTicket();if(tipo==='whatsapp')enviarWhatsAppTicket(false);
  }finally{
   cobroEnProceso=false;botones.forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
  }
@@ -1312,7 +1285,6 @@ function renderCalendario(){ let facts=getFacts(); let y=fechaVista.getFullYear(
 function renderDesgloseDia(fechaStr){ let facts=getFacts().filter(f=>f.fecha==fechaStr); document.getElementById('fechaSelLabel').innerText=fechaStr; document.getElementById('flu-lista').innerHTML=facts.slice().reverse().map(f=>`<div class="flex justify-between p-3 bg-gray-50 rounded-xl border"><div><b class="text-[12px]">${f.concepto}</b><br><span class="text-[10px] text-gray-500">${f.fechaHora}</span></div><span class="${f.tipo=='entrada'?'text-green-600':'text-red-500'} font-black">$${f.monto.toFixed(0)}</span></div>`).join('')||'<p class="text-center text-gray-400">Sin movimientos</p>'; }
 function actualizarClienteTicket(){ let sel=document.getElementById('selCliente'); if(!sel) return; let opt=sel.options[sel.selectedIndex]; let nombre=opt? (opt.getAttribute('data-nombre')||opt.text) : 'Mostrador'; let el=document.getElementById('cobroClienteNombre'); if(el) el.innerText=nombre; }
 
-  // === PARCHE NUBE - NO BORRA NADA, SOLO AGREGA ===
 async function cargarNubeAuto(){
  try{
   const email = localStorage.getItem('session_email');
@@ -1323,7 +1295,6 @@ async function cargarNubeAuto(){
   const txt = await r.text();
   let data;
   try{ data = JSON.parse(txt); }catch{ console.log(txt); alert('Error cargando nube: '+txt.slice(0,150)); if(btn){ btn.innerText='Recargar de la nube'; } return; }
-  console.log('Nube:', data);
   const d = data.data || data;
   const idNegocio=negocioId||localStorage.getItem('session_negocio');
   let invRemoto=d['inventarioMaestro_'+idNegocio]!==undefined?d['inventarioMaestro_'+idNegocio]:d.inventarioMaestro;
@@ -1343,6 +1314,7 @@ async function cargarNubeAuto(){
   if(d.citas) localStorage.setItem('citas', JSON.stringify(d.citas));
   if(d.pedidos) localStorage.setItem('pedidos', JSON.stringify(d.pedidos));
   if(d.entregas) localStorage.setItem('entregas', JSON.stringify(d.entregas));
+  if(d.pedidosPendientes) localStorage.setItem('pedidosPendientes', JSON.stringify(d.pedidosPendientes));
   if(btn){ btn.innerText='✅ Cargado'; setTimeout(()=>{ btn.innerText='Recargar de la nube'; location.reload(); }, 800); }
   else { location.reload(); }
  }catch(e){ console.log('Error cargarNubeAuto', e); alert('Error: '+(e.message||e)); }
@@ -1359,8 +1331,6 @@ function intentarAutoRecarga(){
     }catch(e){ cargarNubeAuto(); }
   },1500);
 }
-// Auto-ejecuta después de login
-const _oldIniciar = window.iniciarApp || window.login || null;
 if(localStorage.getItem('session_email')) intentarAutoRecarga(); cargarEntregas();
 revisarRetornoStripe();
 </script>
