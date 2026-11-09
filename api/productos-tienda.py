@@ -62,26 +62,22 @@ class handler(BaseHTTPRequestHandler):
             negocios = get('/rest/v1/negocios?id=eq.'
                            + urllib.parse.quote(negocio_id, safe='') + '&select=*')
             
-            # CORRECCIÓN: Extraemos correctamente el objeto de la lista devuelta por Supabase
             negocio = negocios[0] if negocios else {}
             if not negocio:
                 return self.send_json({"ok": False, "msg": "No se encontró el negocio"}, 404)
 
             owner_id = str(negocio.get('user_id') or '').strip().lower()
-            # Respaldo de los nombres de columna comunes para el correo
             owner_email = str(negocio.get('correo') or negocio.get('email') or '').strip().lower()
 
             # 2. Datos del dueño (Búsqueda por user_id o por Correo)
             data = {}
             rows = []
             
-            # Intento 1: Buscar por el user_id de la cuenta
             if owner_id:
                 rows = get('/rest/v1/negocio_data?user_id=eq.'
                            + urllib.parse.quote(owner_id, safe='')
                            + '&select=user_id,data')
             
-            # Intento 2: Si no regresó filas, buscamos usando el correo en la columna user_id
             if not rows and owner_email:
                 rows = get('/rest/v1/negocio_data?user_id=eq.'
                            + urllib.parse.quote(owner_email, safe='')
