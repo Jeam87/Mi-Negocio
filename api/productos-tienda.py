@@ -141,6 +141,10 @@ class handler(BaseHTTPRequestHandler):
             for p in merged.values():
                 if not isinstance(p, dict):
                     continue
+                # Productos antiguos sin destinoVenta permanecen visibles en ambas tiendas.
+                destino = str(p.get('destinoVenta') or 'ambas').strip().lower()
+                if destino not in ('online', 'ambas'):
+                    continue
                 productos.append({
                     'id': p.get('id'),
                     'nombre': p.get('nombre') or 'Producto',
@@ -153,7 +157,8 @@ class handler(BaseHTTPRequestHandler):
                     'barcode': p.get('barcode') or '',
                     'foto': p.get('foto') or '',
                     'descripcion': p.get('descripcion') or p.get('descripcion_producto') or p.get('descripcionProducto') or p.get('detalle') or '',
-                    'esBase': bool(p.get('esBase', False))
+                    'esBase': bool(p.get('esBase', False)),
+                    'destinoVenta': destino
                 })
 
             productos = [p for p in productos if not p.get('esBase')]
