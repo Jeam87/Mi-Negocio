@@ -39,7 +39,7 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             qs = parse_qs(urlparse(self.path).query)
-            negocio_id = (qs.get('negocio_id', [''])[0] or '').strip()
+            negocio_id = (qs.get('negocio_id', ['']) or '').strip()
 
             if not negocio_id:
                 return self.send_json({"ok": False, "msg": "Falta negocio_id"}, 400)
@@ -66,20 +66,29 @@ class handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": False, "msg": "No se encontró el negocio"}, 404)
 
             owner_id = str(negocio.get('user_id') or '').strip().lower()
+            # Respaldo de los dos nombres comunes que puede tener el campo de correo electrónico
+            owner_email = str(negocio.get('correo') or negocio.get('email') or '').strip().lower()
 
-            # 2. Datos del dueño. Solo del dueño de esta tienda: nunca se
-            #    revisan filas de otros negocios.
+            # 2. Datos del dueño (Búsqueda por user_id o por Correo)
             data = {}
+            rows = []
+            
+            # Intento 1: Buscar por el user_id de la cuenta
             if owner_id:
                 rows = get('/rest/v1/negocio_data?user_id=eq.'
                            + urllib.parse.quote(owner_id, safe='')
                            + '&select=user_id,data')
-                for row in rows:
-                    data.update(_como_dict(row.get('data')))
+            
+            # Intento 2: Si no regresó filas, buscamos usando el correo en la columna user_id
+            if not rows and owner_email:
+                rows = get('/rest/v1/negocio_data?user_id=eq.'
+                           + urllib.parse.quote(owner_email, safe='')
+                           + '&select=user_id,data')
 
-            # 3. Productos: misma lógica que la app (clave del negocio primero,
-            #    clave general como respaldo). No se mezclan listas, para que
-            #    la tienda muestre lo mismo que la app.
+            for row in rows:
+                data.update(_como_dict(row.get('data')))
+
+            # 3. Productos: misma lógica que la app
             especifica = _como_lista(data.get('productosV2_' + negocio_id))
             general = _como_lista(data.get('productosV2'))
             if especifica:
@@ -112,7 +121,7 @@ class handler(BaseHTTPRequestHandler):
                     'esBase': False
                 })
 
-            # 4. Categorías de la app (para mostrar nombres y subcategorías)
+            # 4. Categorías de la app
             categorias = (_como_lista(data.get('categoriasVenta_' + negocio_id))
                           or _como_lista(data.get('categoriasVenta')) or [])
             categorias = [
@@ -121,7 +130,7 @@ class handler(BaseHTTPRequestHandler):
                 for c in categorias if isinstance(c, dict) and c.get('id') is not None
             ]
 
-            # 5. Logo y datos del negocio (los mismos que usa el ticket)
+            # 5. Logo y datos del negocio
             empresa = (_como_dict(data.get('empresaConfig_' + negocio_id))
                        or _como_dict(data.get('empresaConfig')))
             logo = (empresa.get('logo') or data.get('logo_url')
