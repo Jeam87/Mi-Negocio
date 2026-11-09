@@ -61,12 +61,14 @@ class handler(BaseHTTPRequestHandler):
             # 1. Negocio
             negocios = get('/rest/v1/negocios?id=eq.'
                            + urllib.parse.quote(negocio_id, safe='') + '&select=*')
+            
+            # CORRECCIÓN: Extraemos correctamente el objeto de la lista devuelta por Supabase
             negocio = negocios[0] if negocios else {}
             if not negocio:
                 return self.send_json({"ok": False, "msg": "No se encontró el negocio"}, 404)
 
             owner_id = str(negocio.get('user_id') or '').strip().lower()
-            # Respaldo de los dos nombres comunes que puede tener el campo de correo electrónico
+            # Respaldo de los nombres de columna comunes para el correo
             owner_email = str(negocio.get('correo') or negocio.get('email') or '').strip().lower()
 
             # 2. Datos del dueño (Búsqueda por user_id o por Correo)
