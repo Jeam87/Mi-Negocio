@@ -778,6 +778,8 @@ function escapar(texto){
    ========================================================= */
 
 let categoriasNube = [];
+let backendNuevo = false;
+let logoYaCargado = false;
 
 function parseMaybe(v){
   if(typeof v === "string"){
@@ -831,9 +833,7 @@ async function cargarNegocio(){
     data.nombre ||
     "Mi Tienda";
 
-  whatsapp =
-    data.whatsapp ||
-    "";
+  whatsapp = data.whatsapp || whatsapp || "";
 
   document.title =
     nombreTienda;
@@ -845,8 +845,10 @@ async function cargarNegocio(){
   // El logo de los tickets se guarda en la nube con el correo de inicio
   // de sesión (currentUser), no necesariamente con el UUID de negocios.user_id.
   const img = document.getElementById("logo");
-  img.style.display = "none";
-  img.removeAttribute("src");
+  if(!logoYaCargado){
+    img.style.display = "none";
+    img.removeAttribute("src");
+  }
 
   function aplicarLogo(valor){
     if(typeof valor !== "string") return false;
@@ -886,8 +888,10 @@ async function cargarNegocio(){
     data.id
   ].filter((v, i, arr) => v && arr.indexOf(v) === i);
 
-  let logoCargado = false;
-  for(const identificador of identificadoresNube){
+  // Con el backend nuevo, el logo y las categorías ya vienen en la respuesta de
+  // productos-tienda y no se descarga nada más de la nube.
+  let logoCargado = logoYaCargado;
+  for(const identificador of (backendNuevo ? [] : identificadoresNube)){
     for(const ep of ["load.py", "save.py"]){
       try{
         const nube = await fetch(
@@ -964,6 +968,9 @@ async function cargarProductos(){
   }
 
   // Usar exactamente el mismo logo que la app principal guarda para los tickets.
+  backendNuevo = Object.prototype.hasOwnProperty.call(resultado, "categorias");
+  if(resultado.whatsapp && !whatsapp) whatsapp = resultado.whatsapp;
+
   if(typeof resultado.logo === "string" && resultado.logo.trim()){
     const img = document.getElementById("logo");
     // No reemplazar un logo que ya se haya cargado correctamente.
@@ -971,10 +978,11 @@ async function cargarProductos(){
       img.onload = function(){ img.style.display = "block"; };
       img.onerror = function(){ img.style.display = "none"; };
       img.src = resultado.logo.trim();
+      logoYaCargado = true;
     }
   }
 
-  if(Array.isArray(resultado.categorias) && resultado.categorias.length && !categoriasNube.length){
+  if(Array.isArray(resultado.categorias) && resultado.categorias.length){
     categoriasNube = resultado.categorias;
   }
 
@@ -1026,9 +1034,15 @@ async function iniciar(){
 
   try{
 
+    let errProductos = null;
+    try{ await cargarProductos(); }catch(e){ errProductos = e; }
     await cargarNegocio();
-
-    await cargarProductos();
+    if(categoriasNube.length && productos.length){
+      asignarCategorias();
+      pintarCategorias();
+      aplicarFiltro();
+    }
+    if(errProductos) throw errProductos;
 
     establecerFechaMinima();
 
