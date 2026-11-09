@@ -434,7 +434,6 @@ button{cursor:pointer}
 .hidden{
   display:none!important
 }
-#subcats{top:116px;z-index:29}
 </style>
 </head>
 
@@ -713,6 +712,7 @@ const sb =
    ========================================================= */
 
 let productos = [];
+let categoriasTienda = [];
 let carrito = [];
 let productoActual = null;
 
@@ -777,28 +777,6 @@ function escapar(texto){
    CARGAR NEGOCIO
    ========================================================= */
 
-let categoriasNube = [];
-let backendNuevo = false;
-let logoYaCargado = false;
-
-function parseMaybe(v){
-  if(typeof v === "string"){
-    try{ return JSON.parse(v); }catch{ return null; }
-  }
-  return v;
-}
-
-// La app guarda cada dato con sufijo del negocio (empresaConfig_<id>) y también
-// sin sufijo (empresaConfig). Se prueba primero el del negocio de esta tienda.
-function leerClaveNube(datos, base){
-  if(!datos || typeof datos !== "object") return undefined;
-  for(const k of [base + "_" + tiendaId, base]){
-    if(datos[k] !== undefined && datos[k] !== null && datos[k] !== "") return parseMaybe(datos[k]);
-  }
-  const alt = Object.keys(datos).find(k => k.startsWith(base + "_") && datos[k]);
-  return alt ? parseMaybe(datos[alt]) : undefined;
-}
-
 async function cargarNegocio(){
 
   const {data,error} =
@@ -833,7 +811,9 @@ async function cargarNegocio(){
     data.nombre ||
     "Mi Tienda";
 
-  whatsapp = data.whatsapp || whatsapp || "";
+  whatsapp =
+    data.whatsapp ||
+    "";
 
   document.title =
     nombreTienda;
@@ -845,10 +825,8 @@ async function cargarNegocio(){
   // El logo de los tickets se guarda en la nube con el correo de inicio
   // de sesión (currentUser), no necesariamente con el UUID de negocios.user_id.
   const img = document.getElementById("logo");
-  if(!logoYaCargado){
-    img.style.display = "none";
-    img.removeAttribute("src");
-  }
+  img.style.display = "none";
+  img.removeAttribute("src");
 
   function aplicarLogo(valor){
     if(typeof valor !== "string") return false;
@@ -865,11 +843,11 @@ async function cargarNegocio(){
 
   function extraerLogo(obj){
     if(!obj || typeof obj !== "object") return "";
-    let empresa = leerClaveNube(obj, "empresaConfig") || obj.empresa_config || obj.configuracionEmpresa || null;
-    if(typeof empresa === "string") empresa = parseMaybe(empresa);
-    if(empresa && empresa.whatsapp && !whatsapp) whatsapp = empresa.whatsapp;
-    const cats = leerClaveNube(obj, "categoriasVenta");
-    if(Array.isArray(cats) && cats.length) categoriasNube = cats;
+    let empresa = obj.empresaConfig || obj.empresa_config || obj.configuracionEmpresa || null;
+    if(typeof empresa === "string"){
+      try{ empresa = JSON.parse(empresa); }catch{ empresa = null; }
+    }
+    if(empresa && empresa.whatsapp) whatsapp = empresa.whatsapp;
     return (empresa && (
       empresa.logo || empresa.logo_url || empresa.logoUrl ||
       empresa.logo_ticket || empresa.logoTicket
@@ -888,32 +866,30 @@ async function cargarNegocio(){
     data.id
   ].filter((v, i, arr) => v && arr.indexOf(v) === i);
 
-  // Con el backend nuevo, el logo y las categorías ya vienen en la respuesta de
-  // productos-tienda y no se descarga nada más de la nube.
-  let logoCargado = logoYaCargado;
-  for(const identificador of (backendNuevo ? [] : identificadoresNube)){
-    for(const ep of ["load.py", "save.py"]){
-      try{
-        const nube = await fetch(
-          "https://mi-negocio-mauve.vercel.app/api/" + ep + "?user_id=" +
-          encodeURIComponent(identificador),
-          { method:"GET", cache:"no-store" }
-        );
-        if(!nube.ok) continue;
-        const textoNube = await nube.text();
-        let datosNube = {};
-        try{ datosNube = JSON.parse(textoNube || "{}"); }catch{}
-        const datos = datosNube.data || datosNube;
-        const logo = extraerLogo(datos);
-        if(logo && aplicarLogo(logo)){
-          logoCargado = true;
-          break;
-        }
-      }catch(e){
-        console.warn("No se pudo consultar la configuración del logo:", e);
+  let logoCargado = false;
+  for(const identificador of identificadoresNube){
+    try{
+      const nube = await fetch(
+        "https://mi-negocio-mauve.vercel.app/api/save.py?user_id=" +
+        encodeURIComponent(identificador),
+        { method:"GET", cache:"no-store" }
+      );
+      if(!nube.ok) continue;
+      const textoNube = await nube.text();
+      let datosNube = {};
+      try{ datosNube = JSON.parse(textoNube || "{}"); }catch{}
+      const datos = datosNube.data || datosNube;
+      if(datos && datos.empresaConfig && typeof datos.empresaConfig === "string"){
+        try{ datos.empresaConfig = JSON.parse(datos.empresaConfig); }catch{}
       }
+      const logo = extraerLogo(datos);
+      if(logo && aplicarLogo(logo)){
+        logoCargado = true;
+        break;
+      }
+    }catch(e){
+      console.warn("No se pudo consultar la configuración del logo:", e);
     }
-    if(logoCargado) break;
   }
 
   // Último recurso: logo guardado directamente en la ficha negocios de Supabase.
@@ -921,6 +897,41 @@ async function cargarNegocio(){
     const logoFicha = data.logo_url || data.logoUrl || data.logo || data.logo_ticket || "";
     if(logoFicha) aplicarLogo(logoFicha);
   }
+}
+
+
+/* =========================================================
+   RESOLVER NOMBRES DE CATEGORÍAS
+   ========================================================= */
+
+function resolverNombreCategoria(valor){
+  const id = String(valor ?? "").trim();
+  if(!id) return "Otros";
+
+  const encontrada = categoriasTienda.find(c =>
+    String(c.id ?? "").trim() === id
+  );
+  if(encontrada && encontrada.nombre) return String(encontrada.nombre);
+
+  // Compatibilidad con categorías antiguas que guardaban números.
+  const legado = {
+    "1":"Abarrotes",
+    "2":"Bebidas",
+    "3":"Limpieza",
+    "4":"Lácteos",
+    "5":"Snacks"
+  };
+  if(legado[id]) return legado[id];
+
+  // No mostrar identificadores técnicos (por ejemplo CAT-... o UUID).
+  if(/^CAT[-_]/i.test(id) || /^cat[-_]/i.test(id) ||
+     /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id) ||
+     /^[A-Z0-9_-]{12,}$/i.test(id)){
+    return "Otros";
+  }
+
+  // Si ya es un nombre legible, se conserva.
+  return id;
 }
 
 
@@ -967,23 +978,20 @@ async function cargarProductos(){
     );
   }
 
-  // Usar exactamente el mismo logo que la app principal guarda para los tickets.
-  backendNuevo = Object.prototype.hasOwnProperty.call(resultado, "categorias");
-  if(resultado.whatsapp && !whatsapp) whatsapp = resultado.whatsapp;
+  // Las definiciones vienen del mismo registro en la nube que los productos.
+  categoriasTienda = Array.isArray(resultado.categorias)
+    ? resultado.categorias.filter(c => c && c.id != null && c.nombre)
+    : [];
 
+  // Usar exactamente el mismo logo que la app principal guarda para los tickets.
   if(typeof resultado.logo === "string" && resultado.logo.trim()){
     const img = document.getElementById("logo");
     // No reemplazar un logo que ya se haya cargado correctamente.
-    if(img.style.display === "none" || !img.getAttribute("src")) {
+    if(!img.getAttribute("src")) {
       img.onload = function(){ img.style.display = "block"; };
       img.onerror = function(){ img.style.display = "none"; };
       img.src = resultado.logo.trim();
-      logoYaCargado = true;
     }
-  }
-
-  if(Array.isArray(resultado.categorias) && resultado.categorias.length){
-    categoriasNube = resultado.categorias;
   }
 
   if(resultado.nombre_tienda){
@@ -996,17 +1004,17 @@ async function cargarProductos(){
     (resultado.productos || []).map(p => ({
       id:p.id,
       nombre:p.nombre || "Producto",
-      precio:Number(p.precio ?? p.venta ?? 0),
+      precio:Number(p.precio || 0),
       costo:Number(p.costo || 0),
       stock:p.stock === undefined ? null : p.stock,
-      categoria:p.categoria || "Otros",
-      barcode:p.barcode || "",
-      foto:p.foto || "",
+      // categoriaId conserva el identificador interno; categoria es solo el nombre visible.
+      categoriaId:p.categoria_id || p.categoria || "Otros",
+      categoria:resolverNombreCategoria(p.categoria_id || p.categoria || "Otros"),
+      barcode:p.barcode || "",       foto:p.foto || "",
       descripcion:p.descripcion || p.descripcion_producto || p.descripcionProducto || p.detalle || "",
-      esBase:!!p.esBase
-    })).filter(p => !p.esBase);
-
-  asignarCategorias();
+      esBase:!!p.esBase,
+      destinoVenta:p.destinoVenta || 'ambas'
+    }));
 
   pintarCategorias();
   pintarLista(productos);
@@ -1034,15 +1042,9 @@ async function iniciar(){
 
   try{
 
-    let errProductos = null;
-    try{ await cargarProductos(); }catch(e){ errProductos = e; }
     await cargarNegocio();
-    if(categoriasNube.length && productos.length){
-      asignarCategorias();
-      pintarCategorias();
-      aplicarFiltro();
-    }
-    if(errProductos) throw errProductos;
+
+    await cargarProductos();
 
     establecerFechaMinima();
 
@@ -1079,100 +1081,81 @@ async function iniciar(){
    CATEGORÍAS
    ========================================================= */
 
-const CATS_BASE = { comida:"Comida", bebidas:"Bebidas", otros:"Otros" };
-let catRaizActiva = "todos";
-let catSubActiva = null;
-
-function mapaCategorias(){
-  const m = new Map();
-  (categoriasNube || []).forEach(c => {
-    if(c && c.id !== undefined && c.id !== null) m.set(String(c.id), c);
-  });
-  return m;
-}
-
-// Convierte lo que trae el producto (id de categoría de la app) en un nombre legible.
-function resolverCategoria(valor){
-  const m = mapaCategorias();
-  const v = String(valor ?? "").trim();
-  const bajo = v.toLowerCase();
-  if(!v || bajo === "todas") return { id:"otros", nombre:"Otros" };
-  if(m.has(v)){
-    const c = m.get(v);
-    return { id:String(c.id), nombre:c.nombre || CATS_BASE[bajo] || "Otros" };
-  }
-  const porNombre = [...m.values()].find(c => String(c.nombre || "").trim().toLowerCase() === bajo);
-  if(porNombre) return { id:String(porNombre.id), nombre:porNombre.nombre };
-  if(CATS_BASE[bajo]) return { id:bajo, nombre:CATS_BASE[bajo] };
-  if(/^[\d.-]{5,}$/.test(v)) return { id:"otros", nombre:"Otros" };
-  return { id:v, nombre:v };
-}
-
-function raizDe(id){
-  const m = mapaCategorias();
-  let c = m.get(String(id));
-  let guard = 0;
-  while(c && c.parentId && m.has(String(c.parentId)) && guard++ < 10){
-    c = m.get(String(c.parentId));
-  }
-  return c ? { id:String(c.id), nombre:c.nombre || CATS_BASE[String(c.id)] || "Otros" } : null;
-}
-
-function asignarCategorias(){
-  productos.forEach(p => {
-    const r = resolverCategoria(p.categoria);
-    const raiz = raizDe(r.id);
-    p.catId = r.id;
-    p.catNombre = r.nombre;
-    p.raizId = raiz ? raiz.id : r.id;
-    p.raizNombre = raiz ? raiz.nombre : r.nombre;
-  });
-}
-
 function pintarCategorias(){
-  const cont = document.getElementById("cats");
-  cont.innerHTML = "";
-  const raices = [];
-  productos.forEach(p => {
-    if(!raices.some(r => r.id === p.raizId)) raices.push({ id:p.raizId, nombre:p.raizNombre });
-  });
-  const chip = (texto, activo, accion) => {
-    const d = document.createElement("div");
-    d.className = "cat" + (activo ? " active" : "");
-    d.innerText = String(texto).toUpperCase();
-    d.onclick = accion;
-    return d;
-  };
-  const elegir = (raiz, sub) => { catRaizActiva = raiz; catSubActiva = sub; pintarCategorias(); aplicarFiltro(); };
-  cont.appendChild(chip("INICIO", catRaizActiva === "todos", () => elegir("todos", null)));
-  raices.forEach(r => cont.appendChild(chip(r.nombre, catRaizActiva === r.id, () => elegir(r.id, null))));
 
-  let sub = document.getElementById("subcats");
-  if(!sub){
-    sub = document.createElement("div");
-    sub.id = "subcats";
-    sub.className = "cats";
-    cont.after(sub);
-  }
-  sub.innerHTML = "";
-  if(catRaizActiva !== "todos"){
-    const subs = [];
-    productos
-      .filter(p => p.raizId === catRaizActiva && p.catId !== catRaizActiva)
-      .forEach(p => { if(!subs.some(s => s.id === p.catId)) subs.push({ id:p.catId, nombre:p.catNombre }); });
-    if(subs.length){
-      sub.appendChild(chip("Todo", catSubActiva === null, () => elegir(catRaizActiva, null)));
-      subs.forEach(s => sub.appendChild(chip(s.nombre, catSubActiva === s.id, () => elegir(catRaizActiva, s.id))));
-    }
-  }
-  sub.style.display = sub.children.length ? "" : "none";
+  const categorias =
+    [...new Set(
+      productos
+        .map(p => p.categoria)
+        .filter(Boolean)
+    )];
+
+  const cont =
+    document.getElementById("cats");
+
+  cont.innerHTML = "";
+
+  const inicio =
+    document.createElement("div");
+
+  inicio.className =
+    "cat active";
+
+  inicio.innerText =
+    "INICIO";
+
+  inicio.onclick =
+    () => filtrarProductos(
+      "todos",
+      inicio
+    );
+
+  cont.appendChild(inicio);
+
+  categorias.forEach(cat => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "cat";
+
+    div.innerText =
+      String(cat).toUpperCase();
+
+    div.onclick =
+      () => filtrarProductos(
+        cat,
+        div
+      );
+
+    cont.appendChild(div);
+
+  });
+
 }
 
-function aplicarFiltro(){
-  let lista = productos;
-  if(catRaizActiva !== "todos") lista = lista.filter(p => p.raizId === catRaizActiva);
-  if(catSubActiva) lista = lista.filter(p => p.catId === catSubActiva);
+
+function filtrarProductos(categoria,elemento){
+
+  document
+    .querySelectorAll(".cat")
+    .forEach(x =>
+      x.classList.remove("active")
+    );
+
+  elemento.classList.add("active");
+
+  const lista =
+    categoria === "todos"
+      ? productos
+      : productos.filter(
+          p =>
+            p.categoria === categoria
+        );
+
   pintarLista(lista);
+
 }
 
 
@@ -1919,17 +1902,6 @@ async function crearPedido(){
     return;
 
   }
-
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){
-    alert("Escribe un correo electrónico válido.");
-    return;
-  }
-
-  if(telefono.replace(/\D/g,"").length < 10){
-    alert("Escribe tu teléfono a 10 dígitos.");
-    return;
-  }
-
 
   if(
     tipoEntrega === "domicilio" &&
